@@ -612,9 +612,9 @@
       }
      },
      "changes": {
-      "text": "With 9 copies on the accumulator and supercapacitor lanes, every copy makes every swing. Another clock of this build holds with all 11: Takt Batches, window cycle 2,112 ticks.",
+      "text": "Another clock of this build holds with all 11: Takt Batches, window cycle 2,112 ticks.",
       "data": {
-       "fewer_copies": 9,
+       "fewer_copies": null,
        "other_clock": {
         "id": "takt_batches_observed",
         "label": "Takt Batches: 3 output swings each output cycle",
@@ -1972,9 +1972,9 @@
       }
      },
      "changes": {
-      "text": "With 9 copies on the accumulator and supercapacitor lanes, every copy makes every swing. Another clock of this build holds with all 11: Takt Batches, window cycle 2,112 ticks.",
+      "text": "Another clock of this build holds with all 11: Takt Batches, window cycle 2,112 ticks.",
       "data": {
-       "fewer_copies": 9,
+       "fewer_copies": null,
        "other_clock": {
         "id": "takt_batches_observed",
         "label": "Takt Batches: 3 output swings each output cycle",

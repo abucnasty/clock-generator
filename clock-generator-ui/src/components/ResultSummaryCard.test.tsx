@@ -56,7 +56,7 @@ describe('the note on why no clock is stable, of the recommended clock\'s loss o
     const result = ELECTROMAGNETIC_330_TWO_SWINGS;
     const views = viewsOf(result);
     const cause = views[result.selected_index].checkedLanes!.cause!;
-    const parts = [cause.headline.text, cause.cause!.text, cause.spacing!.text, cause.where.text, cause.alone.text, cause.changes!.text];
+    const parts = [cause.headline.text, cause.cause!.text, cause.spacing!.text, cause.where.text, cause.alone.text];
 
     it('keeps its title and the count line in place of its message, and no link; the pictures and the other parts are not on the card', () => {
         const { container } = card(views, result.selected_index, { recommendedIndex: result.selected_index, whyNotStable: result.why_not_stable, onShowDiagnostics: () => {} });

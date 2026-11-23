@@ -440,13 +440,7 @@
        "swings": 432
       }
      },
-     "changes": {
-      "text": "With 9 copies on the accumulator and supercapacitor lanes, every copy makes every swing.",
-      "data": {
-       "fewer_copies": 9,
-       "other_clock": null
-      }
-     },
+     "changes": null,
      "swings": {
       "kind": "lane",
       "rows": [
@@ -1238,13 +1232,7 @@
        "swings": 432
       }
      },
-     "changes": {
-      "text": "With 9 copies on the accumulator and supercapacitor lanes, every copy makes every swing.",
-      "data": {
-       "fewer_copies": 9,
-       "other_clock": null
-      }
-     },
+     "changes": null,
      "swings": {
       "kind": "lane",
       "rows": [
@@ -2035,13 +2023,7 @@
        "swings": 432
       }
      },
-     "changes": {
-      "text": "With 9 copies on the accumulator and supercapacitor lanes, every copy makes every swing.",
-      "data": {
-       "fewer_copies": 9,
-       "other_clock": null
-      }
-     },
+     "changes": null,
      "swings": {
       "kind": "lane",
       "rows": [
@@ -2941,13 +2923,7 @@
        "swings": 432
       }
      },
-     "changes": {
-      "text": "With 9 copies on the accumulator and supercapacitor lanes, every copy makes every swing.",
-      "data": {
-       "fewer_copies": 9,
-       "other_clock": null
-      }
-     },
+     "changes": null,
      "swings": {
       "kind": "lane",
       "rows": [
@@ -3923,13 +3899,7 @@
        "swings": 432
       }
      },
-     "changes": {
-      "text": "With 9 copies on the accumulator and supercapacitor lanes, every copy makes every swing.",
-      "data": {
-       "fewer_copies": 9,
-       "other_clock": null
-      }
-     },
+     "changes": null,
      "swings": {
       "kind": "lane",
       "rows": [
@@ -4721,13 +4691,7 @@
        "swings": 432
       }
      },
-     "changes": {
-      "text": "With 9 copies on the accumulator and supercapacitor lanes, every copy makes every swing.",
-      "data": {
-       "fewer_copies": 9,
-       "other_clock": null
-      }
-     },
+     "changes": null,
      "swings": {
       "kind": "lane",
       "rows": [

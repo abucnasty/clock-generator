@@ -757,7 +757,7 @@ const automation240: JobCheck[] = [
             expect(cause.where.text).toBe("The inserter of copy 4 that drops automation science pack misses 163 of its 1,464 swings in 244 window cycles, and so does that of copy 8. "
                 + "325 of the 1,301 swings each one makes wait for room.");
             expect(cause.alone.text).toBe("The same inserter makes all 1,464 swings. The clock is right for one copy.");
-            expect(cause.changes!.text).toBe("With 3 copies, every copy makes every swing. Another clock of this build has no full join: Coordinated Sources, window cycle 72 ticks.");
+            expect(cause.changes!.text).toBe("Another clock of this build has no full join: Coordinated Sources, window cycle 72 ticks.");
         },
     },
     {

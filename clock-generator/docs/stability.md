@@ -204,12 +204,12 @@ A clock that is not stable on a shared lane has the parts of its cause, each a s
 - The reason from the spacing, only where the run shows the gap of the copy before: the tiles between the copies, the ticks that an item takes over them, and the window cycle. It does not decide a verdict.
 - Where and how much: each taker of each copy by its items, with its swings missed.
 - One copy alone: what the same inserter makes in the run of one copy alone.
-- What changes it: the most copies on the shared lanes whose own run holds, found by bisection. Also another clock of the result that holds with all the copies.
+- What changes it: another clock of the result that holds with all the copies.
 - The swings (`swings`), window cycle by window cycle, as numbers and codes with no sentence. On a lane, there is a row for each inserter of each copy that has the cause. The row gives the items of the inserter and its swings in each window cycle of the run of one copy alone. It also gives each window cycle in which the inserter makes fewer swings, with the swings missed, the code of what stopped them (`gap`, `full`, `both` or `neither`) and if the reach was empty. One hand takes all the items of an inserter, so a missed swing has no item. At a full join, the part gives the output swings of each copy in each window cycle, the output swings that the clock gives it in one, and if the output inserter drops onto a side belt (`side_belt`). By copy, by inserter and by code, the swings add up to the counts of the cause.
 
 The web app shows the parts, the pictures of the missed swings and the table of the shared lanes on the **Diagnostics** tab of the selected clock. The result card keeps the status and a link to that tab. Where the note on why no clock is stable is of such a loss, the note shows its title and the headline.
 
-Recorded on AUTOMATION_SCIENCE_240, the clock of 72 ticks (2026-11-12): copy 2 misses 6 of 130 swings. In 3 of them, the gap of copy 1 on the copper plate lane reaches copy 2. In 5 of them, the output of its assembling machine is full, and 2 show both. With 8 copies on the lanes, every copy makes every swing.
+Recorded on AUTOMATION_SCIENCE_240, the clock of 72 ticks (2026-11-12): copy 2 misses 6 of 130 swings. In 3 of them, the gap of copy 1 on the copper plate lane reaches copy 2. In 5 of them, the output of its assembling machine is full, and 2 show both.
 
 ### What a stable verdict proves
 

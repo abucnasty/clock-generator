@@ -471,9 +471,9 @@
       }
      },
      "changes": {
-      "text": "With 3 copies, every copy makes every swing. Another clock of this build has no full join: Time-Study Windows, window cycle 216 ticks.",
+      "text": "Another clock of this build has no full join: Time-Study Windows, window cycle 216 ticks.",
       "data": {
-       "fewer_copies": 3,
+       "fewer_copies": null,
        "other_clock": {
         "id": "time_study_windows",
         "label": "Time-Study Windows: 3 output swings each output cycle",
@@ -1002,9 +1002,9 @@
       }
      },
      "changes": {
-      "text": "With 8 copies on the iron gear wheel and copper plate lanes, every copy makes every swing. Another clock of this build holds with all 9: Time-Study Windows, window cycle 216 ticks.",
+      "text": "Another clock of this build holds with all 9: Time-Study Windows, window cycle 216 ticks.",
       "data": {
-       "fewer_copies": 8,
+       "fewer_copies": null,
        "other_clock": {
         "id": "time_study_windows",
         "label": "Time-Study Windows: 3 output swings each output cycle",
@@ -2144,9 +2144,9 @@
       }
      },
      "changes": {
-      "text": "With 8 copies on the iron gear wheel and copper plate lanes, every copy makes every swing. Another clock of this build holds with all 9: Time-Study Windows, window cycle 216 ticks.",
+      "text": "Another clock of this build holds with all 9: Time-Study Windows, window cycle 216 ticks.",
       "data": {
-       "fewer_copies": 8,
+       "fewer_copies": null,
        "other_clock": {
         "id": "time_study_windows",
         "label": "Time-Study Windows: 3 output swings each output cycle",
@@ -2774,9 +2774,9 @@
       }
      },
      "changes": {
-      "text": "With 7 copies on the iron gear wheel and copper plate lanes, every copy makes every swing. Another clock of this build holds with all 9: Time-Study Windows, window cycle 216 ticks.",
+      "text": "Another clock of this build holds with all 9: Time-Study Windows, window cycle 216 ticks.",
       "data": {
-       "fewer_copies": 7,
+       "fewer_copies": null,
        "other_clock": {
         "id": "time_study_windows",
         "label": "Time-Study Windows: 3 output swings each output cycle",
