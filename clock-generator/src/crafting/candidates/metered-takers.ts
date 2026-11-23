@@ -191,7 +191,7 @@ export function meteredTakersClock(configuration: Config, logger: Logger): Bluep
             continue;
         }
         // the checks after the maker plan the clock on its own count and LCM (verificationPlanningConfigOf), as they do the primitive one
-        return withSecondaryPlanningProvenance(result);
+        return { ...withSecondaryPlanningProvenance(result), metered_takers: takers.map(taker => taker.inserter.entity_id.id) };
     }
     if (first_unproved !== undefined && as_built_refusals + margin_refusals === 0) throw first_unproved;
     const request = forced === undefined ? "" : ` at ${forced} output swing${forced === 1 ? "" : "s"}`;

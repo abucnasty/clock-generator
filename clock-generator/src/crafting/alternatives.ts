@@ -849,6 +849,7 @@ function alternativePart(config: Config, alternative: ClockAlternative): Coordin
         name: alternative.id, alternative_id: alternative.id, verdict: alternative.verdict, holds: alternative.assessment.holds, wake_ups_per_minute: clockCost(alternative.ranking),
         window_cycle_ticks: result.simulation_duration.ticks, windows: result.clock_windows,
         counted: result.stability_check.as_built?.wake_ups !== undefined,
+        ...(result.metered_takers !== undefined && { metered_takers: result.metered_takers }),
         ...(result.always_on_reasons !== undefined && { always_on: result.always_on_reasons }),
         plan: { ...(overrides?.terminal_swing_count !== undefined && { terminal_swing_count: overrides.terminal_swing_count }),
             ...(overrides?.lcm !== undefined && { lcm: overrides.lcm }),
