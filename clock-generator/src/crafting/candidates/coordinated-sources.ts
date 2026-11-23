@@ -15,6 +15,7 @@ import { costKey } from "../rank";
 import { CodedError, emitMakerLog, makerLogOn, reasonOf, type MakerReason } from "../maker-log";
 import { verdictWithCopies, type VerdictWithCopies } from "../copies-verdict";
 import { meteredOutputWindows } from "./metered-output-windows";
+import { chooseInputWindows, meteredInputWindows, type InputJointStage, type InputWindowJudge } from "./metered-input-windows";
 
 /**
  * The per-branch clock (DESIGN D7, PR 18): each part of the build gets the windows of the clock that fits it, all on one shared
@@ -548,21 +549,63 @@ export function coordinatedSourcesClock(
     }
     const finish = { ...options, loop_windows: false as const };
     let service: ReturnType<typeof meteredOutputWindows> | undefined;
+    // the input step reads the stock of the check that made the clock the output step leaves (`composed`)
+    let inputs: ReturnType<typeof meteredInputWindows> | undefined;
+    let composed = windows;
     let result = finishedClock(made, map, [], finish, left_open, undefined, metered.size === 0 ? {} : {
-        on_as_built: run => { service = meteredOutputWindows(made, windows, metered, run); },
+        on_as_built: run => {
+            service = meteredOutputWindows(made, windows, metered, run);
+            inputs = meteredInputWindows(made, windows, metered, run);
+        },
     });
+    let output_decisions: NonNullable<BlueprintGenerationResult["metered_output_windows"]> | undefined;
     if (service) {
         const { changes, decisions } = service;
         if (Object.keys(changes).length > 0) {
             const trial = trialOf({ ...windows, ...changes }, left_open);
             if (holdsOf(trial) && marginOf(trial) === null && lossOf(trial)?.survives === true && holdsWithCopies(trial)) {
-                result = finishedClock(made, trial.map, [], finish, left_open);
+                composed = trial.windows;
+                result = finishedClock(made, trial.map, [], finish, left_open, undefined, {
+                    on_as_built: run => { inputs = meteredInputWindows(made, composed, metered, run); },
+                });
             } else {
                 for (const id of Object.keys(changes)) decisions[id] = { kind: "retained", reason: "joint_check_failed" };
             }
         }
-        result = { ...result, metered_output_windows: decisions };
+        output_decisions = decisions;
     }
+    if (inputs) {
+        const { proposals, decisions, witnesses } = inputs;
+        if (proposals.length > 0) {
+            // the clock the output step leaves with a proposal's windows; with none, that clock itself
+            const trialWith = (changes: SerializableClockWindows) => trialOf({ ...composed, ...changes }, left_open);
+            const judge: InputWindowJudge = {
+                longRun: changes => {
+                    const trial = trialWith(changes);
+                    return { holds: trial.holds_to_long_run, wake_ups: trial.wake_ups,
+                        stage: trial.holds_to_long_run ? null : notHeldFields(trial).check as InputJointStage };
+                },
+                // the whole check the output step asks, part by part
+                wholeCheck: changes => {
+                    const trial = trialWith(changes);
+                    if (!holdsOf(trial)) return "whole_check";
+                    if (marginOf(trial) !== null) return "margin";
+                    if (lossOf(trial)?.survives !== true) return "loss";
+                    return holdsWithCopies(trial) ? null : "copies";
+                },
+                recovery: changes => {
+                    const trial = trialWith(changes);
+                    return { one_copy: lossOf(trial)?.recovered_after_window_cycles ?? null,
+                        copies: copiesVerdictOf(trial)?.copies_trial?.recovered_after_window_cycles ?? null };
+                },
+            };
+            const choice = chooseInputWindows(proposals, witnesses, judge);
+            Object.assign(decisions, choice.decisions);
+            if (choice.taken !== null) result = finishedClock(made, trialWith(choice.taken.changes).map, [], finish, left_open);
+        }
+        result = { ...result, metered_input_windows: decisions };
+    }
+    if (output_decisions) result = { ...result, metered_output_windows: output_decisions };
     return { ...result, coordinated_sources: { parts: Object.fromEntries(groups.map(group => [group.source, partName(group.choices[current.get(group.source)!].parts[0])])),
         sources: sourceControlsOf(groups, current, result.always_on_reasons ?? {}, logger, config.setpoint.item) } };
 }
