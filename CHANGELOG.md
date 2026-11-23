@@ -15,12 +15,14 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 - ui: the setpoint picker lets you choose the output of a recipe with several outputs
 - generation: a clock for builds where one machine feeds several machines that make the target
 - ui: enter an exact fraction in the setpoint rate field
+- generation: an inserter can take from a belt into a steel chest
 
 ### Changed
 - generation: science output inserters can keep enable windows when one machine feeds several science assemblers
 - ui: configuration files name the setpoint's item; older files still open
 - generation: quiet command-line generation does less work
 - generation: quiet command-line generation checks a repeated clock start once
+- ui: a belt pickup that drops elsewhere is refused with clearer text
 
 ### Fixed
 - ui: inserter refusals use form labels and name the containers, machines and items involved

@@ -372,10 +372,10 @@ describe('inserters that take from a belt into chests (#650)', () => {
             { id: 3, type: 'buffer-chest', storage_size: 1, item_filter: 'stone', prototype: 'wooden-chest' },
         ],
     } as unknown as Config;
-    const says = 'Inserters 3 and 5 take from a belt and drop into something other than a machine: '
+    const says = 'Inserters 3 and 5 take from a belt and drop into something a belt pickup cannot drop into: '
         + 'Inserter 3 takes from Belt 2 and drops into Chest 2; Inserter 5 takes from Belt 3 and drops into Chest 3. '
-        + 'Taking from a belt into anything but a machine is not supported, so this build cannot be clocked. '
-        + 'Make each of them drop into a machine, so that the machine is fed straight from the belt.';
+        + 'A belt pickup can drop into a machine or into a steel chest, and nowhere else, so this build cannot be clocked. '
+        + 'Make each of them drop into a machine or into a steel chest.';
 
     it('names inserters 3 and 5 live, in the one error the Build validation lists', async () => {
         const response = await send({ type: 'query', requestId: 55, query: { kind: 'inserter-coverage', config } });

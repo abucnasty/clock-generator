@@ -264,7 +264,7 @@ function handleValidate(requestId: number, given: Config): void {
             internal: isEngineRefusal(error) ? undefined : internalErrorOf(error),
             diagnostics: error instanceof clockGenerator.InserterCoverageError
                 ? error.issues.map(issue => ({ kind: 'coverage' as const, issue }))
-                // inserters that take from a belt into anything but a machine: the text once, and the inserters it names
+                // inserters that take from a belt and drop where a belt pickup cannot: the text once, and the inserters it names
                 : error instanceof clockGenerator.BeltPickupSinkError
                     ? [{ kind: 'inserters' as const, ids: error.inserter_ids, message: error.message }]
                 : error instanceof clockGenerator.ConfigValidationError

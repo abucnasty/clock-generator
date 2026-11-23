@@ -50,6 +50,11 @@ export class BeltHandPickup implements HandPickupPort {
         sink_wakes: MachineWakes | null,
         private readonly tick_provider?: TickProvider,
         private readonly notifications: HandNotifications = new HandNotifications(),
+        /**
+         * The sink is a chest of one item, the other sink a belt pickup drops into: it takes every item while it has room,
+         * and while it has none the idle rule holds the empty hand at the belt
+         */
+        private readonly sink_is_chest = false,
     ) {
         const inserter = state.inserter;
         this.pickup_lane_order = inserter.near_lane === 2 ? [1, 0] : [0, 1];
@@ -151,7 +156,7 @@ export class BeltHandPickup implements HandPickupPort {
         const scratch = this.scratch;
         const source = this.source;
 
-        if (this.sink_wakes === null) {
+        if (this.sink_wakes === null && !this.sink_is_chest) {
             throw new Error("Inserter sink is not a machine");
         }
 
