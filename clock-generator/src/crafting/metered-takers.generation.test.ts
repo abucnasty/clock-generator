@@ -16,7 +16,6 @@ import { meteredTakersClock } from "./candidates/metered-takers";
 import type { MakerLogEvent } from "./maker-log";
 import { quiet } from "./generate-blueprint-test-helpers";
 import { combineClockAlternativeRuns, coordinatedSourcesInputOf, runCoordinatedSourcesTask, type BlueprintGenerationResult } from "./generate-blueprint";
-import { outputServiceWindow } from "./candidates/metered-output-windows";
 import { CIRCUIT_LATENCY_TICKS } from "../common/rule-constants";
 
 /** Read the enabling deciders as the circuit sees them with the lock off. The counter starts at one;
@@ -81,13 +80,6 @@ function checkScienceExport(config: Config, clock: BlueprintGenerationResult) {
         }
     }
 }
-
-it("keeps acquisition, outbound entry and margin across the wrap, and keeps the full clock when no idle gap fits", () => {
-    expect(outputServiceWindow(new Set([7]), new Set([7]), 8, 16)).toEqual([
-        { start: 0, end: 1 }, { start: 6, end: 7 }, { start: 8, end: 9 }, { start: 14, end: 15 },
-    ]);
-    expect(outputServiceWindow(new Set([0, 2, 4, 6]), new Set([0, 4]), 8, 16)).toBeNull();
-});
 
 // A utility science build at 320 a second with 3 copies: two foundries each hand low density structure to three of the six
 // assemblers, and no clock made before Round-Robin Polling with metered takers is stable. A fixture, not a job of the record.

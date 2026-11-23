@@ -3,7 +3,14 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { loadConfigFromFile } from "../../config/loader";
 import { quiet } from "../generate-blueprint-test-helpers";
 import { unclockedRun, type UnclockedRun } from "../plan/unclocked-run";
-import { meteredOutputWindows } from "./metered-output-windows";
+import { meteredOutputWindows, outputServiceWindow } from "./metered-output-windows";
+
+it("keeps acquisition, outbound entry and margin across the wrap, and keeps the full clock when no idle gap fits", () => {
+    expect(outputServiceWindow(new Set([7]), new Set([7]), 8, 16)).toEqual([
+        { start: 0, end: 1 }, { start: 6, end: 7 }, { start: 8, end: 9 }, { start: 14, end: 15 },
+    ]);
+    expect(outputServiceWindow(new Set([0, 2, 4, 6]), new Set([0, 4]), 8, 16)).toBeNull();
+});
 
 describe("retaining output controls without a service witness", () => {
     let plan: UnclockedRun;
