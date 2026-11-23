@@ -19,7 +19,7 @@ import { canonicalKey, currentRunMemo } from "./plan/run-memo";
 import { wholeCounterOf } from "./plan/clock-window-cycle-limit";
 import { assessTargetProduction, TargetProduction } from "./target-production";
 import { TARGET_RATE_TOLERANCE } from "./rank";
-import { BlueprintGenerationResult, BuildRun, FractionalSwings, LCM_STABILITY_TOLERANCE, SIMULATION_BUDGET_TICKS, RunOptions, fractionalSwingsOf, SimulationStabilityCheck, TrialRun, alwaysEnabledByConfig, checkedClock, clockOfPlan, coldControlledTrialBuild, unclockedRun, provenRepeatBin, runBuild, trialRunOf, withInserterClocks } from "./plan/unclocked-run";
+import { BlueprintGenerationResult, BuildRun, FractionalSwings, LCM_STABILITY_TOLERANCE, SIMULATION_BUDGET_TICKS, RunOptions, fractionalSwingsOf, SimulationStabilityCheck, TrialRun, alwaysEnabledByConfig, checkedClock, clockOfPlan, coldControlledTrialBuild, measureSampledStart, unclockedRun, provenRepeatBin, runBuild, trialRunOf, withInserterClocks } from "./plan/unclocked-run";
 import { SimulationTick } from "./runner/simulation-tick";
 import { simulationStateKey } from "./runner/steady-state";
 import { inLoopInserterWindows, loopInserterWindows, type OutOfLoopWindows } from "./candidates/loop-windows";
@@ -302,11 +302,22 @@ function clockBuildRun(
     options: ClockTrialOptions = {},
     fuel_clocks?: ReadonlyMap<string, InserterClock>,
 ): BuildRun {
+    return runBuild(...clockBuildInputs(config, windows, window_cycle_ticks, logger, options, fuel_clocks));
+}
+
+function clockBuildInputs(
+    configuration: Config,
+    enable_windows: Map<string, OpenRange[]>,
+    window_cycle_ticks: number,
+    logger: Logger,
+    options: ClockTrialOptions,
+    fuel_clocks?: ReadonlyMap<string, InserterClock>,
+): [Config, RunOptions] {
     const { main_clock_shift = 0, ...run_options } = options;
     const named_start = run_options.keep_output_buffers === true || run_options.start_stock !== undefined;
     // a clock of whole ticks is counted by its own window cycle, also where the plan's is not whole (a clock rounded down)
-    return runBuild(buildAsBuiltConfig(config, windows, window_cycle_ticks, fuel_clocks, run_options.decider_order, main_clock_shift),
-        { logger: quietLogger(logger), cold_start: !named_start, output_belt: true, ...(Number.isInteger(window_cycle_ticks) && { window_cycle_ticks }), ...run_options });
+    return [buildAsBuiltConfig(configuration, enable_windows, window_cycle_ticks, fuel_clocks, run_options.decider_order, main_clock_shift),
+        { logger: quietLogger(logger), cold_start: !named_start, output_belt: true, ...(Number.isInteger(window_cycle_ticks) && { window_cycle_ticks }), ...run_options }];
 }
 
 /**
@@ -543,22 +554,22 @@ function longRunOfFreeRunningBuild(
         .flatMap(machine => targetInsertersOf(machine, target, registry).map(inserter => inserter.entity_id.id)));
     const output_inserters = registry.getAll().filter(Entity.isInserter).filter(inserter => output_ids.has(inserter.entity_id.id));
     const hand = Math.max(1, ...output_inserters.map(it => it.metadata.stack_size));
-    const judged = (of: TrialRun) => {
+    const judged = (of: TrialRun, first_tick_drops: number = 0) => {
         const recorded = of.machine_stock!;
         const held = recorded.inserters.filter(it => output_ids.has(it.inserter_id)).map(it => it.held);
         // the first third of the run carries its start-up, which a loop can take a dozen window cycles to work out of, as a
         // build does in game before a recording is settled; a build is judged by what follows: the span as a whole has
         // to come out within a hand, and no bin further off than a hand. A run that repeated is judged on its cycle.
         const verdict = of.state_repeat !== undefined
-            ? judgeProvenCycle(held, recorded.ticks, of.state_repeat, expected_output_items, hand)
-            : judgeLongRun(held, recorded.ticks, window_cycle_ticks, repeat, expected_output_items, hand);
+            ? judgeProvenCycle(held, recorded.ticks, of.state_repeat, expected_output_items, hand, first_tick_drops)
+            : judgeLongRun(held, recorded.ticks, window_cycle_ticks, repeat, expected_output_items, hand, first_tick_drops);
         // under the strict amount the judged span must move its target in all: a proven cycle as it is, the settled bins
         // of a sample over whole repeats of its output where it repeats in them (`wholeOutputRepeats`)
         const amount = of.state_repeat !== undefined ? assessTargetProduction(verdict, true)
             : sampledAmountOf(verdict);
         return { held, verdict, amount };
     };
-    let { held, verdict, amount: target_production } = judged(run);
+    let { held, verdict, amount: target_production } = judged(run, build_run.output_dropped_at_first_tick);
     // Under the strict amount a sample short by a hand or less is run on, up to the cap the long run is lengthened to
     // (LONG_RUN_MAX_TICKS), for its repeat: where the repeat is proven the amount is judged on it alone, so a start-up
     // loss inside the sampled span is not charged as rate; where it is not, the sample stands as it was judged.
@@ -570,7 +581,7 @@ function longRunOfFreeRunningBuild(
                 + (longer.run.state_repeat !== undefined ? "its repeat is proven" : "no repeat proven, the sample stands"));
             if (longer.run.state_repeat !== undefined && longer.run.machine_stock) {
                 ({ build_run, run } = longer);
-                ({ held, verdict, amount: target_production } = judged(run));
+                ({ held, verdict, amount: target_production } = judged(run, build_run.output_dropped_at_first_tick));
             }
         }
     }
@@ -580,7 +591,9 @@ function longRunOfFreeRunningBuild(
     // the mean is the expected output to within the rate tolerance of the ranking, which is over all the copies: the
     // long run is of one copy
     const output_reason = outputReasonOf(verdict, TARGET_RATE_TOLERANCE * window_cycle_ticks / 60 / (config.setpoint.copies ?? 1), cycle_window_cycles);
-    const start_up_shortfall = proven ? startUpShortfallOf(held, verdict.first_judged_tick, window_cycle_ticks, expected_output_items) : undefined;
+    const start_up_shortfall = proven
+        ? startUpShortfallOf(held, verdict.first_judged_tick, window_cycle_ticks, expected_output_items, build_run.output_dropped_at_first_tick)
+        : undefined;
     // the exports are judged in the bins of the output: a belt with a consumption rate has to receive it in every bin
     const exported = exportedItemsOf(registry, output_ids);
     const export_shortfalls = exportShortfallsOfRun(exported, new Map(stock.inserters.map(it => [it.inserter_id, it.held])),
@@ -623,8 +636,9 @@ function longRunOfFreeRunningBuild(
  * What a proven run moved short of its target before its repeat starts at `orbit_tick`: the items its output inserters
  * dropped against what the window cycles before it expect. Undefined where nothing was short.
  */
-function startUpShortfallOf(held: readonly (readonly number[])[], orbit_tick: number, window_cycle_ticks: number, expected_per_window_cycle: number): StartUpShortfall | undefined {
-    let dropped = 0;
+function startUpShortfallOf(held: readonly (readonly number[])[], orbit_tick: number, window_cycle_ticks: number,
+    expected_per_window_cycle: number, first_tick_drops: number = 0): StartUpShortfall | undefined {
+    let dropped = orbit_tick > 0 ? first_tick_drops : 0;
     for (const series of held) {
         for (let t = 1; t < orbit_tick; t++) {
             if (series[t] < series[t - 1]) dropped += series[t - 1] - series[t];
@@ -1289,8 +1303,16 @@ export function runAsBuiltCheck(
     const wakeups = check.wake_ups?.wake_ups_per_minute;
     if (typeof through === "function" && passed === undefined && check.holds && stock !== undefined
         && wakeups !== undefined && Number.isFinite(wakeups) && through(wakeups)) return null;
+    const passed_ticks = passed?.long_run_ticks;
+    // The quick check and its confirmation already share the unshifted result. Use that object only as the owner;
+    // each shifted measurement still matches its own current inputs.
+    let sampled_start_owner: TrialRun | undefined;
+    if (currentRunMemo()?.sampled_starts !== undefined) {
+        if (long_run_ticks === 0 && start_phases === AS_BUILT_START_PHASES && passed === undefined) sampled_start_owner = result;
+        if (long_run_ticks > 0 && start_phases === FULL_CHECK_START_PHASES && passed_ticks === 0) sampled_start_owner = result;
+    }
     return afterTheLongRun(config, decider_windows, window_cycle_ticks, logger, start_phases, report, long_run_ticks,
-        { result, check, stock }, passed?.long_run_ticks === long_run_ticks ? passed.run.check : undefined, swings);
+        { result, check, stock }, passed !== undefined && passed_ticks === long_run_ticks ? passed.run.check : undefined, swings, sampled_start_owner);
 }
 
 /** The count of the start phases a check reports its progress against (see runAsBuiltCheck) */
@@ -1337,6 +1359,7 @@ function afterTheLongRun(
     { result, check, stock }: AsBuiltRun,
     orders_passed: AsBuiltStabilityCheck | undefined,
     swings: FractionalSwings,
+    sampled_start_owner?: TrialRun,
 ): AsBuiltRun {
     const counter = wholeCounterOf(window_cycle_ticks, swings.exact_window_cycle);
     const start_shifts = startShiftsOf(window_cycle_ticks, counter, start_phases);
@@ -1351,7 +1374,8 @@ function afterTheLongRun(
         return { result, check, stock };
     }
 
-    if (typeof process !== "undefined" && process.env?.CLOCK_PROOF_PHASES === "1") {
+    const prove_phases = typeof process !== "undefined" && process.env?.CLOCK_PROOF_PHASES === "1";
+    if (prove_phases) {
         const exhaustive = withTickPurpose("start_phase", () => exhaustiveStartPhases(config, decider_windows, window_cycle_ticks, logger, report, swings));
         if (exhaustive !== null) {
             check.start_phases_checked = exhaustive.phases_checked;
@@ -1379,25 +1403,32 @@ function afterTheLongRun(
     }
     for (const offset of start_shifts) {
         // only its output count is read
-        const shifted = withTickPurpose("start_phase", () =>
-            firstClockSpan(config, decider_windows, window_cycle_ticks, logger, { ...swings, factorio_states: false, main_clock_shift: offset }));
+        const shifted = withTickPurpose("start_phase", () => {
+            const options = { ...swings, factorio_states: false, main_clock_shift: offset };
+            if (sampled_start_owner === undefined || prove_phases || !Number.isInteger(window_cycle_ticks)
+                || !Reflect.ownKeys(options).every(key => key === "fractional_swings" || key === "factorio_states" || key === "main_clock_shift")) {
+                return firstClockSpan(config, decider_windows, window_cycle_ticks, logger, options).stability_check;
+            }
+            return measureSampledStart(...clockBuildInputs(config, decider_windows, window_cycle_ticks, logger, options),
+                { owner: sampled_start_owner, save: !strict, enable_windows: decider_windows, offset });
+        });
         check.start_phases_checked++;
         report?.(check.start_phases_checked, total);
-        const amount = strict ? measuredAmountOf(shifted.stability_check) : null;
-        if (!shifted.stability_check.holds || amount?.target_production.valid === false) {
+        const amount = strict ? measuredAmountOf(shifted) : null;
+        if (!shifted.holds || amount?.target_production.valid === false) {
             check.holds = false;
             clearJudgedClock(check);
-            check.actual_output_items = shifted.stability_check.actual_output_items;
+            check.actual_output_items = shifted.actual_output_items;
             if (amount !== null) failedOnAmount(check, amount);
             check.failed_start_offset = offset;
-            if (shifted.stability_check.full_output_chests !== undefined) {
-                check.full_output_chests = shifted.stability_check.full_output_chests;
+            if (shifted.full_output_chests !== undefined) {
+                check.full_output_chests = shifted.full_output_chests;
             }
-            if (shifted.stability_check.export_shortfalls !== undefined) {
-                check.export_shortfalls = shifted.stability_check.export_shortfalls;
+            if (shifted.export_shortfalls !== undefined) {
+                check.export_shortfalls = shifted.export_shortfalls;
             }
-            check.repeat_window_cycles = shifted.stability_check.repeat_window_cycles;
-            check.repeat_output_items = shifted.stability_check.repeat_output_items;
+            check.repeat_window_cycles = shifted.repeat_window_cycles;
+            check.repeat_output_items = shifted.repeat_output_items;
             break;
         }
     }

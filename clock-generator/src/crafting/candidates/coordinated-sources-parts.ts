@@ -33,6 +33,8 @@ export interface CoordinatedSourcesPart {
     /** The ticks of its window cycle, the window cycle its windows are of */
     window_cycle_ticks: number;
     windows: SerializableClockWindows;
+    /** Direct ingredient turns proved by the metered maker. Carried with the windows through worker composition. */
+    metered_takers?: string[];
     /**
      * Whether its own clock's long run was counted as built (the as-built check's wake-ups): a part without a count gives no
      * windows. Absent where it is not known yet (the per-hand shape of a way): the composition counts it.

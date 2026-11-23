@@ -14,6 +14,7 @@ import type { EnableControl, SourceControl } from "../strategy-catalog";
 import { costKey } from "../rank";
 import { CodedError, emitMakerLog, makerLogOn, reasonOf, type MakerReason } from "../maker-log";
 import { verdictWithCopies, type VerdictWithCopies } from "../copies-verdict";
+import { meteredOutputWindows } from "./metered-output-windows";
 
 /**
  * The per-branch clock (DESIGN D7, PR 18): each part of the build gets the windows of the clock that fits it, all on one shared
@@ -539,7 +540,29 @@ export function coordinatedSourcesClock(
     logger.log(`Coordinated Sources: ${starts.length > 1 ? `from ${partName(start.part)}, ` : ""}`
         + `${groups.map(group => `${group.source} from ${partName(group.choices[current.get(group.source)!].parts[0])}`).join(", ")}; `
         + `${trials.size} clocks simulated`);
-    const result = finishedClock(made, map, [], { ...options, loop_windows: false }, left_open);
+    const metered = new Set<string>();
+    for (const group of groups) {
+        for (const part of group.choices[current.get(group.source)!].parts) {
+            for (const id of part.metered_takers ?? []) if (group.inserters.includes(id)) metered.add(id);
+        }
+    }
+    const finish = { ...options, loop_windows: false as const };
+    let service: ReturnType<typeof meteredOutputWindows> | undefined;
+    let result = finishedClock(made, map, [], finish, left_open, undefined, metered.size === 0 ? {} : {
+        on_as_built: run => { service = meteredOutputWindows(made, windows, metered, run); },
+    });
+    if (service) {
+        const { changes, decisions } = service;
+        if (Object.keys(changes).length > 0) {
+            const trial = trialOf({ ...windows, ...changes }, left_open);
+            if (holdsOf(trial) && marginOf(trial) === null && lossOf(trial)?.survives === true && holdsWithCopies(trial)) {
+                result = finishedClock(made, trial.map, [], finish, left_open);
+            } else {
+                for (const id of Object.keys(changes)) decisions[id] = { kind: "retained", reason: "joint_check_failed" };
+            }
+        }
+        result = { ...result, metered_output_windows: decisions };
+    }
     return { ...result, coordinated_sources: { parts: Object.fromEntries(groups.map(group => [group.source, partName(group.choices[current.get(group.source)!].parts[0])])),
         sources: sourceControlsOf(groups, current, result.always_on_reasons ?? {}, logger, config.setpoint.item) } };
 }

@@ -1,6 +1,7 @@
 import { ParsedConfig, ConfigSchema } from "./schema";
 import { ConfigValidationError } from "./errors";
 import { migrateChestType } from "./migrate-chest-type";
+import { didParseJsonConfiguration } from "./json-configuration";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -41,6 +42,7 @@ export async function parseConfig(jsonString: string): Promise<ParsedConfig> {
     if (!result.success) {
         throw new ConfigValidationError(result.error, normalized);
     }
+    didParseJsonConfiguration(result.data);
     return result.data;
 }
 

@@ -1,7 +1,8 @@
 import { ContainerPrototype, CraftingMachinePrototype, FactorioData, Ingredient, InserterPrototype, InserterResearch, Item, ItemName, ItemPrototypeFields, MiningDrillSpec, QualityName, QualitySpec, Recipe, Resource, ResourceName, RocketSiloPrototype, TransportBeltPrototype } from "./factorio-data-types";
 import { MiningDrillType } from "../entities/drill/mining-drill";
 import assert from "../common/assert";
-import { setGameWords } from "../crafting/entity-name";
+import { hasGameWordsSource, setGameWords, type TextWords } from "../crafting/entity-name";
+import { isPlainBundledData } from "./bundled-data";
 
 export type EnrichedIngredient = Ingredient & {
     item: Item;
@@ -23,6 +24,7 @@ export class FactorioDataService {
     private static factorio_data: FactorioData | null = null;
     private static initialized: boolean = false;
     private static default_source: (() => FactorioData) | null = null;
+    private static loaded_from_default: boolean = false;
     /** Each item's place in `item_order`, made from the data on first use */
     private static item_ranks: Map<ItemName, number> | null = null;
 
@@ -35,6 +37,7 @@ export class FactorioDataService {
         this.factorio_data = data;
         this.item_ranks = null;
         this.initialized = true;
+        this.loaded_from_default = false;
     }
 
     /**
@@ -59,6 +62,11 @@ export class FactorioDataService {
         return this.initialized || this.default_source !== null;
     }
 
+    /** The quiet Node path can inspect its already-loaded bundled data without reading a custom source. */
+    public static hasPlainBundledData(): boolean {
+        return this.loaded_from_default && hasGameWordsSource(wordsFromData) && isPlainBundledData(this.factorio_data);
+    }
+
     /**
      * Get the Factorio data, initializing from the default source if there is one.
      */
@@ -71,6 +79,7 @@ export class FactorioDataService {
             }
             this.factorio_data = this.default_source();
             this.initialized = true;
+            this.loaded_from_default = true;
         }
         return this.factorio_data;
     }
@@ -371,9 +380,10 @@ export class FactorioDataService {
 }
 
 // every text names items, recipes and machines by the game's names where the data can be read (entity-name.ts, textWords)
-setGameWords(() => FactorioDataService.isAvailable()
+const wordsFromData = (): TextWords | undefined => FactorioDataService.isAvailable()
     ? { item: id => FactorioDataService.itemNameInSentence(id), recipe: id => FactorioDataService.recipeNameInSentence(id) }
-    : undefined);
+    : undefined;
+setGameWords(wordsFromData);
 
 /** "iron-plate" as "Iron plate": the name of an id the data does not name */
 function displayNameOfId(id: string): string {
