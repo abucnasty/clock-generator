@@ -19,7 +19,7 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 
 ### Changed
 - generation: science output inserters can keep enable windows when one machine feeds several science assemblers
-- generation: belt-fed inserters into science assemblers can get enable windows when one machine feeds several
+- generation: belt-fed inserters into science assemblers can get staggered enable windows when one machine feeds several
 - ui: configuration files name the setpoint's item; older files still open
 - generation: quiet command-line generation does less work
 - generation: quiet command-line generation checks a repeated clock start once

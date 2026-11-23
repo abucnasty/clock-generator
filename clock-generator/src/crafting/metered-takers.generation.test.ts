@@ -210,6 +210,10 @@ describe("Round-Robin Polling with metered takers on a build whose foundries eac
         // the three science outputs whose clock covers the whole window cycle without the proposal; the other three have windows already
         const outputs = [1, 4, 13].map(id => `inserter:${id}`);
         // Alter only what the maker proposes: nothing for the reference, and for the refusal one tick of each turn, which no output can be served in.
+        // The stagger step after it is silenced (its proposals emptied) on both runs: it tests its own refusals below.
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const stagger: typeof import("./candidates/staggered-input-windows") = require("../../dist/crafting/candidates/staggered-input-windows");
+        const staggers = stagger.staggeredInputWindows;
         const composeWith = (alter: (proposed: ReturnType<typeof propose>) => ReturnType<typeof propose>) => {
             const proposals: string[][] = [];
             const spy = vi.spyOn(owner, "meteredOutputWindows").mockImplementation((...args) => {
@@ -217,10 +221,15 @@ describe("Round-Robin Polling with metered takers on a build whose foundries eac
                 proposals.push(Object.keys(proposed.changes));
                 return alter(proposed);
             });
+            const silenced = vi.spyOn(stagger, "staggeredInputWindows").mockImplementation((...args) => {
+                const proposed = staggers(...args);
+                return proposed && { ...proposed, groups: proposed.groups.map(group => ({ ...group, proposals: [] })) };
+            });
             try {
                 return { selected: compose(), proposals };
             } finally {
                 spy.mockRestore();
+                silenced.mockRestore();
             }
         };
         const reference = composeWith(proposed => ({ ...proposed, changes: {} }));
@@ -335,6 +344,115 @@ describe("Round-Robin Polling with metered takers on a build whose foundries eac
         const refused = composeWithInputs(proposed => ({ ...proposed, proposals: proposed.proposals.slice(0, 1).map(proposal => ({ ...proposal, changes: clusters })) }));
         // it holds to the long run and fails the whole check, which starts the clock from its other start phases
         expectRefused(refused, "whole_check");
+    });
+
+    // The belt-fed inputs of the assemblers the first foundry's takers feed (PU and FRF from belt 5), the outputs of those
+    // assemblers, and for each arm the metered taker of its assembler; output 11 and its taker are of the second foundry
+    const SHARED_INPUTS = [2, 3, 10];
+    const STAGGERED_OUTPUTS = [1, 4, 13];
+    const TAKER_OF: Record<number, number> = { 2: 5, 3: 6, 10: 9, 1: 5, 4: 6, 13: 9, 11: 14 };
+    // the wake-ups of the clock with the stagger and the output windows, as its screen gave them before the step was built
+    const STAGGERED_WAKE_UPS = 565.39;
+
+    /** The ticks of one service interval an arm is enabled at, after checking each interval is the same and opens once */
+    function intervalOf(clock: BlueprintGenerationResult, id: number): boolean[] {
+        const ranges = clock.clock_windows[`inserter:${id}`];
+        const on = Array.from({ length: clock.simulation_duration.ticks }, (_, tick) => ranges.some(range => range.start <= tick && tick <= range.end));
+        const first = on.slice(0, SERVICE_TICKS);
+        for (let from = 0; from < on.length; from += SERVICE_TICKS) {
+            const interval = on.slice(from, from + SERVICE_TICKS);
+            expect(interval, `inserter ${id} from ${from}`).toEqual(first);
+        }
+        const openings = first.filter((enabled, tick) => enabled && !first[(tick - 1 + SERVICE_TICKS) % SERVICE_TICKS]).length;
+        expect(openings, `inserter ${id}`).toBe(1);
+        expect(first.filter(Boolean).length, `inserter ${id}`).toBeLessThan(SERVICE_TICKS);
+        return first;
+    }
+    const turnOf = (clock: BlueprintGenerationResult, id: number) => clock.clock_windows[`inserter:${TAKER_OF[id]}`][0].start % SERVICE_TICKS;
+    /** The interval moved back by `ticks`: tick t of the result is tick t + ticks of the interval */
+    const movedBack = (interval: boolean[], ticks: number) => interval.map((_, tick) => interval[(tick + ticks) % SERVICE_TICKS]);
+
+    it("staggers a shared belt-input window to each assembler's turn and windows its outputs", () => {
+        const selected = generated.alternatives[generated.selected_index];
+        const clock = selected.result;
+        expect([selected.id, selected.verdict, selected.assessment.items_per_second.toFixed(2), clock.simulation_duration.ticks])
+            .toEqual(["coordinated_sources", "stable", "320.00", 324]);
+        // the inputs: one window each service interval, not all at the same ticks, the same once each is moved back by its taker's turn
+        const inputs = SHARED_INPUTS.map(id => intervalOf(clock, id));
+        expect(inputs.every(interval => JSON.stringify(interval) === JSON.stringify(inputs[0]))).toBe(false);
+        const relative = SHARED_INPUTS.map((id, i) => movedBack(inputs[i], turnOf(clock, id)));
+        for (const [i, id] of SHARED_INPUTS.entries()) expect(relative[i], `inserter ${id}`).toEqual(relative[0]);
+        // the outputs: one window each service interval, output 11's moved by the difference of their takers' turns
+        const sibling = movedBack(intervalOf(clock, 11), turnOf(clock, 11));
+        for (const id of STAGGERED_OUTPUTS) expect(movedBack(intervalOf(clock, id), turnOf(clock, id)), `inserter ${id}`).toEqual(sibling);
+        // which field governs: the output step's decision stays as it made it; the new step's windows are the clock's
+        const fields = clock as { metered_output_windows?: Record<string, { kind: string }>;
+            staggered_input_windows?: Record<string, { kind: string; role?: string; reference?: string }> };
+        for (const id of STAGGERED_OUTPUTS) {
+            expect(fields.metered_output_windows?.[`inserter:${id}`]?.kind, `inserter ${id}`).toBe("bounded");
+            expect(fields.staggered_input_windows?.[`inserter:${id}`], `inserter ${id}`).toMatchObject({ kind: "staggered", role: "output" });
+        }
+        for (const id of SHARED_INPUTS) {
+            expect(fields.staggered_input_windows?.[`inserter:${id}`], `inserter ${id}`)
+                .toMatchObject({ kind: "staggered", role: "input", reference: "inserter:2" });
+        }
+        const wake_ups = clock.stability_check.as_built?.wake_ups?.wake_ups_per_minute;
+        expect(wake_ups).toBeDefined();
+        expect(Number(wake_ups!.toFixed(2))).toBeLessThan(SCREENED_WAKE_UPS);
+        expect(Number(wake_ups!.toFixed(2))).toBeLessThanOrEqual(STAGGERED_WAKE_UPS);
+        checkScienceExport(configuration, clock, [...SCIENCE_OUTPUTS, ...SHARED_INPUTS, ...BELT_INPUTS]);
+    });
+
+    type StaggerProposals = { groups: { belt: string; proposals: { reference: string; changes: Record<string, unknown>; staggered: Record<string, { role: string }> }[] }[] };
+    // Replace what the stagger step proposes where the composition reads it (the CommonJS build, as above)
+    function composeWithStaggers(alter: (proposed: StaggerProposals) => unknown) {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const owner = require("../../dist/crafting/candidates/staggered-input-windows");
+        const propose = owner.staggeredInputWindows;
+        const proposals: string[] = [];
+        const spy = vi.spyOn(owner, "staggeredInputWindows").mockImplementation((...args: unknown[]) => {
+            const proposed = propose(...args);
+            proposals.push(...proposed.groups.flatMap((group: StaggerProposals["groups"][number]) => group.proposals.map(it => it.reference)));
+            return alter(proposed);
+        });
+        try {
+            return { selected: compose(), proposals };
+        } finally {
+            spy.mockRestore();
+        }
+    }
+    const withoutProposals = (proposed: StaggerProposals) => ({ ...proposed, groups: proposed.groups.map(group => ({ ...group, proposals: [] })) });
+    // the run with no stagger proposal, made once for the two refusals below
+    let unstaggered: ReturnType<typeof composeWithStaggers> | undefined;
+    const withoutStagger = () => unstaggered ??= composeWithStaggers(withoutProposals);
+
+    function expectStaggerRefused(refused: ReturnType<typeof composeWithStaggers>, decision: object) {
+        const unchanged = withoutStagger().selected;
+        const kept = refused.selected;
+        // the real step proposed the three references of the shared window
+        expect(refused.proposals).toEqual(["inserter:2", "inserter:10", "inserter:3"]);
+        expect([kept.id, kept.verdict, kept.assessment.items_per_second.toFixed(2)]).toEqual([unchanged.id, unchanged.verdict, "320.00"]);
+        expect(kept.result.clock_windows).toEqual(unchanged.result.clock_windows);
+        expect(exportedOf(kept.result)).toBe(exportedOf(unchanged.result));
+        // the clock the input step leaves: the three inputs on one shared window
+        for (const id of SHARED_INPUTS) expect(kept.result.clock_windows[`inserter:${id}`], `inserter ${id}`).toEqual(kept.result.clock_windows["inserter:2"]);
+        const decisions = (kept.result as { staggered_input_windows?: Record<string, unknown> }).staggered_input_windows;
+        for (const id of SHARED_INPUTS) expect(decisions?.[`inserter:${id}`], `inserter ${id}`).toEqual(decision);
+    }
+
+    it("keeps the selected and exported controls when the clock refuses a stagger that keeps the shared window on another arm", () => {
+        // arm 3 keeps the shared window: the clock falls short in its first window cycle from the cold start
+        const refused = composeWithStaggers(proposed => ({ ...proposed, groups: proposed.groups.map(group => ({ ...group,
+            proposals: group.proposals.filter(proposal => proposal.reference === "inserter:3") })) }));
+        expectStaggerRefused(refused, { kind: "retained", reason: "joint_check_failed", stage: "first_window_cycle" });
+    });
+
+    it("keeps the selected and exported controls when the clock refuses the stagger without the outputs", () => {
+        // the inputs moved, the outputs as the output step left them: more wake-ups than the clock
+        const refused = composeWithStaggers(proposed => ({ ...proposed, groups: proposed.groups.map(group => ({ ...group,
+            proposals: group.proposals.slice(0, 1).map(proposal => ({ ...proposal, changes: Object.fromEntries(Object.entries(proposal.changes)
+                .filter(([id]) => proposal.staggered[id]?.role === "input")) })) })) }));
+        expectStaggerRefused(refused, { kind: "retained", reason: "no_fewer_wake_ups" });
     });
 });
 
