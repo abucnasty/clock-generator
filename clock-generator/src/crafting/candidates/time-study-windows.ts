@@ -1,4 +1,5 @@
 import { windowCycleTicks, type WindowCycle } from "../../common/subtick-window-cycle";
+import { ChestType } from "../../common/entity-types";
 import { Config } from "../../config";
 import { alwaysEnabledInserters } from "../sequence/unplanned-inserter-clock";
 import { createEntityRegistryFromConfig } from "../sequence/simulation-context";
@@ -16,6 +17,7 @@ import { busyDeciderRanges, evenlySpacedOutputWindows, outputSwingCountsOf, padd
 import { transitionsOf } from "../sequence/compact-history";
 import { movedOutputSwingWindows } from "./moved-output-swing";
 import { machineLoopsOf } from "./loop-windows";
+import { targetItemOf, targetMachinesOf } from "../sequence/cycle/target-ends";
 
 
 export interface TimeStudyWindowsReport {
@@ -51,6 +53,44 @@ export interface TimeStudyWindows {
 }
 
 /**
+ * The windows the plan gives each inserter that takes from a buffer chest an inserter fills from a belt, into a machine
+ * the target is counted at: the run the windows are read off keeps them, as it keeps the output windows. Such an inserter
+ * moves the hand of the plan's ingredient a window cycle; left free, it fills its machine from the chest as fast as the
+ * machine takes it, and the run moves more than the plan. An inserter the plan gives no window, or a window open the whole
+ * window cycle, is left free.
+ */
+export function chestFeedWindowsOf(
+    config: Config,
+    planned_windows: ReadonlyMap<string, OpenRange[]>,
+    window_cycle: WindowCycle,
+    logger: Logger,
+): Map<string, OpenRange[]> {
+    const buffer_chests = new Set((config.chests ?? []).filter(chest => chest.type === ChestType.BUFFER_CHEST).map(chest => chest.id));
+    const belt_filled = new Set(config.inserters.flatMap(inserter =>
+        inserter.source.type === "belt" && inserter.sink.type === "chest" && buffer_chests.has(inserter.sink.id) ? [inserter.sink.id] : []));
+    if (belt_filled.size === 0) {
+        return new Map();
+    }
+    const target_machines = new Set(targetMachinesOf(targetItemOf(config.setpoint), createEntityRegistryFromConfig(config)).map(it => it.entity_id.id));
+    const last_tick = Math.ceil(windowCycleTicks(window_cycle)) - 1;
+    const kept = new Map<string, OpenRange[]>();
+    config.inserters.forEach((inserter, index) => {
+        if (inserter.source.type !== "chest" || !belt_filled.has(inserter.source.id) || inserter.sink.type !== "machine"
+            || !target_machines.has(EntityId.forMachine(inserter.sink.id).id)) {
+            return;
+        }
+        const id = EntityId.forInserter(inserter.id ?? index + 1).id;
+        const ranges = planned_windows.get(id) ?? [];
+        if (ranges.length === 0 || ranges.some(range => range.start_inclusive <= 0 && range.end_inclusive >= last_tick)) {
+            logger.log(`Derived enable windows: ${id} takes from a chest a belt fills, but the plan gives it ${ranges.length === 0 ? "no window" : "a window open the whole window cycle"}; it runs free`);
+            return;
+        }
+        kept.set(id, ranges);
+    });
+    return kept;
+}
+
+/**
  * Derives clock windows by simulating with only the output inserters clocked (their planned windows)
  * and every other inserter free, then turning each inserter's busy time (pickup through return swing)
  * into a decider window. Windows are padded and accepted only if a clock-only simulation stays stable.
@@ -78,14 +118,15 @@ function deriveClockWindows(
     const deriveFrom = (planned_windows: Map<string, OpenRange[]>, in_positions: boolean, label: string): TimeStudyWindows => {
         const output_windows = new Map(Array.from(planned_windows).filter(([key]) => output_inserter_ids.has(key)));
         const drill_windows = new Map(Array.from(planned_windows).filter(([key]) => drill_ids.has(key)));
+        const chest_feed_windows = chestFeedWindowsOf(config, planned_windows, window_cycle, logger);
         const planned = deriveTimeStudyWindows(base_config, output_windows, drill_windows, output_inserter_ids, lane_hand_room, window_cycle,
-            `planned output${label}`, logger, report, true, in_positions);
+            `planned output${label}`, logger, report, true, in_positions, chest_feed_windows);
         if (planned.windows !== null || planned.even_output_windows === null) {
             return planned;
         }
         // Bunched output swings (e.g. a double swing then a long gap) can leave a partial stack in hand when the window closes
         const even = deriveTimeStudyWindows(base_config, planned.even_output_windows, drill_windows, output_inserter_ids, lane_hand_room, window_cycle,
-            `evenly spaced output${label}`, logger, report, true, in_positions);
+            `evenly spaced output${label}`, logger, report, true, in_positions, chest_feed_windows);
         if (even.windows !== null) {
             return even;
         }
@@ -141,10 +182,15 @@ export function deriveTimeStudyWindows(
      * read off whole ticks, with neither the room nor the second try
      */
     in_positions: boolean = true,
+    /**
+     * The plan's windows of the inserters that take from a buffer chest a belt fills (`chestFeedWindowsOf`): kept in the run
+     * as the output windows are, and neither read off it nor padded
+     */
+    chest_feed_windows: ReadonlyMap<string, OpenRange[]> = new Map(),
 ): TimeStudyWindows {
     const window_cycle_ticks = windowCycleTicks(window_cycle);
     const as_read = !in_positions && !Number.isInteger(window_cycle_ticks);
-    const fixed_windows = new Map([...output_windows, ...drill_windows]);
+    const fixed_windows = new Map([...output_windows, ...drill_windows, ...chest_feed_windows]);
     report?.(`Simulating with only the output inserters clocked (${label} enable windows)`);
     const derivation = withTickPurpose("window_derivation", () => runClockOnBuild(base_config, fixed_windows, window_cycle, logger), { claim: true });
     logger.log(`Derived enable windows (${label}): output-only run actual=${derivation.stability_check.actual_output_items} expected=${derivation.stability_check.expected_output_items}`);
@@ -164,7 +210,7 @@ export function deriveTimeStudyWindows(
     const always_enabled = new Set(alwaysEnabledInserters(createEntityRegistryFromConfig(base_config)).map(it => it.entity_id.id));
     const busy_windows = new Map<string, OpenRange[]>();
     for (const entity of derivation.serializable_state_transition_history.entities) {
-        if (entity.entity_type !== "inserter" || output_inserter_ids.has(entity.entity_id)
+        if (entity.entity_type !== "inserter" || output_inserter_ids.has(entity.entity_id) || chest_feed_windows.has(entity.entity_id)
             || always_enabled_by_config.has(entity.entity_id) || always_enabled.has(entity.entity_id)) {
             continue;
         }

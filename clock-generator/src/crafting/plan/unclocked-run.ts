@@ -84,7 +84,7 @@ import type { SourceControl } from "../strategy-catalog";
 import { AlwaysOnReason, AlwaysOnReasons, alwaysOnReasonsOf, classifyEntities } from "../enable-control-router";
 import { canonicalKey, RUN_MEMO_MIN_TICKS, RunMemo, currentRunMemo, shortSampledStart } from "./run-memo";
 import { MAX_SAMPLED_START_KEY_CHARACTERS, sampledStartInputs, type SampledStart } from "./sampled-start-memo";
-import { beginShadow, countRunMemoHit, runsThatMakeWindows, tickLedgerOn, withSampledRunWork, withTickPurpose, type ShadowWatch } from "../tick-ledger";
+import { beginShadow, countRunMemoHit, runsThatMakeWindows, tickLedgerOn, withSampledRunWork, withTickPurpose, type ShadowWatch, type WindowCycleWatch } from "../tick-ledger";
 import { AS_BUILT_START_PHASES, AsBuiltRun, AsBuiltStabilityCheck, FREE_RUNNING_CHECK_TICKS, completedAsBuiltCheck, laneHandRoomTrial, runAsBuiltCheck, runClockOnBuild, trialWithLoopWindows } from "../trial";
 
 export { SIMULATION_BUDGET_TICKS };
@@ -503,6 +503,14 @@ export interface RunOptions {
      * planning runs of that alternative, and by every run of a clock planned so (`fractionalSwingsOf`)
      */
     fractional_swings?: true;
+    /**
+     * Hold each output inserter whose hand its machine fills only after the window it gets otherwise to its planned hand
+     * alone, from the window cycle's start until the hand is full, and run the chest-fed inputs of its machine that one
+     * window cannot feed on their latch alone (`EnableControlFactory`): asked for by the second planning run of
+     * `unclockedRun` only, where the first falls short. Such a run also counts its output over its warm-up's repeat
+     * (`BuildRun.late_output_hands_check`).
+     */
+    fill_late_output_hands?: true;
     /** Debug settings provider (defaults to disabled) */
     debug?: MutableDebugSettingsProvider;
     /** Configuration for which steps should have debugging enabled */
@@ -689,6 +697,13 @@ export interface BuildRun extends PlannedOutputCycle, TransferPlan {
     disturbance_trial: LossOutcome | undefined;
     /** The pickups whose start was recorded from the take that freed them (`PickupStartAtTheTake`) */
     pickups_from_the_take: number;
+    /**
+     * The output inserters of the plan whose hand their machine fills only after the window they get otherwise, by entity id
+     * (`EnableControlFactory.late_output_hands`): empty in a run where the plan's controls do not hold them
+     */
+    late_output_hands: ReadonlySet<string>;
+    /** With `fill_late_output_hands`: whether the run moves its output over the repeat its warm-up proved (`lateOutputHandsCheckOf`) */
+    late_output_hands_check?: LateOutputHandsCheck;
 }
 
 /**
@@ -782,7 +797,7 @@ function simulateBuild(config: Config, options: RunOptions): BuildRun {
     // a run from a start of its own (what a recording held, the output kept) has its output belt from that start
     if (!options.cold_start) withTheOutputBelt(simulation_context, config, options);
     const controlled = withEnableControls(config, build, output_cycle_plan, transfer_plan.recipe_lcm, logger,
-        options.counter_runs_through === true, options.exact_window_cycle);
+        options.counter_runs_through === true, options.exact_window_cycle, options.fill_late_output_hands === true);
     const { duration, warmup_window_cycle } = runWindowCyclesOf(output_cycle_plan, transfer_plan.recipe_lcm, options, logger, window_cycle_ticks => {
         // A shared final chest's reported count aggregates several machines. Planner overrides are per machine.
         const terminal_swing_count = config.setpoint.counts === "destroyed"
@@ -801,15 +816,23 @@ function simulateBuild(config: Config, options: RunOptions): BuildRun {
     // the shadow of the tick ledger: only where a ledger is open; it reads the outputs and changes nothing
     const shadow = tickLedgerOn() ? shadowOfOutputs(build, all_output_inserters, duration, warmup_window_cycle) : undefined;
     const shared_lanes = options.shared_lanes?.lanes.map(it => it.lane) ?? [];
-    const warmup = warmUp(config, build, controlled, duration, warmup_window_cycle, shared_lanes, debug, debug_steps, logger, shadow);
+    // a run with its late output hands filled counts its output over the repeat its warm-up proves, back from the end of the
+    // recorded window cycle: what its output inserters had dropped at each window cycle's start is kept as the warm-up runs
+    const output_drops = options.fill_late_output_hands === true ? outputDropsOf(build, all_output_inserters, duration) : undefined;
+    const warmup = warmUp(config, build, controlled, duration, warmup_window_cycle, shared_lanes, debug, debug_steps, logger, shadow, output_drops?.watch);
     const repeat_window_cycles = warmup.repeat_window_cycles;
     const repeat_bin = options.detect_repeat === true && (options.simulate_window_cycles ?? 1) > 1 ? provenRepeatBin(config, duration.ticks, duration.exact_ticks) : null;
     const simulated = simulate(build, controlled, all_output_inserters, duration, options, debug, debug_steps, logger, repeat_bin, shadow);
     shadow?.finish();
+    // what the output inserters had dropped when the recorded window cycle ended, before anything counts on from it
+    const dropped_at_recorded_end = output_drops?.dropped();
     // the recorded run is over: what it recorded is sealed once, and the run, the memo and every result share that copy
     const state_transition_history = build.state_transition_history.seal(build.simulation_context.entity_registry, simulated.recorded_duration.ticks);
     const final_history = finalHistoryOf(build, output_cycle_plan, all_output_inserters, duration, logger);
     const output = checkOutput(build, planned_cycle, transfer_plan.recipe_lcm, duration, simulated, final_history, repeat_window_cycles, logger);
+    const late_output_hands_check = options.fill_late_output_hands === true
+        ? lateOutputHandsCheckOf(planned_cycle, transfer_plan.recipe_lcm, duration, output, output_drops!, dropped_at_recorded_end!, warmup, logger)
+        : undefined;
     const terminal_branches = neverBlockingBranchesOf(build.simulation_context.entity_registry, traitsOf(config), output_cycle_plan.entity_transfer_map,
         transfer_plan.recipe_lcm, new Set(all_output_inserters.map(it => it.inserter.entity_id.id)));
     const disturbance_trial = disturbanceTrialOf(config, build, controlled, simulated, options, logger, terminal_branches);
@@ -855,6 +878,8 @@ function simulateBuild(config: Config, options: RunOptions): BuildRun {
         used_terminal_swing_count: output.used_terminal_swing_count,
         disturbance_trial,
         pickups_from_the_take,
+        late_output_hands: controlled.late_output_hands,
+        ...(late_output_hands_check !== undefined && { late_output_hands_check }),
     };
 }
 
@@ -1137,6 +1162,8 @@ interface ControlledBuild {
     inserter_clocks: Map<string, InserterClock>;
     /** The control each inserter and drill was put on, in the order of the context's lists */
     installed_controls: InstalledControl[];
+    /** The output inserters whose hand their machine fills only after the window they get otherwise (`EnableControlFactory`) */
+    late_output_hands: ReadonlySet<string>;
 }
 
 /**
@@ -1152,6 +1179,8 @@ function withEnableControls(
     /** Whether a clock of the game of a p/q-tick window cycle runs through too, where they run through (`RunOptions.counter_runs_through`) */
     counter_runs_through: boolean = false,
     trial_window_cycle?: Ratio,
+    /** Hold the output inserters whose hand is filled late to their planned hand alone (`RunOptions.fill_late_output_hands`) */
+    fill_late_output_hands: boolean = false,
 ): ControlledBuild {
     const { simulation_context, relative_tick_provider } = build;
     // the clocks of the game (an inserter's own clock, a configured clocked control) run on through the start of a later
@@ -1204,6 +1233,7 @@ function withEnableControls(
         game_tick_provider,
         exact_subtick_positions,
         counter_runs_through,
+        fill_late_output_hands,
     );
 
     // Swap the controls of the build's context, in place
@@ -1236,7 +1266,8 @@ function withEnableControls(
         }
     });
 
-    return { resettable_registry, crafting_shares, always_enabled_by_config, inserter_clocks, installed_controls };
+    return { resettable_registry, crafting_shares, always_enabled_by_config, inserter_clocks, installed_controls,
+        late_output_hands: enable_control_factory.late_output_hands };
 }
 
 /** How long a build runs: the window cycle of the clock, and the warmup before it */
@@ -1307,7 +1338,9 @@ function warmUp(
     debug_steps: DebugSteps,
     logger: Logger,
     shadow?: ShadowWatch,
-): { repeat_window_cycles: number | undefined; ticks_run: number } {
+    /** Told where each whole window cycle of the warm-up ends, beside the shadow's: it only reads (`outputDropsOf`) */
+    output_watch?: WindowCycleWatch,
+): { repeat_window_cycles: number | undefined; repeat_ticks: number | undefined; ticks_run: number } {
     const { simulation_context } = build;
     const { resettable_registry } = controlled;
     logger.log("Running the warm-up...");
@@ -1320,7 +1353,7 @@ function warmUp(
         const warmup_step = new WarmupStep(simulation_context, warmup_window_cycle,
             repeat.armed
                 ? { bin_ticks: repeat.bin_ticks, keyed_from_ticks: repeat.keyed_from_ticks, key: () => `${stateKeyWithLanes(simulation_context, shared_lanes)}\n${controls_key!()}` }
-                : undefined, shadow?.warm_up);
+                : undefined, bothWatches(shadow?.warm_up, output_watch));
         warmup_step.execute();
         // a stop left out whole repeats: what the controls count in spans of the run moves on by them
         if (warmup_step.repeat_ticks !== undefined) {
@@ -1332,6 +1365,7 @@ function warmUp(
         const repeat_ticks = warmup_step.repeat_ticks;
         return {
             repeat_window_cycles: repeat_ticks !== undefined && isPurelyClocked(config, duration.ticks) ? repeat_ticks / duration.ticks : undefined,
+            repeat_ticks,
             ticks_run: warmup_step.ticks_run,
         };
     });
@@ -1592,12 +1626,7 @@ function checkOutput(
     // against the expected amount derived from the crafting cycle plan.
     const output_inserter_ids = new Set(all_output_inserters.map(os => os.inserter.entity_id.id));
     const total_actual_output = output_inserter_states.reduce((sum, state) => sum + state.items_dropped, 0) - dropped_before_run;
-    let total_expected_output_float = 0;
-    for (const [entity_id, etc] of swing_counts.entries()) {
-        if (output_inserter_ids.has(entity_id.id)) {
-            total_expected_output_float += etc.total_transfer_count.toDecimal() * etc.stack_size * recipe_lcm;
-        }
-    }
+    const total_expected_output_float = expectedOutputOf(swing_counts, output_inserter_ids, recipe_lcm);
     const total_expected_output = Math.round(total_expected_output_float);
     const used_terminal_swing_count = plannedOutputSwingCount(output_cycle_plan, output_inserters, output_inserter_ids);
 
@@ -1638,6 +1667,97 @@ function checkOutput(
     logger.log(`Stability check: actual=${total_actual_output} expected=${total_expected_output} stable=${stability_check.holds} (tolerance=${LCM_STABILITY_TOLERANCE})`);
 
     return { output_inserter_ids, stability_check, total_expected_output, used_terminal_swing_count };
+}
+
+/** What the output inserters are planned to move in a window cycle of the plan, unrounded */
+function expectedOutputOf(swing_counts: EntityTransferCountMap, output_inserter_ids: ReadonlySet<string>, recipe_lcm: number): number {
+    let expected = 0;
+    for (const [entity_id, etc] of swing_counts.entries()) {
+        if (output_inserter_ids.has(entity_id.id)) {
+            expected += etc.total_transfer_count.toDecimal() * etc.stack_size * recipe_lcm;
+        }
+    }
+    return expected;
+}
+
+/** What a planning run with its late output hands filled moved over the repeat its warm-up proved (`lateOutputHandsCheckOf`) */
+export interface LateOutputHandsCheck {
+    /** The window cycles the warm-up's state repeats over; undefined where it proved no repeat */
+    repeat_window_cycles: number | undefined;
+    /** What the output inserters dropped over those window cycles; undefined where they were not counted */
+    output_items: number | undefined;
+    /** What they are planned to drop over them */
+    expected_items: number | undefined;
+    /** Whether the run moves its output over the repeat: the plan is kept only then */
+    holds: boolean;
+}
+
+/** What the output inserters of a run had dropped at the start of each window cycle of its warm-up, and its watch */
+interface OutputDrops {
+    /** Told where each window cycle of the warm-up ends; undefined where the window cycle is not a whole number of ticks */
+    watch: WindowCycleWatch | undefined;
+    /** What the output inserters had dropped at the warm-up's start and at the end of each of its window cycles, in order */
+    at_cycle_starts: number[];
+    /** What they have dropped so far */
+    dropped(): number;
+}
+
+/**
+ * A reader of what a run's output inserters drop, kept at the start of each window cycle of its warm-up (`OutputDrops`):
+ * made just before the warm-up starts, which it reads as the first window cycle's start. It changes nothing in the run.
+ */
+function outputDropsOf(build: RecordedBuild, all_output_inserters: InserterState[], duration: Duration): OutputDrops {
+    const ids = new Set(all_output_inserters.map(it => it.inserter.entity_id.id));
+    const states = build.simulation_context.inserters.map(it => it.inserter_state).filter(state => ids.has(state.entity_id.id));
+    const dropped = () => states.reduce((sum, state) => sum + state.items_dropped, 0);
+    const at_cycle_starts = [dropped()];
+    const watch = Number.isInteger(duration.ticks)
+        ? { window_cycle_ticks: duration.ticks, cycle_ended: () => { at_cycle_starts.push(dropped()); } }
+        : undefined;
+    return { watch, at_cycle_starts, dropped };
+}
+
+/** Both watches of a warm-up's window cycles, where both are given; they count the same window cycle */
+function bothWatches(first: WindowCycleWatch | undefined, second: WindowCycleWatch | undefined): WindowCycleWatch | undefined {
+    if (first === undefined || second === undefined) return first ?? second;
+    assert(first.window_cycle_ticks === second.window_cycle_ticks, `Two watches of a warm-up count window cycles of ${first.window_cycle_ticks} and ${second.window_cycle_ticks} ticks`);
+    return { window_cycle_ticks: first.window_cycle_ticks, cycle_ended: () => { first.cycle_ended(); second.cycle_ended(); } };
+}
+
+/**
+ * Whether a planning run with its late output hands filled (`fill_late_output_hands`) moves its output over the repeat its
+ * warm-up proved, not over its one recorded window cycle alone: where the state repeats every p window cycles, what its
+ * output inserters dropped over the p window cycles that end with the recorded one (the p - 1 last of the warm-up and the
+ * recorded one) is counted against the expected output times p. Over a proven repeat any p window cycles from its start
+ * move the same, and the run is not taken past its recorded window cycle. It does not hold where the warm-up proved no
+ * repeat, where the repeat or the warm-up is not a whole number of window cycles, or where the repeat would run past the
+ * tick budget.
+ */
+function lateOutputHandsCheckOf(
+    planned_cycle: PlannedOutputCycle,
+    recipe_lcm: number,
+    duration: Duration,
+    output: OutputCheck,
+    output_drops: OutputDrops,
+    /** What the output inserters had dropped when the recorded window cycle ended */
+    dropped_at_recorded_end: number,
+    warmup: { repeat_ticks: number | undefined; ticks_run: number },
+    logger: Logger,
+): LateOutputHandsCheck {
+    const window_cycles = warmup.repeat_ticks === undefined ? undefined : warmup.repeat_ticks / duration.ticks;
+    const warm_up_window_cycles = warmup.ticks_run / duration.ticks;
+    // the start of the first of the p window cycles, among the warm-up's window-cycle starts
+    const first = window_cycles === undefined ? -1 : warm_up_window_cycles - (window_cycles - 1);
+    if (window_cycles === undefined || !Number.isInteger(window_cycles) || !Number.isInteger(warm_up_window_cycles)
+        || duration.ticks * window_cycles >= SIMULATION_BUDGET_TICKS || first < 0 || first >= output_drops.at_cycle_starts.length) {
+        logger.log(`Planning run with the late output hands filled: no repeat counted (repeat ${warmup.repeat_ticks ?? "none"} ticks, warm-up ${warmup.ticks_run} ticks)`);
+        return { repeat_window_cycles: window_cycles, output_items: undefined, expected_items: undefined, holds: false };
+    }
+    const expected_items = expectedOutputOf(planned_cycle.output_cycle_plan.entity_transfer_map, output.output_inserter_ids, recipe_lcm) * window_cycles;
+    const output_items = dropped_at_recorded_end - output_drops.at_cycle_starts[first];
+    const holds = Math.abs(output_items - expected_items) <= LCM_STABILITY_TOLERANCE * window_cycles;
+    logger.log(`Planning run with the late output hands filled: state repeats every ${window_cycles} window cycles, output over the ${window_cycles} ending with the recorded one=${output_items} expected=${expected_items} holds=${holds}`);
+    return { repeat_window_cycles: window_cycles, output_items, expected_items, holds };
 }
 
 /**
@@ -1765,9 +1885,10 @@ export interface UnclockedRun {
  */
 export function unclockedRun(config: Config, options: UnclockedRunOptions = {}): UnclockedRun {
     const logger = options.logger ?? defaultLogger;
-    const run = withTickPurpose("planning", () => runBuild(config, { logger, debug: options.debug, debug_steps: options.debug_steps, factorio_states: options.factorio_states,
+    const asked: RunOptions = { logger, debug: options.debug, debug_steps: options.debug_steps, factorio_states: options.factorio_states,
         ...(options.fractional_swings === true && { fractional_swings: true }),
-        ...(options.pickup_start !== undefined && { pickup_start: options.pickup_start }) }));
+        ...(options.pickup_start !== undefined && { pickup_start: options.pickup_start }) };
+    const run = withTickPurpose("planning", () => withLateOutputHandsFilled(config, asked, runBuild(config, asked), logger));
     // Throws LaneCapacityError if one unit asks a belt lane for more than it carries; after the run, so the planner's
     // own refusal of the target comes first
     assertLaneCapacity(config);
@@ -1791,6 +1912,30 @@ export function unclockedRun(config: Config, options: UnclockedRunOptions = {}):
         item_names.set(inserter.entity_id.id, Array.from(inserter.filtered_items).sort().join(","));
     }
     return { config, logger, run, unslacked_windows, item_names, entity_ids };
+}
+
+/**
+ * The plan of a build whose planning run falls short of its output while an output inserter's hand is filled only after
+ * the window it gets (`EnableControlFactory.late_output_hands`), made once more with such inserters held to their
+ * planned hand alone from the window cycle's start, and the chest-fed inputs of their machines that one window cannot feed
+ * on their latch alone (`fill_late_output_hands`): kept where it moves its output over the repeat its warm-up proved
+ * (`LateOutputHandsCheck`), else the first plan stands. A plan that moves its output is never made again.
+ */
+function withLateOutputHandsFilled(config: Config, asked: RunOptions, run: BuildRun, logger: Logger): BuildRun {
+    const short = (check: SimulationStabilityCheck) => check.actual_output_items < check.expected_output_items;
+    if (run.late_output_hands.size === 0 || !short(run.stability_check)) {
+        return run;
+    }
+    const filled = runBuild(config, { ...asked, fill_late_output_hands: true });
+    const check = filled.late_output_hands_check;
+    const kept = check?.holds === true;
+    const over_repeat = check?.output_items === undefined
+        ? `no repeat counted (window cycles of the repeat: ${check?.repeat_window_cycles ?? "none proved"})`
+        : `${check.output_items} of ${check.expected_items} over a repeat of ${check.repeat_window_cycles} window cycles`;
+    logger.log(`Planning run: ${run.stability_check.actual_output_items} of ${run.stability_check.expected_output_items} with the hands of `
+        + `${Array.from(run.late_output_hands).join(", ")} filled after their windows; planned again with those hands filled from the window `
+        + `cycle's start: ${over_repeat}, ${kept ? "kept" : "not kept"}`);
+    return kept ? filled : run;
 }
 
 /** The clock of a plan: the plan's windows with the room they get, and the belt that makes it for */
