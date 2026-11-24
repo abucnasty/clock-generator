@@ -180,7 +180,7 @@
         "capacity_by_item": [
           {
             "item": "iron-plate",
-            "capacity": 4800
+            "capacity": 400
           }
         ],
         "accepts": [
