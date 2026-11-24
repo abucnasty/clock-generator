@@ -5,7 +5,7 @@ import { OpenRange } from "../../data-types";
 import { EntityId } from "../../entities";
 import { InventoryTransferHistory } from "../sequence/inventory-transfer-history";
 import { Logger } from "../../common/logger";
-import { TimeStudyWindows, deriveTimeStudyWindows } from "../candidates/time-study-windows";
+import { TimeStudyWindows, chestFeedWindowsOf, deriveTimeStudyWindows } from "../candidates/time-study-windows";
 import { alwaysEnabledByConfig, windowsFromHistory } from "../plan/unclocked-run";
 import { Confirmed, QuickTrial, confirm, search } from "./search";
 import { withOutputWindowMoved } from "./transforms";
@@ -102,6 +102,7 @@ export function movedOutputSwingWindows(
     const output_windows = new Map(Array.from(planned_windows).filter(([key]) => output_inserter_ids.has(key)));
     const drill_ids = new Set(Array.from(planned_history.keys()).filter(EntityId.isDrill).map(it => it.id));
     const drill_windows = new Map(Array.from(planned_windows).filter(([key]) => drill_ids.has(key)));
+    const chest_feed_windows = chestFeedWindowsOf(config, planned_windows, window_cycle, logger);
 
     const candidates = movedOutputSwingCandidates(output_windows, window_cycle, step_ticks);
     const describe = (candidate: MovedOutputSwingCandidate) => `output swing ${candidate.window_index + 1} moved ${candidate.shift_ticks} ticks`;
@@ -111,7 +112,7 @@ export function movedOutputSwingWindows(
         quick: (candidate, index) => {
             const derived = deriveTimeStudyWindows(base_config, candidate.output_windows, drill_windows, output_inserter_ids,
                 lane_hand_room, window_cycle, describe(candidate), logger,
-                report && (detail => report(`Position ${index + 1}/${candidates.length}: ${detail}`)), false);
+                report && (detail => report(`Position ${index + 1}/${candidates.length}: ${detail}`)), false, true, chest_feed_windows);
             // only the windows that pass are read again; the runs of a position that does not are let go
             return derived.windows === null
                 ? { holds: false, derived: { ...derived, verification: null, as_built: null, even_output_windows: null } }

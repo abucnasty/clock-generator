@@ -194,6 +194,23 @@ describe("Round-Robin Polling with metered takers on a build whose foundries eac
         return final.alternatives[final.selected_index];
     }
 
+    // The copy step after the stagger, silenced (its candidates emptied) where a case tests the refusals of an earlier step. The
+    // generation project loads the CommonJS build: replace the copy step's proposal where the composition reads it.
+    function composeWithoutCopies() {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const owner: typeof import("./candidates/region-copies") = require("../../dist/crafting/candidates/region-copies");
+        const propose = owner.regionCopies;
+        const spy = vi.spyOn(owner, "regionCopies").mockImplementation((...args) => {
+            const proposed = propose(...args);
+            return proposed && { orbits: proposed.orbits.map(orbit => ({ ...orbit, proposals: { ...orbit.proposals, candidates: [], unmade: [] } })) };
+        });
+        try {
+            return compose();
+        } finally {
+            spy.mockRestore();
+        }
+    }
+
     it("carries the metered turns through the worker tasks to the selected clock and its two exports", () => {
         expect(workerRuns().input.parts.some(part => part.metered_takers?.length === 6)).toBe(true);
         const selected = compose();
@@ -226,7 +243,7 @@ describe("Round-Robin Polling with metered takers on a build whose foundries eac
                 return proposed && { ...proposed, groups: proposed.groups.map(group => ({ ...group, proposals: [] })) };
             });
             try {
-                return { selected: compose(), proposals };
+                return { selected: composeWithoutCopies(), proposals };
             } finally {
                 spy.mockRestore();
                 silenced.mockRestore();
@@ -300,7 +317,7 @@ describe("Round-Robin Polling with metered takers on a build whose foundries eac
             return alter(proposed);
         });
         try {
-            return { selected: compose(), proposals };
+            return { selected: composeWithoutCopies(), proposals };
         } finally {
             spy.mockRestore();
         }
@@ -416,7 +433,7 @@ describe("Round-Robin Polling with metered takers on a build whose foundries eac
             return alter(proposed);
         });
         try {
-            return { selected: compose(), proposals };
+            return { selected: composeWithoutCopies(), proposals };
         } finally {
             spy.mockRestore();
         }
@@ -453,6 +470,28 @@ describe("Round-Robin Polling with metered takers on a build whose foundries eac
             proposals: group.proposals.slice(0, 1).map(proposal => ({ ...proposal, changes: Object.fromEntries(Object.entries(proposal.changes)
                 .filter(([id]) => proposal.staggered[id]?.role === "input")) })) })) }));
         expectStaggerRefused(refused, { kind: "retained", reason: "no_fewer_wake_ups" });
+    });
+
+    // The two halves of the build about the cryogenic plant: assemblers 1, 2, 5 with foundry 3, and 6, 8, 9 with foundry 7. Each arm of the
+    // first half and its turn partner in the second
+    const REGION_ARMS: [number, number][] = [[1, 11], [2, 12], [3, 20], [4, 18], [5, 14], [6, 16], [9, 17], [10, 21], [13, 19]];
+
+    it("gives copied regions one clock at the same turns only where it recovers no slower", () => {
+        // On this fixture the second half's windows, moved to the first half's turns and copied onto it, hold every check at fewer
+        // wake-ups and deciders, but recover in 16 window cycles on one copy and 20 on the copies, against 19 and 19: the copy step
+        // judges recovery by the worse of the two readings and keeps the clock as it is
+        const selected = generated.alternatives[generated.selected_index];
+        const clock = selected.result;
+        expect([selected.id, selected.verdict, selected.assessment.items_per_second.toFixed(2), clock.simulation_duration.ticks])
+            .toEqual(["coordinated_sources", "stable", "320.00", 324]);
+        expect(Number(clock.stability_check.as_built?.wake_ups?.wake_ups_per_minute?.toFixed(2))).toBe(STAGGERED_WAKE_UPS);
+        expect(selected.deciders).toBe(clock.schedule.inserter_combinators.length);
+        expect(selected.deciders).toBe(20);
+        const decisions = (clock as { region_copies?: Record<string, unknown> }).region_copies;
+        for (const [a, b] of REGION_ARMS) {
+            for (const id of [a, b]) expect(decisions?.[`inserter:${id}`], `inserter ${id}`).toEqual({ kind: "retained", reason: "recovery_worse" });
+        }
+        for (const id of [7, 8, 15]) expect(decisions?.[`inserter:${id}`], `inserter ${id}`).toEqual({ kind: "retained", reason: "no_orbit" });
     });
 });
 

@@ -65,3 +65,31 @@ describe('the wiring list of every sample', () => {
         expect(html).not.toMatch(/\[(entity|item|recipe|fluid|quality)=/);
     }, 120_000);
 });
+
+// The utility science build at 320 a second: its two halves about the cryogenic plant are copies of one another, and each arm
+// of one half shares its decider with its turn partner in the other
+describe('the controls a player wires for copied regions', () => {
+    it('utility science 320: 11 deciders, one wiring row each, a turn pair on one row', async () => {
+        const generated = generateClockAlternatives(await loadConfigFromFile(ConfigPaths.UTILITY_SCIENCE_320_METERED_TAKERS), { logger: quiet });
+        const selected = generated.alternatives[generated.selected_index];
+        const install = installFactsOf(selected.result);
+        expect(selected.deciders).toBe(11);
+        expect(install.wiring).toHaveLength(11);
+        expect(install.drills).toEqual([]);
+        const PARTNERS: [number, number][] = [[1, 11], [2, 12], [3, 20], [4, 18], [5, 14], [6, 16], [9, 17], [10, 21], [13, 19]];
+        for (const [a, b] of PARTNERS) {
+            expect(install.wiring.filter(ids => ids.includes(a) && ids.includes(b)), `inserters ${a} and ${b}`).toHaveLength(1);
+        }
+        // each row's description names every arm it switches
+        for (const combinator of selected.result.schedule.inserter_combinators) {
+            const description = selected.result.blueprint.entities.find(entity => entity.entity_number === combinator.entity_number)?.player_description ?? '';
+            const named = description.split('\n').flatMap(line => {
+                const match = /^Inserters? (\d+(?:, \d+)*): /.exec(line);
+                return match ? match[1].split(', ').map(Number) : [];
+            });
+            expect(named.sort((x, y) => x - y), description).toEqual([...combinator.inserter_ids].sort((x, y) => x - y));
+        }
+        const html = render(install);
+        expect(html.match(/data-wiring-line/g) ?? []).toHaveLength(11);
+    }, 300_000);
+});

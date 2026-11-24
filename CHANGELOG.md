@@ -22,6 +22,7 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 ### Changed
 - generation: science output inserters can keep enable windows when one machine feeds several science assemblers
 - generation: belt-fed inserters into science assemblers can get staggered enable windows when one machine feeds several
+- generation: repeated groups of machines in one build share one clock and its enable deciders
 - ui: configuration files name the setpoint's item; older files still open
 - ui: a belt pickup that drops elsewhere is refused with clearer text
 
@@ -31,6 +32,7 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 ### Fixed
 - ui: inserter refusals use form labels and name the containers, machines and items involved
 - generation: clocks whose output starts at once are no longer refused one hand short
+- generation: a belt-fed steel chest with a slot limit now gets a stable clock
 
 ## [0.31.1] - 2026-11-20
 
