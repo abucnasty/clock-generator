@@ -109,7 +109,7 @@
     {
       "id": 1,
       "type": "buffer-chest",
-      "storage_size": 48,
+      "storage_size": 4,
       "item_filter": "iron-plate",
       "prototype": "steel-chest"
     },
