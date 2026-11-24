@@ -339,6 +339,11 @@ export interface BlueprintGenerationResult {
     metered_input_windows?: Record<string, import("../candidates/metered-input-windows").InputWindowDecision>;
     /** A belt-fed window the inputs of those machines shared, moved to each machine's own turn, with their outputs; or why it was kept. */
     staggered_input_windows?: Record<string, import("../candidates/staggered-input-windows").StaggerDecision>;
+    /**
+     * Where parts of the build are copies of one another about one machine they share: each arm's windows copied from one region
+     * onto its copies, or why the arm kept its own; absent where no part has a copy.
+     */
+    region_copies?: Record<string, import("../candidates/region-copies").RegionCopyDecision>;
     /** The windows are of a planning run that counts every belt pickup from its entry, not from the take that freed it (see clockWithPickupsFromTheirEntry) */
     pickups_from_entry?: true;
     /**
