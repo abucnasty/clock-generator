@@ -97,6 +97,11 @@ export class EnableControlFactory {
         private readonly exact_subtick_positions: boolean = true,
         /** Whether a clock of a p/q-tick window cycle runs through as well (`runThroughTicks`), given a game tick provider */
         private readonly counter_runs_through: boolean = false,
+        /**
+         * Whether an output inserter whose hand its machine fills only after the window it gets today
+         * (`fillsItsHandAfterItsWindow`) is held to its planned hand alone, from the window cycle's start until the hand is full
+         */
+        private readonly fill_late_output_hands: boolean = false,
     ) {
         this.target_output_item_name = this.output_cycle_plan.production_rate.machine_production_rate.item;
         this.entity_transfer_map = this.output_cycle_plan.entity_transfer_map;
@@ -131,6 +136,12 @@ export class EnableControlFactory {
 
     /** The inserters that only take a by-product no machine uses away: not in the transfer plan */
     private readonly by_product_only_ids: ReadonlySet<string>;
+
+    /**
+     * The output inserters whose hand their machine fills only after the window they get today (`fillsItsHandAfterItsWindow`),
+     * by entity id, as their controls are made: whether or not `fill_late_output_hands` gave them the longer one
+     */
+    public readonly late_output_hands = new Set<string>();
 
     public createForEntityId(entity_id: EntityId): EnableControl {
 
@@ -174,6 +185,14 @@ export class EnableControlFactory {
         if (this.terminal_inserter_states.has(entity_state)) {
             // Find the corresponding terminal machine for this inserter
             const terminal_machine = this.findTerminalMachineForInserter(entity_state);
+            if (!this.output_cycle_plan.fractional_swings_enabled && this.fillsItsHandAfterItsWindow(entity_state, terminal_machine)) {
+                this.late_output_hands.add(entity_state.entity_id.id);
+                if (this.fill_late_output_hands) {
+                    // open the whole window cycle, and held to its planned hand with no slack: it closes the tick the hand is
+                    // full, whatever the machine held when it opened, so it takes no second hand in the window cycle
+                    return this.plannedItemsAndNoMore(entity_state, terminal_machine, 0);
+                }
+            }
             const by_clock = this.transferCountFromMachine(
                 entity_state,
                 terminal_machine,
@@ -207,7 +226,8 @@ export class EnableControlFactory {
         // (Fractional per-item transfers are handled separately below in the belt→machine branch.)
         if (!this.output_cycle_plan.fractional_swings_enabled) {
             if (EntityState.isMachine(sink_state) && this.terminal_machine_states.has(sink_state)) {
-                if (!this.hasFractionalPerItemTransfers(entity_state.inserter)) {
+                if (!this.hasFractionalPerItemTransfers(entity_state.inserter)
+                    && !this.feedsALateOutputHandOnItsLatch(entity_state.inserter, source_state, sink_state)) {
                     additional_enable_controls.push(
                         this.transferCountToMachine(
                             entity_state,
@@ -680,12 +700,12 @@ export class EnableControlFactory {
      * take what the machine made since, and a build with product to spare then makes more than was asked for. The
      * hand of slack lets it start on its next hand early, as it does in game, without getting ahead by more.
      */
-    private plannedItemsAndNoMore(inserter_state: InserterState, source_state: MachineState): EnableControl {
+    private plannedItemsAndNoMore(inserter_state: InserterState, source_state: MachineState, slack?: number): EnableControl {
         const swings_per_cycle = this.transferCountOf(inserter_state.inserter).total_transfer_count;
         const hand_size = handSizeFor(inserter_state.inserter, source_state.machine.output.item_name);
         const items_per_span = swings_per_cycle.getNumerator * hand_size;
         const span_ticks = OutputCyclePlan.ticksOfCycles(this.output_cycle_plan, swings_per_cycle.getDenominator);
-        return this.pickedUpAndNoMore(inserter_state, items_per_span, span_ticks, hand_size - 1);
+        return this.pickedUpAndNoMore(inserter_state, items_per_span, span_ticks, slack ?? hand_size - 1);
     }
 
     /**
@@ -1088,6 +1108,61 @@ export class EnableControlFactory {
 
         // Machine is slow if it can't produce enough items in one cycle
         return items_produced_per_cycle < total_items_needed;
+    }
+
+    /**
+     * Whether an output inserter moves one hand a window cycle that its machine fills only after the window
+     * `computeEnableRangeFromMachine` gives it: in the desync-preventing mode, from a machine that is not slow, with a hand
+     * of more than the machine holds at its output block, and the rest of the hand taking longer to make than the swing and
+     * the 4 ticks of that window. The hand is taken part full and the inserter switched off before the rest is made.
+     */
+    private fillsItsHandAfterItsWindow(inserter_state: InserterState, source_state: MachineState): boolean {
+        const machine = source_state.machine;
+        const inserter = inserter_state.inserter;
+        const transfer_count = this.transferCountOf(inserter);
+        const swings = transfer_count.total_transfer_count;
+        if (swings.getNumerator !== 1 || swings.getDenominator !== 1) {
+            return false;
+        }
+        if (computeSimulationMode(machine, inserter, transfer_count) !== SimulationMode.PREVENT_DESYNCS
+            || this.isSlowMachine(machine, inserter, 1)) {
+            return false;
+        }
+        const hand = handSizeFor(inserter, machine.output.item_name);
+        const held = machine.output.outputBlock.held_limit;
+        return hand > held && this.ticksToProduceStack(machine, hand - held) > inserter.animation.total.ticks + 4;
+    }
+
+    /**
+     * Whether a chest-fed input of a machine whose output hand is filled late (`fillsItsHandAfterItsWindow`) goes without
+     * its window and runs on its latch alone (`fromChestToMachine`), where `fill_late_output_hands` asks for those hands to
+     * be filled: it carries one planned item, and more of it in an output cycle than the machine takes in up to its
+     * automated insertion limit and one hand. One window cannot put in more than that, as the machine takes no more while
+     * it is at its limit, so a window would hold the machine below its planned crafts.
+     */
+    private feedsALateOutputHandOnItsLatch(inserter: Inserter, source_state: EntityState, sink_state: MachineState): boolean {
+        if (!this.fill_late_output_hands || !ContainerStorage.is(source_state)) {
+            return false;
+        }
+        const planned = this.transferCountOf(inserter);
+        if (planned.item_transfers.length !== 1) {
+            return false;
+        }
+        const [item] = planned.item_transfers;
+        const input = sink_state.machine.getInsertableInput(item.item_name);
+        if (!input) {
+            return false;
+        }
+        const planned_items = item.transfer_count.toDecimal() * planned.stack_size;
+        if (planned_items <= input.automated_insertion_limit.quantity + planned.stack_size) {
+            return false;
+        }
+        // asked of the machine's output inserters themselves: their controls may be made after this one
+        const exhaust = this.output_cycle_plan.exhaust;
+        return this.output_cycle_plan.production_rate.counts !== "destroyed"
+            && Array.from(this.terminal_inserter_states).some(state => this.output_sources.get(state.entity_id.id)?.machine === sink_state
+                && !(exhaust !== undefined && takesResultOf(exhaust, state.entity_id))
+                && this.fillsItsHandAfterItsWindow(state, sink_state));
     }
 
     private computeEnableRangeFromMachine(
