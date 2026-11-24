@@ -254,6 +254,24 @@ const utility320: JobCheck[] = [
             expect(metered.strategy).toMatchObject({ id: 'round_robin_polling', settings: { shared_windows: 'metered_takers' } });
         },
     },
+    {
+        // The two halves of the build are copies of one another about the cryogenic plant: each arm of one half has the window of its turn
+        // partner in the other, so the halves share their enable deciders
+        name: 'copied regions share one clock',
+        run: ({ generated }) => {
+            const selected = selectedOf(generated);
+            const clock = selected.result;
+            expect([selected.id, selected.verdict, selected.assessment.items_per_second.toFixed(2), clock.simulation_duration.ticks])
+                .toEqual(['coordinated_sources', 'stable', '320.00', 324]);
+            const wake_ups = clock.stability_check.as_built?.wake_ups?.wake_ups_per_minute;
+            expect(wake_ups).toBeDefined();
+            expect(Number(wake_ups!.toFixed(2))).toBeLessThanOrEqual(498.71);
+            expect(selected.deciders).toBe(clock.schedule.inserter_combinators.length);
+            expect(selected.deciders).toBeLessThanOrEqual(11);
+            const PARTNERS: [number, number][] = [[1, 11], [2, 12], [3, 20], [4, 18], [5, 14], [6, 16], [9, 17], [10, 21], [13, 19]];
+            for (const [a, b] of PARTNERS) expect(clock.clock_windows[`inserter:${a}`], `inserter ${a} and ${b}`).toEqual(clock.clock_windows[`inserter:${b}`]);
+        },
+    },
 ];
 
 // Metallurgic science at the speeds the game gives its scaffold, its packs taken into a chest that removes them
