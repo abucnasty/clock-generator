@@ -194,6 +194,23 @@ describe("Round-Robin Polling with metered takers on a build whose foundries eac
         return final.alternatives[final.selected_index];
     }
 
+    // The copy step after the stagger, silenced (its candidates emptied) where a case tests the refusals of an earlier step. The
+    // generation project loads the CommonJS build: replace the copy step's proposal where the composition reads it.
+    function composeWithoutCopies() {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const owner: typeof import("./candidates/region-copies") = require("../../dist/crafting/candidates/region-copies");
+        const propose = owner.regionCopies;
+        const spy = vi.spyOn(owner, "regionCopies").mockImplementation((...args) => {
+            const proposed = propose(...args);
+            return proposed && { orbits: proposed.orbits.map(orbit => ({ ...orbit, proposals: { ...orbit.proposals, candidates: [], unmade: [] } })) };
+        });
+        try {
+            return compose();
+        } finally {
+            spy.mockRestore();
+        }
+    }
+
     it("carries the metered turns through the worker tasks to the selected clock and its two exports", () => {
         expect(workerRuns().input.parts.some(part => part.metered_takers?.length === 6)).toBe(true);
         const selected = compose();
@@ -226,7 +243,7 @@ describe("Round-Robin Polling with metered takers on a build whose foundries eac
                 return proposed && { ...proposed, groups: proposed.groups.map(group => ({ ...group, proposals: [] })) };
             });
             try {
-                return { selected: compose(), proposals };
+                return { selected: composeWithoutCopies(), proposals };
             } finally {
                 spy.mockRestore();
                 silenced.mockRestore();
@@ -300,7 +317,7 @@ describe("Round-Robin Polling with metered takers on a build whose foundries eac
             return alter(proposed);
         });
         try {
-            return { selected: compose(), proposals };
+            return { selected: composeWithoutCopies(), proposals };
         } finally {
             spy.mockRestore();
         }
@@ -416,7 +433,7 @@ describe("Round-Robin Polling with metered takers on a build whose foundries eac
             return alter(proposed);
         });
         try {
-            return { selected: compose(), proposals };
+            return { selected: composeWithoutCopies(), proposals };
         } finally {
             spy.mockRestore();
         }

@@ -7,6 +7,7 @@ import type { JobCheck } from '../record-job-checks';
 import { disturbanceTrialOf, clockFromWindows, selectableAsStable, simulateClockOnly, validateConfig } from '../../../../src/crafting/generate-blueprint';
 import type { ClockAlternative, ClockAlternativesResult } from '../../../../src/crafting/generate-blueprint';
 import { windowDeciderCount } from '../../../../src/crafting/alternatives';
+import { decidersOf } from '../../../../src/crafting/candidates/region-copies';
 import { lossId } from '../../../../src/crafting/disturbance-trial';
 import { excessLossOf } from '../../../../src/crafting/random-margins';
 import { clockIdentity } from '../../../../src/crafting/clock-identity';
@@ -267,6 +268,7 @@ const utility320: JobCheck[] = [
             expect(wake_ups).toBeDefined();
             expect(Number(wake_ups!.toFixed(2))).toBeLessThanOrEqual(498.71);
             expect(selected.deciders).toBe(clock.schedule.inserter_combinators.length);
+            expect(decidersOf(clock.clock_windows, clock.simulation_duration.ticks), 'the copy step counts the deciders as the blueprint makes them').toBe(selected.deciders);
             expect(selected.deciders).toBeLessThanOrEqual(11);
             const PARTNERS: [number, number][] = [[1, 11], [2, 12], [3, 20], [4, 18], [5, 14], [6, 16], [9, 17], [10, 21], [13, 19]];
             for (const [a, b] of PARTNERS) expect(clock.clock_windows[`inserter:${a}`], `inserter ${a} and ${b}`).toEqual(clock.clock_windows[`inserter:${b}`]);
