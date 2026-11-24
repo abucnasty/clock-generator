@@ -272,6 +272,23 @@ const utility320: JobCheck[] = [
             expect(selected.deciders).toBeLessThanOrEqual(11);
             const PARTNERS: [number, number][] = [[1, 11], [2, 12], [3, 20], [4, 18], [5, 14], [6, 16], [9, 17], [10, 21], [13, 19]];
             for (const [a, b] of PARTNERS) expect(clock.clock_windows[`inserter:${a}`], `inserter ${a} and ${b}`).toEqual(clock.clock_windows[`inserter:${b}`]);
+            // the copy step reports the arms it moved: the second half's windows, 18 ticks earlier, on both halves; the plant's arms are in no region
+            const copied = { kind: 'copied', from: 'machine:4/region:2', shift_ticks: -18 };
+            expect(clock.region_copies).toEqual(Object.fromEntries([
+                ...[1, 2, 3, 4, 5, 6, 9, 10, 13].map(id => [`inserter:${id}`, { ...copied, region: 'machine:4/region:1' }]),
+                ...[11, 12, 14, 16, 17, 18, 19, 20, 21].map(id => [`inserter:${id}`, { ...copied, region: 'machine:4/region:2' }]),
+                ...[7, 8, 15].map(id => [`inserter:${id}`, { kind: 'retained', reason: 'no_orbit' }]),
+            ]));
+            // each earlier step's field reports that step's own decisions, also for the arms whose windows the copy then moved
+            const kinds = (field: Record<string, { kind: string; reason?: string }> | undefined) =>
+                Object.fromEntries(Object.entries(field ?? {}).map(([id, it]) => [id, it.reason ? `${it.kind}: ${it.reason}` : it.kind]));
+            expect(kinds(clock.metered_output_windows)).toEqual({ 'inserter:1': 'bounded', 'inserter:4': 'bounded', 'inserter:13': 'bounded',
+                'inserter:11': 'already_bounded', 'inserter:18': 'already_bounded', 'inserter:19': 'already_bounded' });
+            expect(kinds(clock.metered_input_windows)).toEqual({ 'inserter:2': 'already_bounded', 'inserter:3': 'already_bounded',
+                'inserter:10': 'already_bounded', 'inserter:12': 'bounded', 'inserter:20': 'bounded', 'inserter:21': 'bounded' });
+            expect(kinds(clock.staggered_input_windows)).toEqual({ 'inserter:1': 'staggered', 'inserter:2': 'staggered', 'inserter:3': 'staggered',
+                'inserter:4': 'staggered', 'inserter:10': 'staggered', 'inserter:13': 'staggered',
+                'inserter:12': 'retained: not_identical', 'inserter:20': 'retained: not_identical', 'inserter:21': 'retained: not_identical' });
         },
     },
 ];
