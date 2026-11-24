@@ -1273,3 +1273,23 @@ BELT_SPEED_CAPTURE_DIR=.scratch/judged-start-10 npm run test:game -- tests/game/
 `recording_count.py` reads the start of these cases from `staged: true, backpressure: true` in the code that builds their scenario (`capture_scenario_start`). The two front exit jobs of the electromagnetic clock
 (`front-exit-turbo-unmirrored-backed-different-items`, `front-exit-turbo-unmirrored-moving-config-different-items`) share the clock hash `c9c84d59` and read as holding from these recordings; their own cases in
 `front-clock-controls.json` stay as they were recorded.
+
+## The belt to steel chest to machine sample, from ruling 60's start
+
+The sample `ELECTRONIC_CIRCUIT_2_BELT_CHEST` (one assembling machine 3 makes 2 electronic circuits a second; a turbo belt of iron plates, both lanes in stacks of 4, passes an inserter that drops into a steel chest of 4 slots,
+and a second inserter takes the plates from the chest into the machine; every inserter a legendary stack inserter) records the clock its record job selects, `coordinated_sources` (window cycle 480, `bcbbac7e`, stable, 82.5 wake-ups a minute),
+with `missing-recordings-clock.game.test.ts` and `start: "backpressure"` in its case, on Factorio 2.1.24, with `CLOCK_RECORDING_CACHE=off`. The first run (with `BELT_CLOCK_CALIBRATE=1`) wrote the entry in
+[missing-recordings-clock-controls.json](missing-recordings-clock-controls.json); the second run, with no change, gave the same summary. The clock windows all four inserters, the belt inserter among them, and the recorder lists all four.
+
+| Job | Clock (window cycle) | Clock cycles before / after the losses | Steady state | Losses fell at | Losses recovered at |
+| --- | --- | --- | --- | --- | --- |
+| `ELECTRONIC_CIRCUIT_2_BELT_CHEST` | Coordinated Sources (480, `bcbbac7e`) | 7 / 7 | 6,960 | 13,483 (iron plate cut), 18,283 (block), 22,507 (copper cable cut) | 17,971, 22,291, 23,291 |
+
+- The lock opened 7,200 ticks after the build was placed. The run holds: the baseline's net output over its 7 whole clock cycles is 112 of 112, the stock guard holds, and the copy makes its share (2 x 480 / 60 = 16 circuits) in every whole clock cycle before the first loss and in the cycles after the last one.
+- The run recorded 30,522 ticks: the last recovery at 23,291, the tail of 7,200 and 31 more.
+- The iron plate cut came first, so that the chest's stock is the baseline's. The output fell 2,923 ticks after the cut began, about 97 plates at 30 ticks a plate: under the clock, the belt inserter refills only what the chest inserter took, so the chest holds far less than its 400 plates. The iron cut therefore takes the plates of the chest, the machine and the hands, not the chest's full stock.
+- A chest of the full 48 slots is not recorded in the game; its clock is the same (`bcbbac7e`) and its generation is checked in the simulator only.
+
+```bash
+MISSING_RECORDINGS_CAPTURE_DIR=.scratch/belt-chest npm run test:game -- tests/game/builds/missing-recordings-clock.game.test.ts -t 'electronic-circuit-2-belt-chest: config-'
+```

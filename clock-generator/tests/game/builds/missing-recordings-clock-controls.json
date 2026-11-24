@@ -1143,6 +1143,84 @@
     "clock_sha256": "c3b310dfca640fc0e4b8fa39dffacaf22f061eb094908129e29e66b5c4895d72"
    }
   },
+  "electronic-circuit-2-belt-chest": {
+   "recorded": {
+    "pr": 0,
+    "commit": "ad2a637e",
+    "frozen_head": "ad2a637e",
+    "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start), Factorio 2.1.24, the steel chest at 4 slots; the second run gave the same summary; pr is set when the PR is opened",
+    "clock_sha256": "bcbbac7e20a7795b2e4a52a5d8a0d38dc6d2b1230c236cf020e2423f0ac6d9ab",
+    "clock_basis": "capture"
+   },
+   "native": {
+    "protocol": "trailing-minute",
+    "generationVerdict": "stable",
+    "target": 2,
+    "period": 480,
+    "window": 3600,
+    "expected": 120,
+    "steady": 6960,
+    "baseline": {
+     "ticks": 3600,
+     "total": 119,
+     "expected": 120,
+     "min": 118,
+     "max": 122,
+     "held": false,
+     "meets": true,
+     "measured": {
+      "ticks": 3360,
+      "items": 112,
+      "expected": 112,
+      "stock_start": 0,
+      "stock_end": 0,
+      "net": 112
+     }
+    },
+    "disturbances": [
+     {
+      "kind": "cut iron-plate",
+      "start": 10560,
+      "drop": 13483,
+      "release": 13483,
+      "recovered": 17971
+     },
+     {
+      "kind": "block output",
+      "start": 17971,
+      "drop": 18283,
+      "release": 18283,
+      "recovered": 22291
+     },
+     {
+      "kind": "cut copper-cable",
+      "start": 22291,
+      "drop": 22507,
+      "release": 22507,
+      "recovered": 23291
+     }
+    ],
+    "stock": {
+     "lowest": 0,
+     "end": 1,
+     "holds": true
+    },
+    "result": "holds",
+    "ended": 23291
+   },
+   "generation": {
+    "period": 480,
+    "expected": 16,
+    "verdict": "stable",
+    "selection": {
+     "id": "coordinated_sources",
+     "holds": true,
+     "rate": 2,
+     "supply": "backed_up"
+    },
+    "clock_sha256": "bcbbac7e20a7795b2e4a52a5d8a0d38dc6d2b1230c236cf020e2423f0ac6d9ab"
+   }
+  },
   "flying-robot-frame-80": {
    "recorded": {
     "pr": 0,
