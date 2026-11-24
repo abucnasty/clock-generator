@@ -120,6 +120,18 @@ describe("a belt that feeds a machine through a steel chest with a slot limit of
         const output = run.simulation_context.inserters.map(it => it.inserter_state).find(it => it.entity_id.id === "inserter:4")!;
         // one hand short at most: the first window cycle of the warm-up starts with an empty hand
         expect(output.items_dropped).toBeGreaterThanOrEqual(16 * (window_cycles - 1));
+        // and no more than its hand a window cycle: the plan moves 16 a window cycle, not the machine's free 20
+        expect(output.items_dropped).toBeLessThanOrEqual(16 * window_cycles);
+    });
+});
+
+describe("a belt that feeds a machine through a steel chest, at every slot limit", () => {
+    // red today at 1 to 32 slots: the selected clock is the unstable 0.75 a second clock
+    it.each([1, 4, 8, 16, 32, 36, 48])("clocks a chest of %i slots: the selected clock is stable at 2 a second", storage_size => {
+        const result = generateClockAlternatives(beltThroughChest(storage_size), { logger: quiet });
+        const selected = result.alternatives[result.selected_index];
+        expect({ verdict: selected.verdict, items_per_second: selected.assessment.items_per_second })
+            .toEqual({ verdict: "stable", items_per_second: 2 });
     });
 });
 
