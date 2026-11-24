@@ -1281,13 +1281,14 @@ and a second inserter takes the plates from the chest into the machine; every in
 with `missing-recordings-clock.game.test.ts` and `start: "backpressure"` in its case, on Factorio 2.1.24, with `CLOCK_RECORDING_CACHE=off`. The first run (with `BELT_CLOCK_CALIBRATE=1`) wrote the entry in
 [missing-recordings-clock-controls.json](missing-recordings-clock-controls.json); the second run, with no change, gave the same summary. The clock windows all four inserters, the belt inserter among them, and the recorder lists all four.
 
-| Job | Clock (window cycle) | Clock cycles before / after the losses | Steady state | Losses fell at | Losses recovered at |
-| --- | --- | --- | --- | --- | --- |
-| `ELECTRONIC_CIRCUIT_2_BELT_CHEST` | Coordinated Sources (480, `bcbbac7e`) | 7 / 7 | 6,960 | 13,483 (iron plate cut), 18,283 (block), 22,507 (copper cable cut) | 17,971, 22,291, 23,291 |
+| Job | Clock (window cycle) | Opening: machines at the lock | Clock cycles before / after the losses | Steady state | Losses fell at | Losses recovered at |
+| --- | --- | --- | --- | --- | --- | --- |
+| `ELECTRONIC_CIRCUIT_2_BELT_CHEST` | Coordinated Sources (480, `bcbbac7e`) | empty (no ingredient, no output), all four inserters windowed | 7 / 7 | 6,960 | 13,483 (iron plate cut), 18,283 (block), 22,507 (copper cable cut) | 17,971, 22,291, 23,291 |
 
 - The lock opened 7,200 ticks after the build was placed. The run holds: the baseline's net output over its 7 whole clock cycles is 112 of 112, the stock guard holds, and the copy makes its share (2 x 480 / 60 = 16 circuits) in every whole clock cycle before the first loss and in the cycles after the last one.
 - The run recorded 30,522 ticks: the last recovery at 23,291, the tail of 7,200 and 31 more.
-- The iron plate cut came first, so that the chest's stock is the baseline's. The output fell 2,923 ticks after the cut began, about 97 plates at 30 ticks a plate: under the clock, the belt inserter refills only what the chest inserter took, so the chest holds far less than its 400 plates. The iron cut therefore takes the plates of the chest, the machine and the hands, not the chest's full stock.
+- The iron plate cut came first, so that the chest's stock is the baseline's. The output fell 2,923 ticks after the cut began, about 97 plates at 30 ticks a plate: under the clock, the belt inserter refills only what the chest inserter took, so the chest holds far less than its 400 plates, and the chest never came near its slot limit of 4 in this run. The iron cut therefore takes the plates of the chest, the machine and the hands, not the chest's full stock.
+- The copper cable cut bit: the machine's cable ran out at tick 22,380 and it stood without cable from 22,387 to 22,571, the output fell below the baseline's lowest minute 216 ticks after the cut began, and it recovered 784 ticks after the release.
 - A chest of the full 48 slots is not recorded in the game; its clock is the same (`bcbbac7e`) and its generation is checked in the simulator only.
 
 ```bash
