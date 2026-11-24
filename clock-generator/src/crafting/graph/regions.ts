@@ -65,13 +65,13 @@ const KIND_RANK: Record<string, number> = { machine: 0, drill: 1, container: 2, 
 const idOrder = (a: string, b: string): number => (KIND_RANK[a.split(":")[0]] ?? 9) - (KIND_RANK[b.split(":")[0]] ?? 9)
     || numberOf(a) - numberOf(b) || (a < b ? -1 : a > b ? 1 : 0);
 
-/** The near lane of each arm that takes from a belt, by inserter key, as the config gives it */
+/** The near lane of each arm that takes from a belt, as the config gives it; keyed as the planner facts key inserters (id, else place in the list) */
 export function nearLanesOf(config: Pick<Config, "inserters">): Map<string, number> {
     const sides = new Map<string, number>();
-    for (const inserter of config.inserters) {
+    config.inserters.forEach((inserter, index) => {
         const source = inserter.source as { type: string; near_lane?: number };
-        if (source.type === "belt") sides.set(`inserter:${inserter.id}`, source.near_lane ?? 1);
-    }
+        if (source.type === "belt") sides.set(`inserter:${inserter.id ?? index + 1}`, source.near_lane ?? 1);
+    });
     return sides;
 }
 
@@ -211,8 +211,7 @@ function takerOrderOf(facts: PlannerFacts, graph: PlannerGraph): string[] {
 }
 
 /**
- * The map from region `a` to region `b` by refinement and one pair at a time, checked; null where it does not hold. `own`
- * gives each node and arm its region.
+ * The map from region `a` to region `b` by refinement and one pair at a time, checked; null where it does not hold.
  */
 function mapBetween(
     g: CutGraph, colours: Map<string, number>, a: ReadonlySet<string>, b: ReadonlySet<string>, takers: readonly string[],

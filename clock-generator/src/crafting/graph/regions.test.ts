@@ -79,18 +79,25 @@ describe("the copied regions of a build", () => {
         expect(find(swapped).found).toBeNull();
     });
 
+    it("reads the near lanes of a config whose inserters have no ids by their place in the list", async () => {
+        const chemical = await loadConfigFromFile(ConfigPaths.CHEMICAL_SCIENCE_240_SHARED_FOUNDRY);
+        expect(chemical.inserters.every(it => it.id === undefined)).toBe(true);
+        expect([5, 7].map(id => nearLanesOf(chemical).get(`inserter:${id}`))).toEqual([1, 2]);
+    });
+
     it("gives null for a build with no copy", async () => {
         expect(find(await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240)).found).toBeNull();
     });
 });
 
-// Every sample: the anchor and the machines of each region where it has copied regions; every other sample has none. Two halves
-// whose arms take one item from opposite sides of their belts are not copies (the chemical and military science samples).
+// Every sample: the anchor and the machines of each region where it has copied regions; every other sample has none.
 describe("the copied regions of the samples", () => {
     const EXPECTED: Record<string, string> = {
         ADVANCED_CIRCUIT_230: "machine:5: 1 3 | 2 4",
         ADVANCED_CIRCUIT_240: "machine:3: 1 2 | 4 5",
+        CHEMICAL_SCIENCE_240_SHARED_FOUNDRY: "machine:9: 1 2 5 6 | 3 4 7 8",
         GRENADE_240_FILLS_BELT_EXACTLY: "machine:3: 1 2 | 4 5",
+        MILITARY_SCIENCE_240: "machine:5: 1 3 | 2 4",
         UTILITY_SCIENCE_320_METERED_TAKERS: "machine:4: 1 2 3 5 | 6 7 8 9",
         UTILITY_SCIENCE_480_LDS_FOUNDRY_CHAIN: "machine:7: 1 3 5 8 10 12 | 2 4 6 9 11 13",
     };
