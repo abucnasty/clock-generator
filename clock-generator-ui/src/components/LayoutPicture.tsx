@@ -118,11 +118,32 @@ function BeltTile({ tile, onPick, selected }: { tile: LayoutBeltTile; onPick(): 
             {tile.direction !== null && (
                 <g transform={`translate(${px(tile.x)} ${px(tile.y)})`}><Arrow direction={tile.direction} size={PX * 0.3} fill="#ffffff" /></g>
             )}
-            <text x={px(tile.x - 0.46)} y={px(tile.y + 0.42)} fontSize={8.5} fontWeight={700} fill="#ffffff" stroke={INK} strokeWidth={2} paintOrder="stroke" pointerEvents="none">
-                {`b${tile.beltId}`}
-            </text>
         </Pickable>
     );
+}
+
+interface Box { x: number; y: number; width: number; height: number }
+
+/** Where an inserter's number badge is, with the matching inserter's number beside it, in picture units */
+function badgeBox(inserter: LayoutInserter, twins: readonly number[] | undefined): Box & { badgeWidth: number } {
+    const badgeWidth = 8 + String(inserter.number).length * 7;
+    const twinWidth = twins !== undefined && twins.length > 0 ? 2 + 5.8 * `=${twins.join(',')}`.length : 0;
+    return { x: px(inserter.x) - PX * 0.5 - badgeWidth * 0.45, y: px(inserter.y) - PX * 0.5 - 6, width: badgeWidth + twinWidth, height: 15, badgeWidth };
+}
+
+const overlap = (a: Box, b: Box) => Math.max(0, Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x)) * Math.max(0, Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y));
+
+/**
+ * The label of a belt tile ("b4"), at the corner of its tile that no inserter number covers: the badge of an inserter next to
+ * the tile reaches over the tile's own corner, so the four corners are tried and the one with the least cover is taken
+ */
+function beltLabelAt(tile: LayoutBeltTile, covers: readonly Box[]): { x: number; y: number; width: number } {
+    const width = 5.4 * `b${tile.beltId}`.length + 2, height = 9;
+    const left = px(tile.x - 0.5), top = px(tile.y - 0.5);
+    const corners = [[left + 2, top + PX - 3], [left + PX - 2 - width, top + PX - 3], [left + PX - 2 - width, top + 9], [left + 2, top + 9]];
+    const covered = (corner: number[]) => covers.reduce((sum, box) => sum + overlap({ x: corner[0], y: corner[1] - height + 1, width, height }, box), 0);
+    const [x, y] = corners.reduce((best, corner) => (covered(corner) < covered(best) ? corner : best));
+    return { x, y, width };
 }
 
 /** The hand of an inserter: from the side it picks from to the side it drops on, inside its own tile */
@@ -144,14 +165,13 @@ function InserterBody({ inserter }: { inserter: LayoutInserter }) {
 
 function InserterBadge({ inserter, twins, selected }: { inserter: LayoutInserter; twins: readonly number[] | undefined; selected: boolean }) {
     const text = String(inserter.number);
-    const width = 8 + text.length * 7;
-    const x = px(inserter.x) - PX * 0.5 - width * 0.45, y = px(inserter.y) - PX * 0.5 - 6;
+    const { x, y, badgeWidth: width } = badgeBox(inserter, twins);
     return (
         <g pointerEvents="none">
-            <rect x={x} y={y} width={width} height={15} rx={5} fill="#ffffff" stroke={selected ? SELECTED : INK} strokeWidth={selected ? 3.5 : 1.5} />
+            <rect x={x} y={y} width={width} height={15} rx={5} fill="#ffffff" stroke={selected ? SELECTED : INK} strokeWidth={selected ? 3.5 : 1.5} data-inserter-badge />
             <text x={x + width / 2} y={y + 11.5} textAnchor="middle" fontSize={11} fontWeight={700} fill={INK}>{text}</text>
             {twins !== undefined && twins.length > 0 && (
-                <text x={x + width + 2} y={y + 11} fontSize={9.5} fontWeight={700} fill="#f4f4f4" stroke={INK} strokeWidth={2.5} paintOrder="stroke">{`=${twins.join(',')}`}</text>
+                <text x={x + width + 2} y={y + 11} fontSize={9.5} fontWeight={700} fill="#f4f4f4" stroke={INK} strokeWidth={2.5} paintOrder="stroke" data-twin-label>{`=${twins.join(',')}`}</text>
             )}
         </g>
     );
@@ -166,6 +186,7 @@ function LayoutPictureComponent({ layout, names, tints, selection, onSelect }: L
     const isSelected = (kind: EntityClickType, id: number) => selection?.kind === kind && selection.id === id;
     const tintOf = (kind: string, id: number) => tints?.of.get(`${kind}:${id}`);
     const marked = (samePlace: readonly unknown[]) => samePlace.length > 0;
+    const covers = layout.inserters.map(inserter => badgeBox(inserter, tints?.twins.get(inserter.id)));
     return (
         <g>
             {/* halos first, so no region tint covers an entity */}
@@ -198,6 +219,15 @@ function LayoutPictureComponent({ layout, names, tints, selection, onSelect }: L
             {layout.inserters.map((inserter, index) => (
                 <InserterBadge key={`badge-${index}`} inserter={inserter} twins={tints?.twins.get(inserter.id)} selected={isSelected('inserter', inserter.id)} />
             ))}
+            {/* the belt labels last, each at a corner of its tile that no number covers */}
+            {layout.beltTiles.map(tile => {
+                const label = beltLabelAt(tile, covers);
+                return (
+                    <text key={`label-${tile.beltId}|${tile.x}|${tile.y}`} x={label.x} y={label.y} fontSize={8.5} fontWeight={700} fill="#ffffff" stroke={INK} strokeWidth={2} paintOrder="stroke" pointerEvents="none" data-belt-label>
+                        {`b${tile.beltId}`}
+                    </text>
+                );
+            })}
         </g>
     );
 }

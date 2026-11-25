@@ -5,7 +5,7 @@ import { FactorioDataService, regionOrbitsOfConfig, type Config, type FoundOrbit
 import factorioData from '../../../clock-generator/resources/data-filtered.json?raw';
 import { ConfigPaths } from '../../../clock-generator/dist/config/config-paths.js';
 import { loadConfigFromFile } from '../../../clock-generator/dist/config/loader.js';
-import { build, inserter, machine, show } from '../test/fixtures';
+import { bufferChest, build, containerChest, drill, inserter, machine, show } from '../test/fixtures';
 import { configToFormData } from '../utils/configForm/configMapping';
 import { duplicateEntity } from '../utils/configForm/edits';
 import type { ConfigFormData } from '../utils/configForm/formData';
@@ -110,6 +110,54 @@ describe('the pictures of the Layout view', () => {
         const belt = utility.belts.find(it => it.id === 4)!;
         const icons = [...legend.querySelectorAll('img')].map(it => it.getAttribute('src'));
         for (const lane of belt.lanes.filter(it => it.ingredient !== '')) expect(icons).toContain(`/icons/${lane.ingredient}.png`);
+    });
+});
+
+describe('the belt labels and the tiles of the Layout view', () => {
+    // a box from the attributes of a drawn badge or label, in picture units (a label's text is drawn up from its baseline)
+    const box = (element: Element, width: number, height: number, up = 0) => ({ x: Number(element.getAttribute('x')), y: Number(element.getAttribute('y')) - up, width, height });
+    const overlaps = (a: ReturnType<typeof box>, b: ReturnType<typeof box>) => a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
+
+    it('puts no belt label under an inserter number or the matching number beside it', () => {
+        const { container } = draw(utility, { orbits });
+        const labels = [...container.querySelectorAll('[data-belt-label]')];
+        expect(labels).toHaveLength(13);
+        const covers = [
+            ...[...container.querySelectorAll('[data-inserter-badge]')].map(it => box(it, Number(it.getAttribute('width')), 15)),
+            ...[...container.querySelectorAll('[data-twin-label]')].map(it => box(it, 5.8 * (it.textContent ?? '').length, 11, 10)),
+        ];
+        // 21 numbers, and the matching number beside the 18 that have one (the cryogenic plant's three inserters have none)
+        expect(covers).toHaveLength(21 + 18);
+        for (const label of labels) {
+            const mine = box(label, 5.4 * (label.textContent ?? '').length + 2, 9, 8);
+            expect(covers.filter(cover => overlaps(mine, cover)), `${label.textContent} at ${mine.x}, ${mine.y}`).toEqual([]);
+        }
+    });
+
+    it('draws each belt tile on the square of its tile: its corner is a whole number of tiles', () => {
+        const { container } = draw(utility);
+        for (const tile of buttons(container, /^Belt \d+$/)) {
+            const square = tile.querySelector('rect')!;
+            expect(Number(square.getAttribute('x')) % LAYOUT_TILE_PX === 0).toBe(true);
+            expect(Number(square.getAttribute('y')) % LAYOUT_TILE_PX === 0).toBe(true);
+            expect(Number(square.getAttribute('width'))).toBe(LAYOUT_TILE_PX);
+        }
+    });
+});
+
+describe('the pictures of a drill and a chest', () => {
+    it('draws a drill as its ore\'s icon with its type in the corner, and a chest and a car as their types\' icons', () => {
+        const form = build({
+            machines: [machine(1, { position: { x: 10.5, y: 10.5 }, prototype: 'assembling-machine-3' })],
+            chests: [bufferChest(1, { position: { x: 20.5, y: 10.5 } }), containerChest(2, 'car', { position: { x: 30, y: 10 } })],
+            inserters: [],
+            drills: { configs: [drill(1, { position: { x: 4.5, y: 10.5 }, mined_item_name: 'iron-ore', type: 'electric-mining-drill' })] },
+        });
+        const { container } = draw(form);
+        const sources = (name: string) => [...within(container).getByRole('button', { name }).querySelectorAll('img')].map(it => it.getAttribute('src'));
+        expect(sources('Drill 1')).toEqual(['/icons/iron-ore.png', '/icons/electric-mining-drill.png']);
+        expect(sources('Chest 1')).toEqual(['/icons/steel-chest.png']);
+        expect(sources('Car 2')).toEqual(['/icons/car.png']);
     });
 });
 
