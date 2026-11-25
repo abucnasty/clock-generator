@@ -6,7 +6,7 @@ import { useGameNames } from '../hooks/useGameNames';
 import type { BeltFormData, ChestFormData, DrillFormData, InserterFormData, MachineFormData } from '../hooks/useConfigForm';
 import { chestLabel, entityLabel, nameInSentence, type LabelKind } from '../utils/entityLabel';
 import { boundsOf, LAYOUT_TILE_PX } from '../utils/layoutBounds';
-import { beltColour, regionColour } from '../utils/layoutColours';
+import { beltColour, LAYOUT_GROUND, regionColour } from '../utils/layoutColours';
 import { layoutOf, type EntityRef, type Layout } from '../utils/layoutOf';
 import { regionTintsOf } from '../utils/layoutRegions';
 import { tileSizeOf } from '../utils/layoutSizes';
@@ -92,7 +92,7 @@ function Legend({ layout, regions }: { layout: Layout; regions: ReturnType<typeo
  * The Layout view of the Build panel: the build drawn from above from the positions its config holds, north up, with the
  * numbers of its inserters and the belts they reach. It only reads: a click selects, as in the diagram, and nothing is edited.
  */
-export function LayoutView({ machines, inserters, belts, chests, drills, orbits, selection, onSelectionChange, height = 520 }: LayoutViewProps) {
+export function LayoutView({ machines, inserters, belts, chests, drills, orbits, selection, onSelectionChange, height = 640 }: LayoutViewProps) {
     const { recipeLabel, itemLabel } = useGameNames();
     const layout = useMemo(() => layoutOf({ machines, drills, inserters, belts, chests }, tileSizeOf), [machines, drills, inserters, belts, chests]);
     const tints = useMemo(() => regionTintsOf(orbits), [orbits]);
@@ -171,7 +171,7 @@ export function LayoutView({ machines, inserters, belts, chests, drills, orbits,
         <Box sx={{ mb: 3 }}>
             {selection && <Typography variant="body2" sx={{ mb: 0.5 }}>Selected: {labelOf(chests, selection)}.</Typography>}
             <Box sx={{ position: 'relative', height, border: '1px solid', borderColor: 'divider', borderRadius: 1, overflow: 'hidden' }}>
-                <svg ref={setFrame} width="100%" height="100%" role="group" aria-label="The layout of the build" style={{ display: 'block', touchAction: 'none', cursor: 'grab' }}
+                <svg ref={setFrame} width="100%" height="100%" role="group" aria-label="The layout of the build" style={{ display: 'block', touchAction: 'none', cursor: 'grab', background: LAYOUT_GROUND }}
                     onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerEnd} onPointerLeave={onPointerEnd}
                     // a drag that panned is not a click on what was under it
                     onClickCapture={event => { if (drag.current?.moved) event.stopPropagation(); }}>

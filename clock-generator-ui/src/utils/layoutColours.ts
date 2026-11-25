@@ -7,3 +7,6 @@ export const beltColour = (id: number): string => BELT_COLOURS[((id % BELT_COLOU
 
 /** The tint of region `region` from 1, repeating after four; region 0 is what stands between the regions */
 export const regionColour = (region: number): string => REGION_COLOURS[region === 0 ? 0 : ((region - 1) % (REGION_COLOURS.length - 1)) + 1];
+
+/** The ground the picture is drawn on, in either theme */
+export const LAYOUT_GROUND = '#fcfcfc';

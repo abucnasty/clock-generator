@@ -78,6 +78,7 @@ describe('the Layout view of utility 320', () => {
         // the cryogenic plant they share stands between them
         expect(tintOf(4)).toBe(regionColour(0));
         expect(container.textContent).toContain('Region 1: machines 1, 2, 3, 5');
+        expect(container.textContent).toContain('Number: the inserter\'s number, as in the List.');
         expect(container.textContent).toContain('Region 2: machines 6, 7, 8, 9');
     });
 

@@ -1,14 +1,13 @@
 import type { KeyboardEvent, ReactNode } from 'react';
 import type { Layout, LayoutBeltTile, LayoutBox, LayoutInserter } from '../utils/layoutOf';
 import { LAYOUT_TILE_PX as PX } from '../utils/layoutBounds';
-import { beltColour, regionColour } from '../utils/layoutColours';
+import { beltColour, LAYOUT_GROUND, regionColour } from '../utils/layoutColours';
 import type { RegionTints } from '../utils/layoutRegions';
 import { entityLabel } from '../utils/entityLabel';
 import type { EntityClickType } from './ConfigFlowDiagram';
 
 /** The colours of the picture: it is drawn on its own light ground, so they hold in either theme */
 const INK = '#1a1a1a';
-const GROUND = '#fcfcfc';
 const GRID = '#eeeeee';
 const SELECTED = '#d35400';
 const WARNING = '#c0392b';
@@ -73,7 +72,11 @@ function BoxLabel({ box, title, detail }: { box: LayoutBox; title: string; detai
     return (
         <svg x={x} y={y} width={px(span)} height={px(spanHeight)} overflow="hidden" pointerEvents="none">
             <text x="50%" y={detail ? '45%' : '52%'} textAnchor="middle" fontSize={11} fontWeight={700} fill={INK}>{title}</text>
-            {detail && <text x="50%" y="45%" dy={13} textAnchor="middle" fontSize={9.5} fill={INK}>{detail}</text>}
+            {detail && (
+                // a name longer than the box is squeezed to it, not cut
+                <text x="50%" y="45%" dy={13} textAnchor="middle" fontSize={9.5} fill={INK}
+                    {...(detail.length * 5.2 > px(span) - 6 ? { textLength: px(span) - 6, lengthAdjust: 'spacingAndGlyphs' as const } : {})}>{detail}</text>
+            )}
         </svg>
     );
 }
@@ -123,7 +126,7 @@ function InserterBadge({ inserter, twins, selected }: { inserter: LayoutInserter
             <rect x={x} y={y} width={width} height={15} rx={5} fill="#ffffff" stroke={selected ? SELECTED : INK} strokeWidth={selected ? 3 : 1.5} />
             <text x={x + width / 2} y={y + 11.5} textAnchor="middle" fontSize={11} fontWeight={700} fill={INK}>{text}</text>
             {twins !== undefined && twins.length > 0 && (
-                <text x={x + width + 2} y={y + 11} fontSize={9} fill="#666666">{`=${twins.join(',')}`}</text>
+                <text x={x + width + 2} y={y + 11} fontSize={9.5} fontWeight={600} fill="#333333">{`=${twins.join(',')}`}</text>
             )}
         </g>
     );
@@ -179,7 +182,7 @@ export function LayoutGround({ minX, minY, maxX, maxY }: { minX: number; minY: n
     const rows = Array.from({ length: Math.max(0, Math.floor(maxY) - Math.ceil(minY) + 1) }, (_, i) => Math.ceil(minY) + i);
     return (
         <g pointerEvents="none">
-            <rect x={px(minX)} y={px(minY)} width={px(maxX - minX)} height={px(maxY - minY)} fill={GROUND} />
+            <rect x={px(minX)} y={px(minY)} width={px(maxX - minX)} height={px(maxY - minY)} fill={LAYOUT_GROUND} />
             {columns.map(x => <line key={`x${x}`} x1={px(x)} x2={px(x)} y1={px(minY)} y2={px(maxY)} stroke={GRID} />)}
             {rows.map(y => <line key={`y${y}`} x1={px(minX)} x2={px(maxX)} y1={px(y)} y2={px(y)} stroke={GRID} />)}
         </g>
