@@ -57,6 +57,8 @@ const TERMINAL: Readonly<Record<string, number>> = {
     AUTOMATION_SCIENCE_120_FOUNDRIES_FEED_BELT_TO_ASSEMBLER: 1,
     CHEMICAL_SCIENCE_240_SHARED_FOUNDRY: 4,
     ELECTRIC_FURNACE_20: 1,
+    // the circuits' inserter (4) into the infinity chest that removes them
+    ELECTRONIC_CIRCUIT_2_BELT_CHEST: 1,
     ELECTROMAGNETIC_SCIENCE_330: 2,
     FLYING_ROBOT_FRAME_80: 1,
     ROCKET_FUEL_60: 3,
