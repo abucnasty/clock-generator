@@ -22,6 +22,7 @@ import { useConfigForm, type BuildMutationSnapshot } from './hooks/useConfigForm
 import type { BeltFormData, InserterFormData } from './hooks/useConfigForm';
 import { useInserterValidation } from './hooks/useInserterValidation';
 import { useOutputTransfers } from './hooks/useOutputTransfers';
+import { useRegionOrbits } from './hooks/useRegionOrbits';
 import { useAnnounce, useDismissMessage, useNotify } from './hooks/useMessages';
 import { useSharedBuildLink } from './hooks/useSharedBuildLink';
 import { useStickyHeaderHeight } from './hooks/useStickyHeaderHeight';
@@ -54,6 +55,7 @@ import { buildValidationIssues, isRefused, navigateToOutputRouteRepair, refusedI
 import { importedAsOneUnitText } from './utils/pasteText';
 import { ConfigFlowDiagram } from './components/ConfigFlowDiagram';
 import { BuildPanel, type BuildView } from './components/BuildPanel';
+import { LayoutView } from './components/LayoutView';
 import { PanelSection } from './components/Panel';
 import { advancedSetCount } from './utils/advancedSummary';
 import { ChangelogDialog } from './components/ChangelogDialog';
@@ -345,6 +347,8 @@ function App() {
     // null until the engine has looked for missing inserters; until then the check catches them
     const checkedCoverage = useInserterValidation(engineConfig, isInitialized);
     const { transfers: outputTransfers, generationIssues: outputGenerationIssues, updating: outputTransfersLoading } = useOutputTransfers(engineConfig, isInitialized);
+    // asked only while the Layout view is open: it is the one that tints the regions
+    const regionOrbits = useRegionOrbits(engineConfig, isInitialized && configView === 'layout');
     // the lanes as the engine reads them: each lane's role, and the end of a lane that states none
     const { facts: laneFacts, roles: laneRoles } = useLaneFacts(engineConfig, isInitialized);
     const inputEnds = inputLaneEnds(laneFacts);
@@ -1343,6 +1347,17 @@ function App() {
                                             onBulkUpdate={updateInsertersUndoable}
                                         />
                                     </>
+                                ) : configView === 'layout' ? (
+                                    <LayoutView
+                                        machines={config.machines}
+                                        inserters={config.inserters}
+                                        belts={config.belts}
+                                        chests={config.chests}
+                                        drills={drillConfigs}
+                                        orbits={regionOrbits}
+                                        selection={flowDiagramProps.selection}
+                                        onSelectionChange={flowDiagramProps.onSelectionChange}
+                                    />
                                 ) : (
                                     <Box sx={{ mb: 3 }}>
                                         <ConfigFlowDiagram

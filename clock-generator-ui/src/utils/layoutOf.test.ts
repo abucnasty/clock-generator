@@ -1,5 +1,7 @@
-import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import ironCar from '../../../clock-generator/resources/config-samples/smelting/iron-plate/iron-plate-80-car-chest.sidecar-export.json?raw';
+import lithiumSilo from '../../../clock-generator/resources/config-samples/smelting/lithium-plate/lithium-plate-80-silo-chest.sidecar-export.json?raw';
+import steelWagon from '../../../clock-generator/resources/config-samples/smelting/steel-plate/steel-plate-26-wagon-chest.sidecar-export.json?raw';
 import type { Config } from 'clock-generator/browser';
 import { ConfigPaths } from '../../../clock-generator/dist/config/config-paths.js';
 import { loadConfigFromFile } from '../../../clock-generator/dist/config/loader.js';
@@ -8,15 +10,14 @@ import { layoutOf, type LayoutLists } from './layoutOf';
 import { tileSizeOf } from './layoutSizes';
 import { readSidecarExport } from './sidecarExport';
 
-const SAMPLES = '../../../clock-generator/resources/config-samples/';
 const listsOfForm = (config: Config): LayoutLists => {
     const form = configToFormData(config);
     return { machines: form.machines, drills: form.drills?.configs ?? [], inserters: form.inserters, belts: form.belts, chests: form.chests };
 };
 // a Sidecar export's lists as `readSidecarExport` gives them: raw entries, which have no id for an inserter
-const listsOfExport = (file: string): LayoutLists => {
-    const read = readSidecarExport(readFileSync(new URL(`${SAMPLES}${file}`, import.meta.url), 'utf8'));
-    if (read.kind !== 'export') throw new Error(`${file} is not an export`);
+const listsOfExport = (text: string): LayoutLists => {
+    const read = readSidecarExport(text);
+    if (read.kind !== 'export') throw new Error('not an export');
     return read as unknown as LayoutLists;
 };
 
@@ -41,9 +42,9 @@ const BUILDS: { name: string; lists: () => Promise<LayoutLists> | LayoutLists; c
     { name: 'logistic-240', lists: async () => listsOfForm(await loadConfigFromFile(ConfigPaths.LOGISTIC_SCIENCE_240)), counts: { placed: 2, notPlaced: 0, inside: 2, belt: 2, untestable: 0 } },
     { name: 'utility-320-metered-takers', lists: async () => listsOfForm(await loadConfigFromFile(ConfigPaths.UTILITY_SCIENCE_320_METERED_TAKERS)), counts: { placed: 21, notPlaced: 0, inside: 29, belt: 13, untestable: 0 } },
     { name: 'stone-brick-120-drill-direct-insert', lists: async () => listsOfForm(await loadConfigFromFile(ConfigPaths.STONE_BRICK_120_DRILL_DIRECT_INSERT)), counts: { placed: 1, notPlaced: 0, inside: 1, belt: 1, untestable: 0 } },
-    { name: 'iron-plate-80-car-chest (Sidecar export)', lists: () => listsOfExport('smelting/iron-plate/iron-plate-80-car-chest.sidecar-export.json'), counts: { placed: 4, notPlaced: 0, inside: 6, belt: 2, untestable: 0 } },
-    { name: 'lithium-plate-80-silo-chest (Sidecar export)', lists: () => listsOfExport('smelting/lithium-plate/lithium-plate-80-silo-chest.sidecar-export.json'), counts: { placed: 16, notPlaced: 0, inside: 26, belt: 6, untestable: 0 } },
-    { name: 'steel-plate-26-wagon-chest (Sidecar export)', lists: () => listsOfExport('smelting/steel-plate/steel-plate-26-wagon-chest.sidecar-export.json'), counts: { placed: 5, notPlaced: 0, inside: 9, belt: 1, untestable: 0 } },
+    { name: 'iron-plate-80-car-chest (Sidecar export)', lists: () => listsOfExport(ironCar), counts: { placed: 4, notPlaced: 0, inside: 6, belt: 2, untestable: 0 } },
+    { name: 'lithium-plate-80-silo-chest (Sidecar export)', lists: () => listsOfExport(lithiumSilo), counts: { placed: 16, notPlaced: 0, inside: 26, belt: 6, untestable: 0 } },
+    { name: 'steel-plate-26-wagon-chest (Sidecar export)', lists: () => listsOfExport(steelWagon), counts: { placed: 5, notPlaced: 0, inside: 9, belt: 1, untestable: 0 } },
 ];
 
 describe('the layout of a build with positions', () => {

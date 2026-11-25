@@ -93,6 +93,18 @@ it('answers output-transfer queries from the engine for both recycler products a
     } });
 });
 
+it('answers a region-orbits query with the finder\'s plain data, which a copy between threads keeps', async () => {
+    const config = JSON.parse(grenadeSample) as Config;
+    const found = await ask({ kind: 'region-orbits', config });
+    expect(found).not.toBeNull();
+    expect(structuredClone(found)).toEqual(found);
+    const orbit = found![0].kind === 'orbit' ? found![0].orbit : null;
+    expect(orbit?.anchor[0]).toBe('machine:3');
+    expect(orbit?.regions.map(region => region.nodes.filter(node => node.startsWith('machine:')).sort())).toEqual([['machine:1', 'machine:2'], ['machine:4', 'machine:5']]);
+    // a build with one machine has no copies of a region
+    expect(await ask({ kind: 'region-orbits', config: { ...config, machines: config.machines.slice(0, 1), inserters: [], belts: [], chests: [], drills: undefined } as Config })).toBeNull();
+});
+
 it.each(['blocked', 'markers'] as const)('keeps blocked container slots through Sidecar paste (%s), save/reload and engine validation', async spelling => {
     // Sidecar exports both game markers as blocked slots; an export of the 0.20.0 drafts named the marker as the item
     const slot_filters = [{ slot: 1, item: 'iron-plate' }, ...Array.from({ length: 79 }, (_, i) => spelling === 'blocked'

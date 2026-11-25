@@ -357,6 +357,9 @@ export { DEFAULT_KICK_START_ITEMS } from './crafting/runner/cold-start';
 
 export { sidecarPickupInserters } from "./config/pickup-capture";
 
+export { regionOrbitsOfConfig } from "./crafting/graph/regions";
+export type { FoundOrbit } from "./crafting/graph/regions";
+
 export { deriveOutputTransfers } from "./config/output-transfer";
 export type { OutputTransferTarget, OutputTransferResult, OutputTransferSummary } from "./config/output-transfer";
 export { outputTransferGenerationIssues, assertOutputTransferGenerationSupported } from "./config/output-transfer-generation";
