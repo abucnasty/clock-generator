@@ -20,6 +20,7 @@ interface Point { x: number, y: number }
 interface BlueprintEntity {
     entity_number: number,
     name: string,
+    type?: string,
     position: Point,
     direction?: number,
     quality?: string,
@@ -31,7 +32,7 @@ interface BlueprintEntity {
 interface ConfigInserter {
     id: number,
     source: { type: string, id: number },
-    sink: { type: string, id: number },
+    sink: { type: string, id: number, belt_direction?: number },
     quality: string,
     stack_size: number,
     position: Point,
@@ -254,6 +255,126 @@ describe('the utility science 320/s scaffold against its config: machines, modul
         for (const machine of config.machines) {
             const wanted = machine.prototype === 'foundry' ? 5 : machine.prototype === 'cryogenic-plant' ? 8 : 10;
             expect(reach(machine_entities.get(machine.id)!), `machine ${machine.id} (${machine.prototype})`).toBe(wanted);
+        }
+    });
+});
+
+/**
+ * The scaffold's belts read by position, as the game joins them: a belt or an underground exit pushes onto the tile ahead; a belt
+ * it pushes into from behind continues it, and one it pushes into from a side is a curve when nothing else feeds that belt (a turn
+ * keeps each lane), else a side load. An underground entrance takes the first underground belt of its name on its axis within its
+ * reach, and pairs with it when that one is an exit facing the same way. A loader takes from its back tile.
+ */
+const REACH: Record<string, number> = { 'turbo-underground-belt': 11, 'express-underground-belt': 9 };
+const tileKey = (x: number, y: number) => `${Math.floor(x)},${Math.floor(y)}`;
+const belt_at = new Map<string, BlueprintEntity>();
+for (const it of entities.filter(it => BELT.test(it.name))) {
+    const [x0, y0, x1, y1] = tilesOf(it);
+    for (let x = x0; x < x1; x++) for (let y = y0; y < y1; y++) belt_at.set(tileKey(x, y), it);
+}
+const headingOf = (it: BlueprintEntity) => it.direction ?? 0;
+const kindOf = (it: BlueprintEntity) => /loader$/.test(it.name) ? 'loader' : /underground-belt$/.test(it.name)
+    ? (it.type === 'output' ? 'exit' : 'entrance') : 'belt';
+const ahead = (it: BlueprintEntity, steps = 1): BlueprintEntity | undefined => {
+    const [vx, vy] = VECTOR[headingOf(it)];
+    return belt_at.get(tileKey(it.position.x + vx * steps, it.position.y + vy * steps));
+};
+/** How a belt that pushes with heading `d` enters `into`: from behind, from a side, or not at all */
+const entry = (d: number, into: BlueprintEntity, from: BlueprintEntity): 'behind' | 'side' | null => {
+    const r = headingOf(into), kind = kindOf(into);
+    if (kind === 'loader') {
+        const [vx, vy] = VECTOR[r];
+        const back = tileKey(into.position.x - vx * 0.5, into.position.y - vy * 0.5);
+        return d === r && back === tileKey(from.position.x + VECTOR[d][0], from.position.y + VECTOR[d][1]) ? 'behind' : null;
+    }
+    if (kind === 'exit') return d === r || d === (r + 8) % 16 ? null : 'side';
+    return d === r ? 'behind' : d === (r + 8) % 16 ? null : 'side';
+};
+const pushes = (it: BlueprintEntity) => kindOf(it) === 'belt' || kindOf(it) === 'exit';
+const feeders = (into: BlueprintEntity) => entities.filter(it => BELT.test(it.name) && pushes(it) && ahead(it) === into && entry(headingOf(it), into, it) !== null);
+const exitOf = (entrance: BlueprintEntity): BlueprintEntity | undefined => {
+    for (let k = 1; k <= (REACH[entrance.name] ?? 0); k++) {
+        const it = ahead(entrance, k);
+        if (it === undefined || it.name !== entrance.name || (headingOf(it) !== headingOf(entrance) && headingOf(it) !== (headingOf(entrance) + 8) % 16)) continue;
+        return kindOf(it) === 'exit' && headingOf(it) === headingOf(entrance) ? it : undefined;
+    }
+    return undefined;
+};
+/** Left of a heading, in the blueprint's plane (y grows to the south) */
+const leftOf = (d: number): [number, number] => { const [x, y] = VECTOR[d]; return [y, -x]; };
+/**
+ * From the belt an output inserter drops on to the loader it reaches: the loader, the lane its items arrive on (left or right of the
+ * loader's heading), every side load on the way, and the count of belts walked (more is further upstream). The inserter drops on
+ * the lane of the belt away from it.
+ */
+const pathOf = (inserter: BlueprintEntity) => {
+    const [vx, vy] = VECTOR[headingOf(inserter)];
+    let belt = at(inserter.position.x - vx, inserter.position.y - vy);
+    expect(belt !== undefined && kindOf(belt) === 'belt', `the drop of entity ${inserter.entity_number} is a belt`).toBe(true);
+    const [lx, ly] = leftOf(headingOf(belt!));
+    let lane: 'left' | 'right' = -vx === lx && -vy === ly ? 'left' : 'right';
+    const side_loads: number[] = [];
+    for (let steps = 0; steps < 200; steps++) {
+        const kind = kindOf(belt!);
+        if (kind === 'loader') return { loader: belt!.entity_number, lane, side_loads, belts_walked: steps + 1 };
+        let next: BlueprintEntity | undefined;
+        if (kind === 'entrance') next = exitOf(belt!);
+        else {
+            next = ahead(belt!);
+            const how = next === undefined ? null : entry(headingOf(belt!), next, belt!);
+            if (next === undefined || how === null) return { loader: null, lane, side_loads, belts_walked: steps + 1 };
+            if (how === 'side') {
+                const others = feeders(next).filter(it => it !== belt);
+                const curve = kindOf(next) === 'belt' && others.length === 0;
+                if (!curve) {
+                    side_loads.push(next.entity_number);
+                    const [nx, ny] = leftOf(headingOf(next));
+                    lane = belt!.position.x - next.position.x === nx && belt!.position.y - next.position.y === ny ? 'left' : 'right';
+                }
+            }
+        }
+        if (next === undefined) return { loader: null, lane, side_loads, belts_walked: steps + 1 };
+        belt = next;
+    }
+    throw new Error(`no end to the belt from entity ${inserter.entity_number}`);
+};
+
+describe('the utility science 320/s scaffold against its config: output belts', () => {
+    const outputs = config.inserters.filter(it => it.sink.type === 'belt');
+    const paths = new Map(outputs.map(it => [it.id, pathOf(inserter_of(it.id))] as const));
+    const laneOf = (id: number) => `loader ${paths.get(id)!.loader} ${paths.get(id)!.lane}`;
+
+    it('drops each output on a belt that side-loads once onto an output belt on the way to its loader', () => {
+        expect(outputs.map(it => it.id)).toEqual([1, 4, 11, 13, 18, 19]);
+        expect(Object.fromEntries([...paths].map(([id, path]) => [id, path.side_loads])))
+            .toEqual({ 1: [69], 4: [80], 11: [114], 13: [135], 18: [176], 19: [196] });
+    });
+
+    it('takes the outputs to the two loaders, each inserter to its lane, upstream first', () => {
+        const lanes: Record<string, number[]> = {};
+        for (const [id] of [...paths].sort(([, a], [, b]) => b.belts_walked - a.belts_walked)) lanes[laneOf(id)] = [...(lanes[laneOf(id)] ?? []), id];
+        expect(lanes).toEqual({ 'loader 228 right': [1], 'loader 228 left': [11, 18], 'loader 229 right': [4, 13], 'loader 229 left': [19] });
+    });
+
+    it('puts the outputs of one config belt only on each lane', () => {
+        const belts = new Map<string, Set<number>>();
+        for (const configured of outputs) belts.set(laneOf(configured.id), new Set([...(belts.get(laneOf(configured.id)) ?? []), configured.sink.id]));
+        for (const [lane, ids] of belts) expect([...ids], `config belts on ${lane}`).toHaveLength(1);
+        expect(belts.size).toBe(4);
+    });
+
+    it('runs the belt under each output inserter the way the frame turns its belt_direction, but the other way under 1 and 19', () => {
+        const under = Object.fromEntries(outputs.map(configured => {
+            const { drop } = endsOf(inserter_of(configured.id));
+            return [configured.id, { entity: drop!.entity_number, heading: headingOf(drop!) }];
+        }));
+        expect(under).toEqual({
+            1: { entity: 59, heading: 4 }, 4: { entity: 76, heading: 4 }, 11: { entity: 110, heading: 0 },
+            13: { entity: 136, heading: 0 }, 18: { entity: 170, heading: 4 }, 19: { entity: 180, heading: 4 },
+        });
+        for (const configured of outputs) {
+            const turned = heading(configured.sink.belt_direction!);
+            expect(under[configured.id].heading, `belt under inserter ${configured.id}`).toBe([1, 19].includes(configured.id) ? (turned + 8) % 16 : turned);
         }
     });
 });
