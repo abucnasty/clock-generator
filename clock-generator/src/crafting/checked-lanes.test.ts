@@ -183,6 +183,21 @@ describe("the rows of a build that states its output belt", () => {
     });
 });
 
+describe("the rows of a build whose copies drop onto one side of a belt that lists one lane", () => {
+    it("say the copies drop more than the lane carries, as for a belt that lists the lane", async () => {
+        // utility science 320: each copy drops 53.33 a second onto one side of belt 3, and onto lane 1 of belt 4
+        const config = await loadConfigFromFile(ConfigPaths.UTILITY_SCIENCE_320_METERED_TAKERS) as Config;
+        const lanes = checked({ config });
+        const output = lanes.rows.filter(row => row.belt_id === 3 || row.belt_id === 4);
+        expect(output.map(row => [`${row.belt_id}/${row.lane}`, row.state, row.label, row.sentence, row.together])).toEqual([3, 4].map(belt_id => [
+            `${belt_id}/1`, { kind: "not_checked", reason: { code: "drops_more_than_lane_carries", data: { copies: 3 } } }, "Not checked",
+            "The 3 copies together drop more than this lane carries.", { kind: "drop", items_per_second: 160, lanes: [1], carries_per_second: 120 },
+        ]));
+        expect(lanes.line.plain_output_belts).toBe(0);
+        expect(lanes.line.sentence).toBe("Checked with all 3 copies on the lanes they share. Every copy gets its items.");
+    });
+});
+
 describe("the line of a build that drops into a chest of each copy", () => {
     it("names the chest by its kind and item", async () => {
         const config = await loadConfigFromFile(ConfigPaths.ELECTROMAGNETIC_SCIENCE_330) as Config;
