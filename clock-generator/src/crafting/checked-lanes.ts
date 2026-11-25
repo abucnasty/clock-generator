@@ -1,5 +1,5 @@
 import type { Config } from "../config/schema";
-import { dropSideLoads, heaviestLoad, laneLoads } from "../config/lane-capacity-validator";
+import { heaviestLoad, laneLoads, laneLoadsWithSides } from "../config/lane-capacity-validator";
 import { carriedItemsOf, laneFactsOfConfig } from "../entities/traits/build-traits";
 import { beltLaneFactsOf, LaneEnd, LaneSharing } from "../entities/traits/lane-facts";
 import type { LaneRole } from "../entities/traits/lane-role";
@@ -345,10 +345,10 @@ function copiesAtFullJoin(losses: readonly SharedLaneLoss[]): (CopyMissed & { he
 
 /**
  * The copies' together on a lane, from the targets' takes and drops of one copy (laneLoads) times the copies. The drops
- * onto a belt that lists one lane are read by their sides (dropSideLoads): the side that is fullest for what it carries,
+ * onto a belt that lists one lane are read by their sides (laneLoadsWithSides): the side that is fullest for what it carries,
  * given as the belt's one lane.
  */
-function togetherOf(config: Config, lane: BuildLane, loads: ReturnType<typeof laneLoads> | null, side_loads: ReturnType<typeof dropSideLoads> | null): LaneTogether | null {
+function togetherOf(config: Config, lane: BuildLane, loads: ReturnType<typeof laneLoads> | null, side_loads: ReturnType<typeof laneLoads> | null): LaneTogether | null {
     const kind = lane.role === "output" ? "drop" : "take";
     const one_lane = kind === "drop" && config.belts.find(belt => belt.id === lane.belt_id)?.lanes.length === 1;
     const from = one_lane ? side_loads : loads;
@@ -439,10 +439,9 @@ export function checkedLanesOf(input: CheckedLanesInput): CheckedLanes | null {
     if (!(copies > 1) && lanes.length === 0 && !on_output_belt) return null;
     const build = buildToNameOf(config);
     let loads: ReturnType<typeof laneLoads> | null;
-    let side_loads: ReturnType<typeof dropSideLoads> | null;
+    let side_loads: ReturnType<typeof laneLoads> | null;
     try {
-        loads = laneLoads(config);
-        side_loads = dropSideLoads(config);
+        ({ loads, side_loads } = laneLoadsWithSides(config));
     } catch {
         loads = null;
         side_loads = null;

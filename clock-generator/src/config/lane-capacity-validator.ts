@@ -44,6 +44,8 @@ interface LaneFlow {
     kind: LaneFlowKind;
     /** The lanes it can use, by place in the belt's `lanes` */
     lanes: number[];
+    /** The lanes it can use where a drop onto a belt that lists one lane is held to the lane its side gives (drop-side.ts) */
+    side_lanes: number[];
     items_per_second: Fraction;
 }
 
@@ -77,11 +79,12 @@ export function lanesCapacityOf(belt: Config['belts'][number], lanes: readonly n
 }
 
 /**
- * The flows of one unit at the target, from the planner's transfer plan. With `sides`, a drop onto a belt that lists one
- * lane is held to the lane its side gives (drop-side.ts) where the side is known and the configuration states no output belt.
+ * The flows of one unit at the target, from the planner's transfer plan, each with its lanes both ways: a drop onto a
+ * belt that lists one lane is held to the lane its side gives (drop-side.ts) in `side_lanes` where the side is known and
+ * the configuration states no output belt. The plan is made once for both.
  */
-function laneFlowsOf(config: Config, sides: boolean): LaneFlow[] {
-    const read_sides = sides && config.output_belt === undefined;
+function laneFlowsOf(config: Config): LaneFlow[] {
+    const read_sides = config.output_belt === undefined;
     const registry = createEntityRegistryFromConfig(config);
     const cycle = OutputCyclePlan.create(TargetProductionRate.fromConfig(config.setpoint), registry, config, fraction(1));
     const seconds = cycle.total_duration_ticks.divide(60);
@@ -98,14 +101,14 @@ function laneFlowsOf(config: Config, sides: boolean): LaneFlow[] {
             const source = inserter.source;
             const from = source.type === 'belt' ? config.belts.find(it => it.id === source.id) : undefined;
             if (from !== undefined && listing(from).length > 0) {
-                flows.push({ inserter_id, belt_id: from.id, kind: 'take', lanes: listing(from), items_per_second });
+                flows.push({ inserter_id, belt_id: from.id, kind: 'take', lanes: listing(from), side_lanes: listing(from), items_per_second });
             }
             const sink = inserter.sink;
             const onto = sink.type === 'belt' ? config.belts.find(it => it.id === sink.id) : undefined;
             if (onto !== undefined && sink.type === 'belt') {
                 const side = read_sides && onto.lanes.length === 1 ? dropSideLane(inserter, sink) : null;
-                const lanes = side !== null ? [side] : dropLanesOf(onto, sink, item.item_name);
-                if (lanes.length > 0) flows.push({ inserter_id, belt_id: onto.id, kind: 'drop', lanes, items_per_second });
+                const lanes = dropLanesOf(onto, sink, item.item_name);
+                if (lanes.length > 0) flows.push({ inserter_id, belt_id: onto.id, kind: 'drop', lanes, side_lanes: side !== null ? [side] : lanes, items_per_second });
             }
         }
     }
@@ -117,17 +120,19 @@ function laneFlowsOf(config: Config, sides: boolean): LaneFlow[] {
  * it, takes and drops apart; ordered by belt, kind and lanes, a single lane before both.
  */
 export function laneLoads(config: Config): LaneLoad[] {
-    return loadsOf(laneFlowsOf(config, false), config);
+    return loadsOf(laneFlowsOf(config), config);
 }
 
 /**
- * The loads of `laneLoads`, with each drop onto a belt that lists one lane held to the side it lands on where that is
- * known (drop-side.ts): the drops of each side summed on their own lane, a drop of unknown side on both. Only the
- * warning for lanes the copies share and the checked lanes read them; the refusal, the lanes exactly full and the
- * suggested target keep `laneLoads`, which reads a belt that lists one lane as both lanes for every drop.
+ * The loads of `laneLoads` (`loads`), and beside them the same flows with each drop onto a belt that lists one lane held
+ * to the side it lands on where that is known (`side_loads`, drop-side.ts): the drops of each side summed on their own
+ * lane, a drop of unknown side on both. From one transfer plan. Only the warning for lanes the copies share and the
+ * checked lanes read `side_loads`; the refusal, the lanes exactly full and the suggested target keep `laneLoads`, which
+ * reads a belt that lists one lane as both lanes for every drop.
  */
-export function dropSideLoads(config: Config): LaneLoad[] {
-    return loadsOf(laneFlowsOf(config, true), config);
+export function laneLoadsWithSides(config: Config): { loads: LaneLoad[]; side_loads: LaneLoad[] } {
+    const flows = laneFlowsOf(config);
+    return { loads: loadsOf(flows, config), side_loads: loadsOf(flows.map(flow => ({ ...flow, lanes: flow.side_lanes })), config) };
 }
 
 function loadsOf(flows: LaneFlow[], config: Config): LaneLoad[] {
@@ -205,11 +210,12 @@ export function lanesSharedByCopies(config: Config): LaneCapacityIssue[] {
     if (!above(copies, fraction(1))) return [];
     const facts = laneFactsOfConfig(config);
     const shared = (load: LaneLoad) => load.kind === 'drop' && !onePerCopy(facts, asListed(config, load));
+    const { loads, side_loads } = laneLoadsWithSides(config);
     // what one unit is refused for is told by the refusal, which reads a belt that lists one lane as both lanes
-    const refused = overCapacity(laneLoads(config).filter(shared), fraction(1));
+    const refused = overCapacity(loads.filter(shared), fraction(1));
     const touches = (load: LaneLoad) => refused.some(other => other.belt_id === load.belt_id && other.kind === load.kind
         && other.lanes.some(lane => load.lanes.includes(lane)));
-    const over = overCapacity(dropSideLoads(config).filter(shared).filter(load => !touches(load)), copies);
+    const over = overCapacity(side_loads.filter(shared).filter(load => !touches(load)), copies);
     return oneForEachBelt(config, over).map(load => asIssue(asListed(config, load), config.setpoint.copies));
 }
 
