@@ -1,26 +1,29 @@
-import { memo, useState, type KeyboardEvent, type ReactNode, type SVGProps } from 'react';
+import { memo, useId, useState, type KeyboardEvent, type ReactNode, type SVGProps } from 'react';
 import type { Layout, LayoutBeltTile, LayoutBox, LayoutInserter } from '../utils/layoutOf';
+import { TILE_GRID_SHADE } from '../theme/tileGrid';
 import { LAYOUT_TILE_PX as PX } from '../utils/layoutBounds';
 import { beltColour, LAYOUT_GROUND, regionColour } from '../utils/layoutColours';
 import type { RegionTints } from '../utils/layoutRegions';
 import { entityLabel } from '../utils/entityLabel';
+import { FactorioIcon } from './FactorioIcon';
 import type { EntityClickType } from './ConfigFlowDiagram';
 
 /** The colours of the picture: it is drawn on its own light ground, so they hold in either theme */
 const INK = '#1a1a1a';
-const GRID = '#eeeeee';
 /** The selection and the keyboard focus, each in a colour no belt, region or box has */
 const SELECTED = '#e6007e';
-const FOCUS = '#5b2bff';
-const WARNING = '#c0392b';
+const FOCUS = '#ffffff';
+const WARNING = '#ff6b5e';
 const HAND = '#f5c400';
+/** An outline that shows on the dark ground */
+const RIM = '#e4e4e4';
 const BOX_COLOURS = { machine: '#8fbf8f', drill: '#c9b48a', chest: '#b9b9c9' } as const;
 const DIRECTION_VECTOR: Record<number, [number, number]> = { 0: [0, -1], 4: [1, 0], 8: [0, 1], 12: [-1, 0] };
 
 interface LayoutPictureProps {
     layout: Layout;
     /** The name of each entity box, by key "machine:3": its label and, under it, what it makes */
-    names: ReadonlyMap<string, { title: string; detail?: string }>;
+    names: ReadonlyMap<string, BoxName>;
     tints: RegionTints | null;
     selection: { kind: EntityClickType; id: number } | null;
     onSelect(kind: EntityClickType, id: number): void;
@@ -57,8 +60,8 @@ function Footprint({ box, tint, selected }: { box: LayoutBox; tint: number | und
         return (
             <>
                 {halo && <Rect x={box.x} y={box.y} width={Math.max(box.width, box.height) + 1} height={Math.max(box.width, box.height) + 1} fill={regionColour(tint!)} rx={6} />}
-                <Rect x={box.x} y={box.y} width={box.width} height={box.height} fill={BOX_COLOURS.chest} fillOpacity={0.25} strokeDasharray="4 3" {...outline} />
-                {box.width !== box.height && <Rect x={box.x} y={box.y} width={box.height} height={box.width} fill={BOX_COLOURS.chest} fillOpacity={0.25} strokeDasharray="4 3" {...outline} />}
+                <Rect x={box.x} y={box.y} width={box.width} height={box.height} fill={BOX_COLOURS.chest} fillOpacity={0.25} strokeDasharray="4 3" {...outline} stroke={selected ? SELECTED : RIM} />
+                {box.width !== box.height && <Rect x={box.x} y={box.y} width={box.height} height={box.width} fill={BOX_COLOURS.chest} fillOpacity={0.25} strokeDasharray="4 3" {...outline} stroke={selected ? SELECTED : RIM} />}
                 <Rect x={box.x} y={box.y} width={0.8} height={0.8} fill={BOX_COLOURS.chest} {...outline} />
             </>
         );
@@ -71,20 +74,35 @@ function Footprint({ box, tint, selected }: { box: LayoutBox; tint: number | und
     );
 }
 
-function BoxLabel({ box, title, detail }: { box: LayoutBox; title: string; detail?: string }) {
-    // text is cut at the box's own edge, so a long recipe name stays in its machine
-    const span = box.freeFacing || box.unsized ? Math.max(box.width, box.height, 1) : box.width;
-    const spanHeight = box.freeFacing || box.unsized ? Math.max(box.width, box.height, 1) : box.height;
-    const x = px(box.x - span / 2), y = px(box.y - spanHeight / 2);
+/** What a box is called, as a number and as pictures; the words are its accessible name and its hover text */
+export interface BoxName {
+    /** "Machine 3": the accessible name */
+    title: string;
+    /** The number badge */
+    id: number;
+    /** The picture in the middle: a machine's recipe, a drill's ore, a chest's type */
+    icon: string;
+    /** The small picture in the corner: what the machine or the drill is */
+    corner?: string;
+    /** The words of the picture, shown where the game has no icon for it, and on hover */
+    detail?: string;
+}
+
+function BoxLabel({ box, name }: { box: LayoutBox; name: BoxName }) {
+    // a marker has no box of its own: its label is one tile around it
+    const small = box.freeFacing || box.unsized;
+    const span = small ? 1 : box.width, spanHeight = small ? 1 : box.height;
+    const side = Math.min(span, spanHeight) * PX;
+    const iconSize = Math.min(40, Math.round(side * 0.52)), cornerSize = Math.round(Math.min(24, side * 0.3));
     return (
-        <svg x={x} y={y} width={px(span)} height={px(spanHeight)} overflow="hidden" pointerEvents="none">
-            <text x="50%" y={detail ? '45%' : '52%'} textAnchor="middle" fontSize={11} fontWeight={700} fill={INK}>{title}</text>
-            {detail && (
-                // a name longer than the box is squeezed to it, not cut
-                <text x="50%" y="45%" dy={13} textAnchor="middle" fontSize={9.5} fill={INK}
-                    {...(detail.length * 5.2 > px(span) - 6 ? { textLength: px(span) - 6, lengthAdjust: 'spacingAndGlyphs' as const } : {})}>{detail}</text>
-            )}
-        </svg>
+        <foreignObject x={px(box.x - span / 2)} y={px(box.y - spanHeight / 2)} width={px(span)} height={px(spanHeight)} pointerEvents="none" style={{ overflow: 'hidden' }}>
+            <div style={{ position: 'relative', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <FactorioIcon name={name.icon} size={iconSize} fallback={name.detail ? <span style={{ fontSize: 9.5, color: INK, textAlign: 'center', lineHeight: 1.1 }}>{name.detail}</span> : null} />
+                {name.corner && !small && <span style={{ position: 'absolute', right: 2, bottom: 2, display: 'flex' }}><FactorioIcon name={name.corner} size={cornerSize} alt="" /></span>}
+                <span style={{ position: 'absolute', left: 2, top: 2, minWidth: 12, padding: '0 3px', boxSizing: 'border-box', background: INK, color: '#ffffff', border: `1px solid ${RIM}`,
+                    font: '700 10px/13px sans-serif', textAlign: 'center' }}>{name.id}</span>
+            </div>
+        </foreignObject>
     );
 }
 
@@ -96,7 +114,7 @@ function BeltTile({ tile, onPick, selected }: { tile: LayoutBeltTile; onPick(): 
     const colour = beltColour(tile.beltId);
     return (
         <Pickable label={entityLabel('belt', tile.beltId)} selected={selected} onPick={onPick}>
-            <Rect x={tile.x} y={tile.y} width={1} height={1} fill={colour} stroke={selected ? SELECTED : INK} strokeWidth={selected ? 3.5 : 1} />
+            <Rect x={tile.x} y={tile.y} width={1} height={1} fill={colour} stroke={selected ? SELECTED : RIM} strokeWidth={selected ? 3.5 : 1.5} />
             {tile.direction !== null && (
                 <g transform={`translate(${px(tile.x)} ${px(tile.y)})`}><Arrow direction={tile.direction} size={PX * 0.3} fill="#ffffff" /></g>
             )}
@@ -112,7 +130,7 @@ function InserterBody({ inserter }: { inserter: LayoutInserter }) {
     const vector = inserter.direction === null ? null : DIRECTION_VECTOR[inserter.direction];
     return (
         <g transform={`translate(${px(inserter.x)} ${px(inserter.y)})`}>
-            <rect x={-PX * 0.22} y={-PX * 0.22} width={PX * 0.44} height={PX * 0.44} rx={3} fill="#444444" stroke={INK} strokeWidth={1} />
+            <rect x={-PX * 0.22} y={-PX * 0.22} width={PX * 0.44} height={PX * 0.44} rx={3} fill="#6b6b6b" stroke={INK} strokeWidth={1} />
             {vector !== null && (
                 <>
                     <line x1={vector[0] * PX * 0.42} y1={vector[1] * PX * 0.42} x2={-vector[0] * PX * 0.3} y2={-vector[1] * PX * 0.3} stroke={HAND} strokeWidth={3} />
@@ -133,7 +151,7 @@ function InserterBadge({ inserter, twins, selected }: { inserter: LayoutInserter
             <rect x={x} y={y} width={width} height={15} rx={5} fill="#ffffff" stroke={selected ? SELECTED : INK} strokeWidth={selected ? 3.5 : 1.5} />
             <text x={x + width / 2} y={y + 11.5} textAnchor="middle" fontSize={11} fontWeight={700} fill={INK}>{text}</text>
             {twins !== undefined && twins.length > 0 && (
-                <text x={x + width + 2} y={y + 11} fontSize={9.5} fontWeight={600} fill="#333333">{`=${twins.join(',')}`}</text>
+                <text x={x + width + 2} y={y + 11} fontSize={9.5} fontWeight={700} fill="#f4f4f4" stroke={INK} strokeWidth={2.5} paintOrder="stroke">{`=${twins.join(',')}`}</text>
             )}
         </g>
     );
@@ -157,11 +175,12 @@ function LayoutPictureComponent({ layout, names, tints, selection, onSelect }: L
             })}
             {layout.boxes.map(box => {
                 const key = `${box.kind}:${box.id}`;
-                const name = names.get(key) ?? { title: entityLabel(box.kind, box.id) };
+                const name: BoxName = names.get(key) ?? { title: entityLabel(box.kind, box.id), id: box.id, icon: box.name };
                 return (
                     <Pickable key={key} label={name.title} selected={isSelected(box.kind, box.id)} onPick={() => onSelect(box.kind, box.id)}>
+                        <title>{name.detail ? `${name.title}: ${name.detail}` : name.title}</title>
                         <Footprint box={box} tint={tintOf(box.kind, box.id)} selected={isSelected(box.kind, box.id)} />
-                        <BoxLabel box={box} title={name.title} detail={box.unsized ? box.name : name.detail} />
+                        <BoxLabel box={box} name={name} />
                         {marked(box.samePlace) && <Rect x={box.x} y={box.y} width={Math.min(box.width, 1.2) + 0.2} height={Math.min(box.height, 1.2) + 0.2} fill="none" stroke={WARNING} strokeWidth={2} strokeDasharray="3 2" data-same-place />}
                     </Pickable>
                 );
@@ -183,19 +202,26 @@ function LayoutPictureComponent({ layout, names, tints, selection, onSelect }: L
     );
 }
 
-/** The ground and the tile grid under the picture, over `bounds` */
-function LayoutGroundComponent({ minX, minY, maxX, maxY }: { minX: number; minY: number; maxX: number; maxY: number }) {
-    const columns = Array.from({ length: Math.max(0, Math.floor(maxX) - Math.ceil(minX) + 1) }, (_, i) => Math.ceil(minX) + i);
-    const rows = Array.from({ length: Math.max(0, Math.floor(maxY) - Math.ceil(minY) + 1) }, (_, i) => Math.ceil(minY) + i);
+/**
+ * The ground under the picture: the checker the entity icons and the diagram use, one square to a game tile, so it is
+ * drawn in the picture's own units and follows the pan and zoom. A tile is the square from a whole number to the next in
+ * the config's coordinates; the lighter square is where the tile's two numbers add to an odd one.
+ */
+export function LayoutGround({ x, y, zoom }: { x: number; y: number; zoom: number }) {
+    const id = useId();
     return (
-        <g pointerEvents="none">
-            <rect x={px(minX)} y={px(minY)} width={px(maxX - minX)} height={px(maxY - minY)} fill={LAYOUT_GROUND} />
-            {columns.map(x => <line key={`x${x}`} x1={px(x)} x2={px(x)} y1={px(minY)} y2={px(maxY)} stroke={GRID} />)}
-            {rows.map(y => <line key={`y${y}`} x1={px(minX)} x2={px(maxX)} y1={px(y)} y2={px(y)} stroke={GRID} />)}
+        <g pointerEvents="none" data-layout-ground="">
+            <defs>
+                <pattern id={id} width={2 * PX} height={2 * PX} patternUnits="userSpaceOnUse" patternTransform={`translate(${x} ${y}) scale(${zoom})`}>
+                    <rect width={2 * PX} height={2 * PX} fill={LAYOUT_GROUND} />
+                    <rect x={PX} width={PX} height={PX} fill={TILE_GRID_SHADE} shapeRendering="crispEdges" />
+                    <rect y={PX} width={PX} height={PX} fill={TILE_GRID_SHADE} shapeRendering="crispEdges" />
+                </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill={`url(#${id})`} />
         </g>
     );
 }
 
-// a pan or a zoom changes the view's transform only: the picture and its ground draw again when their own data changes
+// a pan or a zoom changes the view's transform only: the picture draws again when its own data changes
 export const LayoutPicture = memo(LayoutPictureComponent);
-export const LayoutGround = memo(LayoutGroundComponent);

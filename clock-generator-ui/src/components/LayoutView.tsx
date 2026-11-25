@@ -4,6 +4,7 @@ import { Add, CenterFocusStrong, Remove } from '@mui/icons-material';
 import type { FoundOrbit } from 'clock-generator/browser';
 import { useGameNames } from '../hooks/useGameNames';
 import type { BeltFormData, ChestFormData, DrillFormData, InserterFormData, MachineFormData } from '../hooks/useConfigForm';
+import { machineIconName, chestTypeIcon } from '../utils/configForm/formData';
 import { chestLabel, entityLabel, nameInSentence, type LabelKind } from '../utils/entityLabel';
 import { boundsOf, LAYOUT_TILE_PX } from '../utils/layoutBounds';
 import { beltColour, LAYOUT_GROUND, regionColour } from '../utils/layoutColours';
@@ -11,7 +12,8 @@ import { layoutOf, type EntityRef, type Layout } from '../utils/layoutOf';
 import { regionTintsOf } from '../utils/layoutRegions';
 import { tileSizeOf } from '../utils/layoutSizes';
 import type { EntityClickType } from './ConfigFlowDiagram';
-import { LayoutGround, LayoutPicture } from './LayoutPicture';
+import { LayoutGround, LayoutPicture, type BoxName } from './LayoutPicture';
+import { FactorioIcon } from './FactorioIcon';
 
 /** What a build with no position at all says, in place of a picture */
 const NO_POSITIONS = 'This build has no positions; paste a Sidecar export';
@@ -67,7 +69,7 @@ function Swatch({ colour }: { colour: string }) {
     return <Box component="span" sx={{ display: 'inline-block', width: 14, height: 14, bgcolor: colour, border: '1px solid #1a1a1a', borderRadius: '2px', verticalAlign: 'text-bottom', mr: 0.75 }} />;
 }
 
-function Legend({ layout, regions }: { layout: Layout; regions: ReturnType<typeof regionTintsOf> }) {
+function Legend({ layout, regions, belts }: { layout: Layout; regions: ReturnType<typeof regionTintsOf>; belts: readonly BeltFormData[] }) {
     const regionNumbers = regions === null ? [] : Array.from({ length: regions.count }, (_, index) => index + 1);
     const machinesIn = (region: number) => [...(regions?.of ?? [])].flatMap(([key, number]) => number === region && key.startsWith('machine:') ? [Number(key.slice('machine:'.length))] : []).sort((a, b) => a - b);
     return (
@@ -78,10 +80,14 @@ function Legend({ layout, regions }: { layout: Layout; regions: ReturnType<typeo
             {regions !== null && <Typography variant="caption"><Swatch colour={regionColour(0)} />Between the regions</Typography>}
             {regions !== null && regions.twins.size > 0 && <Typography variant="caption">=N: the matching inserter of another region</Typography>}
             {layout.belts.filter(belt => belt.tiles > 0).map(belt => (
-                <Typography variant="caption" key={`belt-${belt.id}`}><Swatch colour={beltColour(belt.id)} />{entityLabel('belt', belt.id)}</Typography>
+                <Typography variant="caption" key={`belt-${belt.id}`} sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+                    <Swatch colour={beltColour(belt.id)} />{entityLabel('belt', belt.id)}
+                    {/* the items its lanes carry, as pictures; their names are the pictures' own text */}
+                    {[...new Set((belts.find(it => it.id === belt.id)?.lanes ?? []).map(lane => lane.ingredient).filter(item => item !== ''))].map(item => <FactorioIcon key={item} name={item} size={16} titled />)}
+                </Typography>
             ))}
             <Typography variant="caption" sx={{ flexBasis: '100%' }}>
-                Number: the inserter's number, as in the List. Each inserter is drawn from the side it picks from (dot) to the side it drops on (arrow).
+                Number: the inserter's number, as in the List. The number of a machine, drill or chest is in the dark corner of its box. Each inserter is drawn from the side it picks from (dot) to the side it drops on (arrow).
                 A belt tile is one an inserter reaches; the arrow on it is the way the belt runs at a drop.
             </Typography>
         </Box>
@@ -97,10 +103,13 @@ export function LayoutView({ machines, inserters, belts, chests, drills, orbits,
     const layout = useMemo(() => layoutOf({ machines, drills, inserters, belts, chests }, tileSizeOf), [machines, drills, inserters, belts, chests]);
     const tints = useMemo(() => regionTintsOf(orbits), [orbits]);
     const bounds = useMemo(() => boundsOf(layout), [layout]);
-    const names = useMemo(() => new Map<string, { title: string; detail?: string }>([
-        ...machines.map(machine => [`machine:${machine.id}`, { title: entityLabel('machine', machine.id), detail: machine.recipe ? recipeLabel(machine.recipe) : undefined }] as const),
-        ...drills.map(drill => [`drill:${drill.id}`, { title: entityLabel('drill', drill.id), detail: itemLabel(drill.mined_item_name) }] as const),
-        ...chests.map(chest => [`chest:${chest.id}`, { title: chestLabel(chest) }] as const),
+    const names = useMemo(() => new Map<string, BoxName>([
+        // a machine is its recipe's picture, a drill its ore's, a chest its type's; the words stay as the name and the hover text
+        ...machines.map(machine => [`machine:${machine.id}`, { title: entityLabel('machine', machine.id), id: machine.id, icon: machine.recipe,
+            corner: machineIconName(machine), detail: machine.recipe ? recipeLabel(machine.recipe) : undefined }] as const),
+        ...drills.map(drill => [`drill:${drill.id}`, { title: entityLabel('drill', drill.id), id: drill.id, icon: drill.mined_item_name,
+            corner: drill.type, detail: itemLabel(drill.mined_item_name) }] as const),
+        ...chests.map(chest => [`chest:${chest.id}`, { title: chestLabel(chest), id: chest.id, icon: chestTypeIcon(chest.type) }] as const),
     ]), [machines, drills, chests, recipeLabel, itemLabel]);
 
     const [frame, setFrame] = useState<SVGSVGElement | null>(null);
@@ -176,8 +185,8 @@ export function LayoutView({ machines, inserters, belts, chests, drills, orbits,
                     onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerEnd} onPointerLeave={onPointerEnd}
                     // a drag that panned is not a click on what was under it
                     onClickCapture={event => { if (drag.current?.moved) event.stopPropagation(); }}>
+                    <LayoutGround x={transform.x} y={transform.y} zoom={transform.zoom} />
                     <g transform={`translate(${transform.x} ${transform.y}) scale(${transform.zoom})`}>
-                        <LayoutGround {...bounds} />
                         <LayoutPicture layout={layout} names={names} tints={tints} selection={selection} onSelect={onSelect} />
                     </g>
                 </svg>
@@ -187,7 +196,7 @@ export function LayoutView({ machines, inserters, belts, chests, drills, orbits,
                     <IconButton size="small" aria-label="Fit View" title="Fit View" onClick={fit}><CenterFocusStrong fontSize="small" /></IconButton>
                 </Box>
             </Box>
-            <Legend layout={layout} regions={tints} />
+            <Legend layout={layout} regions={tints} belts={belts} />
             <Notes layout={layout} chests={chests} />
         </Box>
     );

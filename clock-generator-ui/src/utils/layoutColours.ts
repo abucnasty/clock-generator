@@ -1,3 +1,5 @@
+import { SURFACE } from '../theme/tokens';
+
 /** By the number of the belt, so that a belt keeps its colour as belts are added */
 const BELT_COLOURS = ['#2a9db3', '#96702a', '#7a5aa8', '#e8741a', '#1f64e6', '#4e9a6a', '#b0366b', '#8f8f2a'];
 /** The tint of what stands between the regions (index 0), then of each region by its number */
@@ -8,5 +10,8 @@ export const beltColour = (id: number): string => BELT_COLOURS[((id % BELT_COLOU
 /** The tint of region `region` from 1, repeating after four; region 0 is what stands between the regions */
 export const regionColour = (region: number): string => REGION_COLOURS[region === 0 ? 0 : ((region - 1) % (REGION_COLOURS.length - 1)) + 1];
 
-/** The ground the picture is drawn on, in either theme */
-export const LAYOUT_GROUND = '#fcfcfc';
+/**
+ * The ground the picture is drawn on, the same in both themes: the dark grey of the diagram's canvas and of the icon slots
+ * (`SURFACE.inset`, theme/tokens.ts), under the lighter squares of the shared checker (`TILE_GRID_SHADE`, theme/tileGrid.ts)
+ */
+export const LAYOUT_GROUND = SURFACE.inset;

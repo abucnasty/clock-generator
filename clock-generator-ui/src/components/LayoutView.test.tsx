@@ -10,7 +10,10 @@ import { configToFormData } from '../utils/configForm/configMapping';
 import { duplicateEntity } from '../utils/configForm/edits';
 import type { ConfigFormData } from '../utils/configForm/formData';
 import { selectBuildEntity } from '../utils/buildViewContext';
+import { SURFACE } from '../theme/tokens';
+import { TILE_GRID_SHADE } from '../theme/tileGrid';
 import { beltColour, regionColour } from '../utils/layoutColours';
+import { LAYOUT_TILE_PX } from '../utils/layoutBounds';
 import { LayoutView } from './LayoutView';
 
 let utilityConfig: Config;
@@ -87,6 +90,41 @@ describe('the Layout view of utility 320', () => {
         const { container } = draw(utility, { orbits: refused });
         expect(within(container).getByRole('button', { name: 'Machine 1' }).querySelectorAll('rect')).toHaveLength(1);
         expect(container.textContent).not.toContain('Region');
+    });
+});
+
+describe('the pictures of the Layout view', () => {
+    it('draws a machine as its recipe\'s icon with its own icon in the corner and its number, keeping the words as its name', () => {
+        const { container } = draw(utility);
+        const machine = utility.machines.find(it => it.id === 3)!;
+        const box = within(container).getByRole('button', { name: 'Machine 3' });
+        const sources = [...box.querySelectorAll('img')].map(it => it.getAttribute('src'));
+        expect(sources).toEqual([`/icons/${machine.recipe}.png`, `/icons/${machine.prototype}.png`]);
+        expect(box.querySelector('foreignObject span:last-child')!.textContent).toBe('3');
+        expect(box.querySelector('title')!.textContent).toBe(`Machine 3: ${machine.recipe}`);
+    });
+
+    it('names the items of each belt in the legend by their icons', () => {
+        const { container } = draw(utility);
+        const legend = container.querySelector('[data-layout-legend]')!;
+        const belt = utility.belts.find(it => it.id === 4)!;
+        const icons = [...legend.querySelectorAll('img')].map(it => it.getAttribute('src'));
+        for (const lane of belt.lanes.filter(it => it.ingredient !== '')) expect(icons).toContain(`/icons/${lane.ingredient}.png`);
+    });
+});
+
+describe('the ground of the Layout view', () => {
+    it('is the checker of the icon slots, one square to a tile, and moves with the picture', () => {
+        const { container } = draw(utility);
+        const pattern = container.querySelector('[data-layout-ground] pattern')!;
+        const squares = [...pattern.querySelectorAll('rect')];
+        // two tiles by two: the dark of the diagram's canvas, with the lighter shade on the tiles whose two numbers add to an odd one
+        expect(pattern.getAttribute('width')).toBe(String(2 * LAYOUT_TILE_PX));
+        expect(squares.map(it => it.getAttribute('fill'))).toEqual([SURFACE.inset, TILE_GRID_SHADE, TILE_GRID_SHADE]);
+        expect(squares.slice(1).map(it => [Number(it.getAttribute('x') ?? 0), Number(it.getAttribute('y') ?? 0), it.getAttribute('width')])).toEqual([[LAYOUT_TILE_PX, 0, String(LAYOUT_TILE_PX)], [0, LAYOUT_TILE_PX, String(LAYOUT_TILE_PX)]]);
+        // the squares scale and move with the picture, so a square stays one tile
+        const group = container.querySelector('svg > g:not([data-layout-ground])')!;
+        expect(pattern.getAttribute('patternTransform')).toBe(group.getAttribute('transform'));
     });
 });
 
