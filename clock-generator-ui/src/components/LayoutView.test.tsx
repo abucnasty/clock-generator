@@ -136,4 +136,19 @@ describe('selecting in the view', () => {
         expect(container.textContent).toContain('Selected: Inserter 5.');
         expect(within(container).getByRole('button', { name: 'Inserter 5' }).getAttribute('aria-pressed')).toBe('true');
     });
+
+    it('shows a ring on the entity a keyboard user has reached, and selects it with Enter', async () => {
+        const onSelectionChange = vi.fn();
+        const { container, user } = draw(utility, { onSelectionChange });
+        const first = buttons(container, /./)[0];
+        await user.tab();
+        // tab goes to the first entity of the picture or to a control before it: go on until the picture's first button
+        for (let step = 0; step < 6 && document.activeElement !== first; step++) await user.tab();
+        expect(document.activeElement).toBe(first);
+        expect(first.hasAttribute('data-focused')).toBe(true);
+        await user.keyboard('{Enter}');
+        expect(onSelectionChange).toHaveBeenCalledOnce();
+        await user.tab();
+        expect(first.hasAttribute('data-focused')).toBe(false);
+    });
 });

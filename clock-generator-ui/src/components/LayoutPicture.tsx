@@ -1,4 +1,4 @@
-import type { KeyboardEvent, ReactNode } from 'react';
+import { memo, useState, type KeyboardEvent, type ReactNode, type SVGProps } from 'react';
 import type { Layout, LayoutBeltTile, LayoutBox, LayoutInserter } from '../utils/layoutOf';
 import { LAYOUT_TILE_PX as PX } from '../utils/layoutBounds';
 import { beltColour, LAYOUT_GROUND, regionColour } from '../utils/layoutColours';
@@ -9,7 +9,9 @@ import type { EntityClickType } from './ConfigFlowDiagram';
 /** The colours of the picture: it is drawn on its own light ground, so they hold in either theme */
 const INK = '#1a1a1a';
 const GRID = '#eeeeee';
-const SELECTED = '#d35400';
+/** The selection and the keyboard focus, each in a colour no belt, region or box has */
+const SELECTED = '#e6007e';
+const FOCUS = '#5b2bff';
 const WARNING = '#c0392b';
 const HAND = '#f5c400';
 const BOX_COLOURS = { machine: '#8fbf8f', drill: '#c9b48a', chest: '#b9b9c9' } as const;
@@ -31,19 +33,24 @@ function Pickable({ label, selected, onPick, children }: { label: string; select
     const onKeyDown = (event: KeyboardEvent<SVGGElement>) => {
         if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onPick(); }
     };
+    // a ring for a keyboard user only: a pointer click focuses the entity too, and the selection shows that
+    const [focused, setFocused] = useState(false);
     return (
-        <g role="button" tabIndex={0} aria-label={label} aria-pressed={selected} onClick={onPick} onKeyDown={onKeyDown} style={{ cursor: 'pointer', outline: 'none' }}>
+        <g role="button" tabIndex={0} aria-label={label} aria-pressed={selected} onClick={onPick} onKeyDown={onKeyDown}
+            onFocus={event => setFocused(event.currentTarget.matches(':focus-visible'))} onBlur={() => setFocused(false)}
+            data-focused={focused ? '' : undefined}
+            style={{ cursor: 'pointer', outline: focused ? `3px solid ${FOCUS}` : 'none', outlineOffset: 3 }}>
             {children}
         </g>
     );
 }
 
-function Rect({ x, y, width, height, ...props }: { x: number; y: number; width: number; height: number } & React.SVGProps<SVGRectElement>) {
+function Rect({ x, y, width, height, ...props }: { x: number; y: number; width: number; height: number } & SVGProps<SVGRectElement>) {
     return <rect x={px(x - width / 2)} y={px(y - height / 2)} width={px(width)} height={px(height)} {...props} />;
 }
 
 function Footprint({ box, tint, selected }: { box: LayoutBox; tint: number | undefined; selected: boolean }) {
-    const outline = selected ? { stroke: SELECTED, strokeWidth: 3 } : { stroke: INK, strokeWidth: 1.5 };
+    const outline = selected ? { stroke: SELECTED, strokeWidth: 3.5 } : { stroke: INK, strokeWidth: 1.5 };
     const halo = tint === undefined ? null : <Rect x={box.x} y={box.y} width={box.width + 1} height={box.height + 1} fill={regionColour(tint)} rx={6} />;
     if (box.freeFacing) {
         // no orientation in the config: both footprints, drawn as outlines, and the place of its middle
@@ -89,7 +96,7 @@ function BeltTile({ tile, onPick, selected }: { tile: LayoutBeltTile; onPick(): 
     const colour = beltColour(tile.beltId);
     return (
         <Pickable label={entityLabel('belt', tile.beltId)} selected={selected} onPick={onPick}>
-            <Rect x={tile.x} y={tile.y} width={1} height={1} fill={colour} stroke={selected ? SELECTED : INK} strokeWidth={selected ? 3 : 1} />
+            <Rect x={tile.x} y={tile.y} width={1} height={1} fill={colour} stroke={selected ? SELECTED : INK} strokeWidth={selected ? 3.5 : 1} />
             {tile.direction !== null && (
                 <g transform={`translate(${px(tile.x)} ${px(tile.y)})`}><Arrow direction={tile.direction} size={PX * 0.3} fill="#ffffff" /></g>
             )}
@@ -123,7 +130,7 @@ function InserterBadge({ inserter, twins, selected }: { inserter: LayoutInserter
     const x = px(inserter.x) - PX * 0.5 - width * 0.45, y = px(inserter.y) - PX * 0.5 - 6;
     return (
         <g pointerEvents="none">
-            <rect x={x} y={y} width={width} height={15} rx={5} fill="#ffffff" stroke={selected ? SELECTED : INK} strokeWidth={selected ? 3 : 1.5} />
+            <rect x={x} y={y} width={width} height={15} rx={5} fill="#ffffff" stroke={selected ? SELECTED : INK} strokeWidth={selected ? 3.5 : 1.5} />
             <text x={x + width / 2} y={y + 11.5} textAnchor="middle" fontSize={11} fontWeight={700} fill={INK}>{text}</text>
             {twins !== undefined && twins.length > 0 && (
                 <text x={x + width + 2} y={y + 11} fontSize={9.5} fontWeight={600} fill="#333333">{`=${twins.join(',')}`}</text>
@@ -137,7 +144,7 @@ function InserterBadge({ inserter, twins, selected }: { inserter: LayoutInserter
  * boxes, belts as the tiles inserters reach, each inserter as a hand from the side it picks from to the side it drops on,
  * with its number. It draws what the config holds and no more.
  */
-export function LayoutPicture({ layout, names, tints, selection, onSelect }: LayoutPictureProps) {
+function LayoutPictureComponent({ layout, names, tints, selection, onSelect }: LayoutPictureProps) {
     const isSelected = (kind: EntityClickType, id: number) => selection?.kind === kind && selection.id === id;
     const tintOf = (kind: string, id: number) => tints?.of.get(`${kind}:${id}`);
     const marked = (samePlace: readonly unknown[]) => samePlace.length > 0;
@@ -177,7 +184,7 @@ export function LayoutPicture({ layout, names, tints, selection, onSelect }: Lay
 }
 
 /** The ground and the tile grid under the picture, over `bounds` */
-export function LayoutGround({ minX, minY, maxX, maxY }: { minX: number; minY: number; maxX: number; maxY: number }) {
+function LayoutGroundComponent({ minX, minY, maxX, maxY }: { minX: number; minY: number; maxX: number; maxY: number }) {
     const columns = Array.from({ length: Math.max(0, Math.floor(maxX) - Math.ceil(minX) + 1) }, (_, i) => Math.ceil(minX) + i);
     const rows = Array.from({ length: Math.max(0, Math.floor(maxY) - Math.ceil(minY) + 1) }, (_, i) => Math.ceil(minY) + i);
     return (
@@ -188,3 +195,7 @@ export function LayoutGround({ minX, minY, maxX, maxY }: { minX: number; minY: n
         </g>
     );
 }
+
+// a pan or a zoom changes the view's transform only: the picture and its ground draw again when their own data changes
+export const LayoutPicture = memo(LayoutPictureComponent);
+export const LayoutGround = memo(LayoutGroundComponent);

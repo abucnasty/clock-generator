@@ -146,6 +146,7 @@ export function LayoutView({ machines, inserters, belts, chests, drills, orbits,
         return () => frame.removeEventListener('wheel', onWheel);
     }, [frame, setTransform]);
 
+    const onSelect = useCallback((kind: EntityClickType, id: number) => onSelectionChange({ kind, id }), [onSelectionChange]);
     const zoomBy = (factor: number) => setTransform(before => {
         const zoom = clampZoom(before.zoom * factor);
         const centre = { x: (size.width || 800) / 2, y: (size.height || height) / 2 };
@@ -177,7 +178,7 @@ export function LayoutView({ machines, inserters, belts, chests, drills, orbits,
                     onClickCapture={event => { if (drag.current?.moved) event.stopPropagation(); }}>
                     <g transform={`translate(${transform.x} ${transform.y}) scale(${transform.zoom})`}>
                         <LayoutGround {...bounds} />
-                        <LayoutPicture layout={layout} names={names} tints={tints} selection={selection} onSelect={(kind, id) => onSelectionChange({ kind, id })} />
+                        <LayoutPicture layout={layout} names={names} tints={tints} selection={selection} onSelect={onSelect} />
                     </g>
                 </svg>
                 <Box sx={{ position: 'absolute', left: 8, bottom: 8, display: 'flex', flexDirection: 'column', bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
