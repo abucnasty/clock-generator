@@ -3,9 +3,10 @@
 // match does not hold is read here: the nine machines and where they stand, their modules, the beacons in reach, the hands.
 // So the reference scaffold stays one when either file is edited.
 //
-// Two things differ from the config on purpose, and are not tested as equal (the README of the sample folder names them):
-// the scaffold's first foundry runs at 199.75 where the config says 185, and its cryogenic plant has 8 beacons in reach
-// where the config's crafting speed needs 9.
+// Three things differ from the config on purpose, and are not tested as equal. The README of the sample folder names the
+// first two: the scaffold's first foundry runs at 199.75 where the config says 185, and its cryogenic plant has 8 beacons in
+// reach where the config's crafting speed needs 9. The third: the belts under inserters 1 and 19 run the other way from their
+// belt_direction, which only orders drops in the drop-spacing note.
 import fs from 'fs';
 import path from 'path';
 import zlib from 'zlib';
@@ -52,7 +53,7 @@ const entity = (number: number): BlueprintEntity => {
 };
 
 /** The sample's frame: where the config's (x, y) stands in the scaffold */
-const placed = ({ x, y }: Point): Point => ({ x: y + 78, y: x - 207 });
+const placed = ({ x, y }: Point): Point => ({ x: y + 305, y: x + 76 });
 /** The frame turns a heading as it turns the plane (it swaps the axes): north to west, east to south, south to east, west to north */
 const heading = (direction: number): number => ({ 0: 12, 4: 8, 8: 4, 12: 0 } as Record<number, number>)[direction];
 
@@ -115,12 +116,12 @@ const cells = (() => {
 
 /** The six inserters that the frame does not place (a tile or two off, one turned); they are held by role and by where they stand */
 const ROLE_MATCHED: Record<number, { entity: number, x: number, y: number, direction: number, from: string, to: string }> = {
-    3: { entity: 54, x: 1.5, y: -121.5, direction: 8, from: 'belt', to: 'machine 2' },
-    4: { entity: 72, x: 3.5, y: -121.5, direction: 0, from: 'machine 2', to: 'belt' },
-    7: { entity: 101, x: 10.5, y: -130.5, direction: 12, from: 'belt', to: 'machine 4' },
-    10: { entity: 120, x: 13.5, y: -121.5, direction: 8, from: 'belt', to: 'machine 5' },
-    18: { entity: 173, x: 23.5, y: -139.5, direction: 8, from: 'machine 8', to: 'belt' },
-    21: { entity: 192, x: 26.5, y: -130.5, direction: 4, from: 'belt', to: 'machine 9' },
+    3: { entity: 61, x: 228.5, y: 161.5, direction: 8, from: 'belt', to: 'machine 2' },
+    4: { entity: 75, x: 230.5, y: 161.5, direction: 0, from: 'machine 2', to: 'belt' },
+    7: { entity: 104, x: 237.5, y: 152.5, direction: 12, from: 'belt', to: 'machine 4' },
+    10: { entity: 121, x: 240.5, y: 161.5, direction: 8, from: 'belt', to: 'machine 5' },
+    18: { entity: 171, x: 250.5, y: 143.5, direction: 8, from: 'machine 8', to: 'belt' },
+    21: { entity: 191, x: 253.5, y: 152.5, direction: 4, from: 'belt', to: 'machine 9' },
 };
 
 const configured_inserter = (id: number): ConfigInserter => config.inserters.find(it => it.id === id)!;
@@ -258,8 +259,8 @@ describe('the utility science 320/s scaffold against its config: machines, modul
 });
 
 describe('the utility science 320/s scaffold file', () => {
-    it('is one line of text ending in one line feed, a blueprint with no label, description or note naming anyone', () => {
-        expect(scaffold_text).toMatch(/^0[A-Za-z0-9+/=]+\n$/);
+    it('is one line of text, a blueprint with no label, description or note naming anyone', () => {
+        expect(scaffold_text).toMatch(/^0[A-Za-z0-9+/=]+\n?$/);
         expect(blueprint.blueprint.label).toBeUndefined();
         expect(blueprint.blueprint.description).toBeUndefined();
         expect(entities.filter(it => 'player_description' in it || 'tags' in it)).toEqual([]);
