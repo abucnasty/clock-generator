@@ -86,7 +86,7 @@ describe('the view of the build', () => {
         complete(hook);
         act(() => hook.result.current.patch({ configView: 'layout' }));
         expect(readBuildViewContext(localStorage, 'one').configView).toBe('layout');
-        // a new session on the same build opens on it
+        // reopening the same build opens on it
         options = { ...options, buildId: 'again', ready: null };
         writeBuildViewContext(localStorage, 'again', { ...defaultBuildViewContext(), configView: 'layout', entityConfigKey: serializeConfig(options.form) });
         hook.rerender();
