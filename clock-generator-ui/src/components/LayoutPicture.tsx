@@ -16,7 +16,7 @@ const HAND = '#f5c400';
 const BOX_COLOURS = { machine: '#8fbf8f', drill: '#c9b48a', chest: '#b9b9c9' } as const;
 const DIRECTION_VECTOR: Record<number, [number, number]> = { 0: [0, -1], 4: [1, 0], 8: [0, 1], 12: [-1, 0] };
 
-export interface LayoutPictureProps {
+interface LayoutPictureProps {
     layout: Layout;
     /** The name of each entity box, by key "machine:3": its label and, under it, what it makes */
     names: ReadonlyMap<string, { title: string; detail?: string }>;

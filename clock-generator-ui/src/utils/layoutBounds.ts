@@ -3,7 +3,7 @@ import type { Layout } from './layoutOf';
 /** Pixels the Layout view draws one tile in, at zoom 1 */
 export const LAYOUT_TILE_PX = 24;
 
-export interface LayoutBounds { minX: number; minY: number; maxX: number; maxY: number }
+interface LayoutBounds { minX: number; minY: number; maxX: number; maxY: number }
 
 /** The tiles the picture covers, with a margin; null where it draws nothing */
 export function boundsOf(layout: Layout, margin = 1.5): LayoutBounds | null {

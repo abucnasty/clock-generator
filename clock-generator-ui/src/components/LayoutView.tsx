@@ -105,8 +105,8 @@ export function LayoutView({ machines, inserters, belts, chests, drills, orbits,
 
     const [frame, setFrame] = useState<SVGSVGElement | null>(null);
     const [size, setSize] = useState({ width: 0, height: 0 });
-    const [transform, setTransform] = useState<Transform>({ x: 0, y: 0, zoom: 1 });
-    // `moved` stays after the button is up, so that the click that follows a pan can be told from a click
+    // what the user has panned or zoomed to, for the extent and the measured canvas it was made for; else the fit
+    const [moved, setMoved] = useState<{ key: string; transform: Transform } | null>(null);
     const drag = useRef<{ x: number; y: number; moved: boolean; down: boolean } | null>(null);
 
     useEffect(() => {
@@ -116,21 +116,18 @@ export function LayoutView({ machines, inserters, belts, chests, drills, orbits,
         return () => observer.disconnect();
     }, [frame]);
 
-    const fit = useCallback(() => {
-        if (bounds === null) return;
+    const fitted = useMemo((): Transform => {
+        if (bounds === null) return { x: 0, y: 0, zoom: 1 };
         const width = size.width || 800, high = size.height || height;
         const boundsWidth = (bounds.maxX - bounds.minX) * LAYOUT_TILE_PX, boundsHeight = (bounds.maxY - bounds.minY) * LAYOUT_TILE_PX;
         const zoom = clampZoom(Math.min(width / boundsWidth, high / boundsHeight));
-        setTransform({ zoom, x: (width - boundsWidth * zoom) / 2 - bounds.minX * LAYOUT_TILE_PX * zoom, y: (high - boundsHeight * zoom) / 2 - bounds.minY * LAYOUT_TILE_PX * zoom });
+        return { zoom, x: (width - boundsWidth * zoom) / 2 - bounds.minX * LAYOUT_TILE_PX * zoom, y: (high - boundsHeight * zoom) / 2 - bounds.minY * LAYOUT_TILE_PX * zoom };
     }, [bounds, size.width, size.height, height]);
-    // fits when the build's extent changes and when the canvas is first measured, not on every resize: a user's pan and zoom stay
+    // a pan or zoom holds until the build's extent changes or the canvas is first measured, not on every resize
     const fitKey = `${bounds?.minX},${bounds?.minY},${bounds?.maxX},${bounds?.maxY}|${size.width > 0}`;
-    const fitted = useRef('');
-    useEffect(() => {
-        if (fitted.current === fitKey) return;
-        fitted.current = fitKey;
-        fit();
-    }, [fit, fitKey]);
+    const transform = moved?.key === fitKey ? moved.transform : fitted;
+    const setTransform = useCallback((change: (before: Transform) => Transform) => setMoved(before => ({ key: fitKey, transform: change(before?.key === fitKey ? before.transform : fitted) })), [fitKey, fitted]);
+    const fit = () => setMoved(null);
 
     // the wheel zooms about the pointer; a listener of its own, as React's is passive and the page would scroll
     useEffect(() => {
@@ -147,7 +144,7 @@ export function LayoutView({ machines, inserters, belts, chests, drills, orbits,
         };
         frame.addEventListener('wheel', onWheel, { passive: false });
         return () => frame.removeEventListener('wheel', onWheel);
-    }, [frame]);
+    }, [frame, setTransform]);
 
     const zoomBy = (factor: number) => setTransform(before => {
         const zoom = clampZoom(before.zoom * factor);
