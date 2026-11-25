@@ -1,5 +1,5 @@
 import type { Config } from "../config/schema";
-import { laneLoads } from "../config/lane-capacity-validator";
+import { dropSideLoads, heaviestLoad, laneLoads } from "../config/lane-capacity-validator";
 import { carriedItemsOf, laneFactsOfConfig } from "../entities/traits/build-traits";
 import { beltLaneFactsOf, LaneEnd, LaneSharing } from "../entities/traits/lane-facts";
 import type { LaneRole } from "../entities/traits/lane-role";
@@ -343,15 +343,22 @@ function copiesAtFullJoin(losses: readonly SharedLaneLoss[]): (CopyMissed & { he
     return [...by_copy.values()].sort((a, b) => a.copy - b.copy);
 }
 
-/** The copies' together on a lane, from the targets' takes and drops of one copy (laneLoads) times the copies */
-function togetherOf(config: Config, lane: BuildLane, loads: ReturnType<typeof laneLoads> | null): LaneTogether | null {
-    if (loads === null) return null;
+/**
+ * The copies' together on a lane, from the targets' takes and drops of one copy (laneLoads) times the copies. The drops
+ * onto a belt that lists one lane are read by their sides (dropSideLoads): the side that is fullest for what it carries,
+ * given as the belt's one lane.
+ */
+function togetherOf(config: Config, lane: BuildLane, loads: ReturnType<typeof laneLoads> | null, side_loads: ReturnType<typeof dropSideLoads> | null): LaneTogether | null {
     const kind = lane.role === "output" ? "drop" : "take";
-    const of_belt = loads.filter(load => load.kind === kind && load.belt_id === lane.belt_id && load.lanes.includes(lane.lane));
+    const one_lane = kind === "drop" && config.belts.find(belt => belt.id === lane.belt_id)?.lanes.length === 1;
+    const from = one_lane ? side_loads : loads;
+    if (from === null) return null;
+    const of_belt = from.filter(load => load.kind === kind && load.belt_id === lane.belt_id && (one_lane || load.lanes.includes(lane.lane)));
     if (of_belt.length === 0) return null;
-    const load = of_belt.find(it => it.lanes.length === 1) ?? of_belt.reduce((a, b) => b.lanes.length > a.lanes.length ? b : a);
+    const load = one_lane ? heaviestLoad(of_belt)
+        : of_belt.find(it => it.lanes.length === 1) ?? of_belt.reduce((a, b) => b.lanes.length > a.lanes.length ? b : a);
     const copies = config.setpoint.copies;
-    return { kind, items_per_second: rounded(load.items_per_second.toDecimal() * copies), lanes: [...load.lanes],
+    return { kind, items_per_second: rounded(load.items_per_second.toDecimal() * copies), lanes: one_lane && load.lanes.length === 1 ? [1] : [...load.lanes],
         ...(kind === "drop" && { carries_per_second: rounded(load.capacity_per_second.toDecimal()) }) };
 }
 
@@ -432,10 +439,13 @@ export function checkedLanesOf(input: CheckedLanesInput): CheckedLanes | null {
     if (!(copies > 1) && lanes.length === 0 && !on_output_belt) return null;
     const build = buildToNameOf(config);
     let loads: ReturnType<typeof laneLoads> | null;
+    let side_loads: ReturnType<typeof dropSideLoads> | null;
     try {
         loads = laneLoads(config);
+        side_loads = dropSideLoads(config);
     } catch {
         loads = null;
+        side_loads = null;
     }
     const dropped = new Set(droppedOntoSharedLanes(config).map(it => `${it.belt_id}/${it.lane}`));
     const ends = outputEndsOf(config);
@@ -455,7 +465,7 @@ export function checkedLanesOf(input: CheckedLanesInput): CheckedLanes | null {
 
     const rows: CheckedLaneRow[] = lanes.map(lane => {
         const key = `${lane.belt_id}/${lane.lane}`;
-        const together = togetherOf(config, lane, loads);
+        const together = togetherOf(config, lane, loads, side_loads);
         const plain_output = lane.role === "output" && lane.belt_id !== stated_output_belt;
         const state = ((): CheckedLaneState => {
             // a fact of the build, whatever the clock

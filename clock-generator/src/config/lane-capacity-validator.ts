@@ -12,6 +12,7 @@ import { TargetProductionRate } from '../crafting/target-production-rate';
 import { buildToNameOf } from '../crafting/build-names';
 import { capitalized, lanesInSentence, type BuildToName } from '../crafting/entity-name';
 import { describeLanes, formatRate, LaneCapacityError, LaneCapacityIssue, LaneFlowKind, LaneRateError, LaneRateIssue, SharedLaneSupplyError, SharedLaneSupplyIssue } from './errors';
+import { dropSideLane } from './drop-side';
 import { Config } from './schema';
 
 // ============================================================================
@@ -33,7 +34,8 @@ import { Config } from './schema';
 // The config describes one unit, and a lane says whether the copies share it or each copy has one of its own (its
 // `sharing`). A lane over capacity in one unit is refused. What the copies take from lanes they share is summed and
 // refused above what the lanes get, their supply rate; what they drop onto lanes they share is summed and only warned
-// of above capacity.
+// of above capacity. The warning reads the side of a drop onto a belt that lists one lane where the configuration gives it
+// (drop-side.ts): the drops of one side land on one lane, so the copies can fill it while both lanes together have room.
 
 /** One unit's flow of items onto or off belt lanes, by one inserter */
 interface LaneFlow {
@@ -74,8 +76,12 @@ export function lanesCapacityOf(belt: Config['belts'][number], lanes: readonly n
     return lanes.reduce((sum, lane) => sum.add(laneItemsPerSecond(belt_speed, laneStackFor(belt, lane))), fraction(0));
 }
 
-/** The flows of one unit at the target, from the planner's transfer plan */
-function laneFlowsOf(config: Config): LaneFlow[] {
+/**
+ * The flows of one unit at the target, from the planner's transfer plan. With `sides`, a drop onto a belt that lists one
+ * lane is held to the lane its side gives (drop-side.ts) where the side is known and the configuration states no output belt.
+ */
+function laneFlowsOf(config: Config, sides: boolean): LaneFlow[] {
+    const read_sides = sides && config.output_belt === undefined;
     const registry = createEntityRegistryFromConfig(config);
     const cycle = OutputCyclePlan.create(TargetProductionRate.fromConfig(config.setpoint), registry, config, fraction(1));
     const seconds = cycle.total_duration_ticks.divide(60);
@@ -97,7 +103,8 @@ function laneFlowsOf(config: Config): LaneFlow[] {
             const sink = inserter.sink;
             const onto = sink.type === 'belt' ? config.belts.find(it => it.id === sink.id) : undefined;
             if (onto !== undefined && sink.type === 'belt') {
-                const lanes = dropLanesOf(onto, sink, item.item_name);
+                const side = read_sides && onto.lanes.length === 1 ? dropSideLane(inserter, sink) : null;
+                const lanes = side !== null ? [side] : dropLanesOf(onto, sink, item.item_name);
                 if (lanes.length > 0) flows.push({ inserter_id, belt_id: onto.id, kind: 'drop', lanes, items_per_second });
             }
         }
@@ -110,7 +117,20 @@ function laneFlowsOf(config: Config): LaneFlow[] {
  * it, takes and drops apart; ordered by belt, kind and lanes, a single lane before both.
  */
 export function laneLoads(config: Config): LaneLoad[] {
-    const flows = laneFlowsOf(config);
+    return loadsOf(laneFlowsOf(config, false), config);
+}
+
+/**
+ * The loads of `laneLoads`, with each drop onto a belt that lists one lane held to the side it lands on where that is
+ * known (drop-side.ts): the drops of each side summed on their own lane, a drop of unknown side on both. Only the
+ * warning for lanes the copies share and the checked lanes read them; the refusal, the lanes exactly full and the
+ * suggested target keep `laneLoads`, which reads a belt that lists one lane as both lanes for every drop.
+ */
+export function dropSideLoads(config: Config): LaneLoad[] {
+    return loadsOf(laneFlowsOf(config, true), config);
+}
+
+function loadsOf(flows: LaneFlow[], config: Config): LaneLoad[] {
     const loads: LaneLoad[] = [];
     const groups = new Map<string, LaneFlow[]>();
     for (const flow of flows) {
@@ -126,7 +146,8 @@ export function laneLoads(config: Config): LaneLoad[] {
         const lanes_of_belt: readonly LaneTrait[] = beltLanesOfFacts(belt, lane_facts);
         const sets = new Map(group.map(flow => [flow.lanes.join(','), flow.lanes] as const));
         const all = [...new Set(group.flatMap(flow => flow.lanes))].sort((a, b) => a - b);
-        sets.set(all.join(','), all);
+        // the two sides of a belt that lists one lane are each held to their lane: summed, they tell nothing more
+        if (belt.lanes.length === 2 || group.some(flow => flow.lanes.length === 2)) sets.set(all.join(','), all);
         for (const lanes of sets.values()) {
             const held = group.filter(flow => flow.lanes.every(lane => lanes.includes(lane)));
             loads.push({
@@ -183,11 +204,44 @@ export function lanesSharedByCopies(config: Config): LaneCapacityIssue[] {
     const copies = fraction(config.setpoint.copies);
     if (!above(copies, fraction(1))) return [];
     const facts = laneFactsOfConfig(config);
-    const loads = laneLoads(config).filter(load => load.kind === 'drop' && !onePerCopy(facts, load));
-    const refused = overCapacity(loads, fraction(1));
+    const shared = (load: LaneLoad) => load.kind === 'drop' && !onePerCopy(facts, asListed(config, load));
+    // what one unit is refused for is told by the refusal, which reads a belt that lists one lane as both lanes
+    const refused = overCapacity(laneLoads(config).filter(shared), fraction(1));
     const touches = (load: LaneLoad) => refused.some(other => other.belt_id === load.belt_id && other.kind === load.kind
         && other.lanes.some(lane => load.lanes.includes(lane)));
-    return overCapacity(loads.filter(load => !touches(load)), copies).map(load => asIssue(load, config.setpoint.copies));
+    const over = overCapacity(dropSideLoads(config).filter(shared).filter(load => !touches(load)), copies);
+    return oneForEachBelt(config, over).map(load => asIssue(asListed(config, load), config.setpoint.copies));
+}
+
+/**
+ * A load of one side of a belt that lists one lane, as on that lane: the drops of either side are given as on the
+ * belt's one lane, lane 1, as `drop.lane` is (schema.ts), so the lane is named by its item and its sharing is read
+ */
+function asListed(config: Config, load: LaneLoad): LaneLoad {
+    return oneSide(config, load) ? { ...load, lanes: [1] } : load;
+}
+
+/** Whether a load is one lane of a belt that lists one lane: the lane it lists, or the side it does not */
+const oneSide = (config: Config, load: Pick<LaneLoad, 'belt_id' | 'lanes'>): boolean =>
+    load.lanes.length === 1 && config.belts.find(belt => belt.id === load.belt_id)?.lanes.length === 1;
+
+/** Of two or more loads, the one whose items are the most of what its lanes carry; the first of those that are equal */
+export function heaviestLoad<T extends Pick<LaneLoad, 'items_per_second' | 'capacity_per_second'>>(loads: readonly T[]): T {
+    return loads.reduce((heaviest, load) =>
+        above(load.items_per_second.multiply(heaviest.capacity_per_second), heaviest.items_per_second.multiply(load.capacity_per_second)) ? load : heaviest);
+}
+
+/**
+ * The loads over capacity, with the two sides of a belt that lists one lane made one: the heavier side, with the
+ * inserters of both, so that the lane is not told of twice
+ */
+function oneForEachBelt(config: Config, over: LaneLoad[]): LaneLoad[] {
+    return over.flatMap(load => {
+        if (!oneSide(config, load)) return [load];
+        const both = over.filter(other => other.belt_id === load.belt_id && other.kind === load.kind && oneSide(config, other));
+        if (both[0] !== load) return [];
+        return [{ ...heaviestLoad(both), inserter_ids: [...new Set(both.flatMap(it => it.inserter_ids))].sort((a, b) => a - b) }];
+    });
 }
 
 /** The drops, within capacity in one unit and over it with no copy, whose copies together fill a set of lanes exactly */
