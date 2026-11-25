@@ -1,7 +1,10 @@
 import { SURFACE } from '../theme/tokens';
 
-/** By the number of the belt, so that a belt keeps its colour as belts are added */
-const BELT_COLOURS = ['#2a9db3', '#96702a', '#7a5aa8', '#e8741a', '#1f64e6', '#4e9a6a', '#b0366b', '#8f8f2a'];
+/**
+ * By the number of the belt, so that a belt keeps its colour as belts are added. Each reaches 3 to 1 on both squares of
+ * the ground (layoutColours.test.ts), and the eight stay apart from each other
+ */
+const BELT_COLOURS = ['#2a9db3', '#96702a', '#8166b2', '#e8741a', '#316bef', '#4e9a6a', '#c2477a', '#8f8f2a'];
 /** The tint of what stands between the regions (index 0), then of each region by its number */
 const REGION_COLOURS = ['#e1e1e1', '#cde1fa', '#fde2be', '#d8f0d0', '#f0d4ec'];
 
