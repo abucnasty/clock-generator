@@ -16,6 +16,7 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 - generation: a clock for builds where one machine feeds several machines that make the target
 - ui: enter an exact fraction in the setpoint rate field
 - generation: an inserter can take from a belt into a steel chest
+- ui: new Layout view draws a build from above with numbered inserters and belts
 
 ### Changed
 - generation: science output inserters can keep enable windows when one machine feeds several science assemblers

@@ -81,6 +81,17 @@ clocks are made for. Saved as a configuration file (**Open configuration file…
 game's word for a saved set of settings ("Server configuration").
 _Avoid_: config (bare), build file
 
+**Layout**:
+A picture of a build from above, drawn from the positions the Sidecar exports: its machines, its inserters with their
+numbers, and the belts the inserters reach. The third view of the **Build** card, beside **List** and **Diagram**. The game
+uses the word in "Button layout". A noun only.
+_Avoid_: map, floor plan, plan view
+
+**Region** (provisional):
+One of several parts of a build that the generator finds to be copies of each other, in the same machines, inserters and
+belts. The **Layout** view tints each region. No source has the word for this: it is the project's own technical noun.
+_Avoid_: zone, area, section
+
 **Check**:
 A test of a configuration that shows whether it can be clocked, without making any clocks. A noun only: "do a check of
 the configuration" (STE: CHECK (n) approved, check (v) not approved). The button label **Check only** stays as the

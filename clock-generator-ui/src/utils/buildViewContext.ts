@@ -18,7 +18,7 @@ export interface TimelineViewContext {
 export interface BuildViewContext {
     version: 1;
     view: 'configure' | 'results';
-    configView: 'list' | 'diagram';
+    configView: 'list' | 'diagram' | 'layout';
     resultDetail: ResultDetail;
     detailsTab: DetailsTab;
     sections: Record<string, boolean>;
@@ -73,7 +73,7 @@ function validateBuildViewContext(value: unknown): BuildViewContext {
         : v.resultDetail === 'why' && v.detailsTab === 'blueprint' ? 'timeline'
         : v.resultDetail === 'why' ? 'overview'
         : oneOf(v.resultDetail, ['overview', 'diagnostics', 'timeline'], d.resultDetail);
-    return { ...d, view: oneOf(v.view, ['configure', 'results'], d.view), configView: oneOf(v.configView, ['list', 'diagram'], d.configView),
+    return { ...d, view: oneOf(v.view, ['configure', 'results'], d.view), configView: oneOf(v.configView, ['list', 'diagram', 'layout'], d.configView),
         resultDetail, detailsTab: oneOf(v.detailsTab, ['insights', 'fuel', 'blueprint'], d.detailsTab), sections,
         wakeAsTable: bool(v.wakeAsTable, false), diagramDetailed: bool(v.diagramDetailed, true),
         timeline: { ...d.timeline, ...(timeline.inspection ? { inspection: validInspection(timeline.inspection) } : {}), viewMode: oneOf(timeline.viewMode, ['simplified', 'detailed'], 'simplified'), sortMode: oneOf(timeline.sortMode, ['byType', 'byRelationship'], 'byType'),

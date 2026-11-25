@@ -537,6 +537,8 @@ function answer(asked: EngineQuery): EngineAnswers[EngineQuery['kind']] {
                 transfers: clockGenerator.deriveOutputTransfers(query.config),
                 generation_issues: clockGenerator.outputTransferGenerationIssues(query.config),
             };
+        case 'region-orbits':
+            return clockGenerator.regionOrbitsOfConfig(query.config);
         case 'repeated-unit-conversion':
             return checkRepeatedUnitConversion(query.config);
         case 'lane-roles':
