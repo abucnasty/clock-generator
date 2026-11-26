@@ -241,6 +241,29 @@ export function heldMakerLog<T>(work: () => T): { value: T; events: MakerLogEven
 }
 
 /**
+ * Runs `work` as one maker of the generation running (a generation inside it: the region step's of a cut group): its seconds and
+ * ticks go to `maker`, the makers inside it count to no slot of their own, and its events are held (`heldMakerLog`). The checks'
+ * seconds are counted as they would be.
+ */
+export function heldAsOneMaker<T>(maker: string, work: () => T): { value: T; events: MakerLogEvent[] } {
+    const own = scope;
+    if (own === undefined) return { value: work(), events: [] };
+    const started = now();
+    try {
+        return withTickMaker(maker, () => {
+            scope = { ...own, makers: new Map() };
+            try {
+                return heldMakerLog(work);
+            } finally {
+                scope = own;
+            }
+        }, { held: true });
+    } finally {
+        own.makers.set(maker, (own.makers.get(maker) ?? 0) + (now() - started) / 1000);
+    }
+}
+
+/**
  * Runs `work` and counts its seconds to a maker, where a log is on. The ticks the work simulates are counted to the maker too
  * (`withTickMaker`, a ledger of its own: it does nothing where none is open).
  */

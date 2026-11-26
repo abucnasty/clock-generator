@@ -2,6 +2,7 @@
 import type { Config } from "../../config";
 import type { SerializableClockWindows } from "../clock";
 import { regionOrbitsOfConfig, type FoundOrbit, type RegionOrbit } from "../graph/regions";
+import { currentBuildRegions } from "../graph/build-regions";
 import { costKey } from "../rank";
 import { recoveryWorse, type InputJointStage, type InputWindowJudge } from "./metered-input-windows";
 import { enabledTicks, rangesOf, shiftedWindows } from "./staggered-input-windows";
@@ -113,7 +114,8 @@ export function orbitProposals(
 }
 
 /**
- * The orbits of copied regions of a build (`regionOrbitsOfConfig`) and, for each, one candidate per region: every region takes
+ * The orbits of copied regions of a build (the generation's detection, `currentBuildRegions`; the finder itself outside a
+ * generation) and, for each, one candidate per region: every region takes
  * that region's windows through the map, moved by one shift that puts its metered takers on the turns of the landing region (the
  * region whose first metered taker opens first). The anchor's arms keep the clock's windows. Null where the build has no orbit.
  * Only the choice (`chooseRegionCopies`) decides what the clock takes.
@@ -121,7 +123,8 @@ export function orbitProposals(
 export function regionCopies(
     config: Config, clock: SerializableClockWindows, period: number, metered: ReadonlySet<string>, open: ReadonlySet<string>,
 ): { orbits: { found: FoundOrbit; proposals: OrbitProposals }[] } | null {
-    const found = regionOrbitsOfConfig(config);
+    const detected = currentBuildRegions();
+    const found = detected === undefined ? regionOrbitsOfConfig(config) : detected.orbits;
     if (found === null) return null;
     return { orbits: found.map(it => ({ found: it, proposals: it.kind === "refused"
         ? { arms: it.regions.flatMap(region => region.arms), candidates: [], unmade: [], refused: it.reason }

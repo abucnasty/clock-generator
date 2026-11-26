@@ -18,6 +18,7 @@ import { meteredOutputWindows } from "./metered-output-windows";
 import { chooseInputWindows, meteredInputWindows, type InputJointStage, type InputWindowJudge, type InputWindowProposal } from "./metered-input-windows";
 import { chooseStaggeredGroups, staggeredInputWindows } from "./staggered-input-windows";
 import { chooseRegionCopies, regionCopies } from "./region-copies";
+import { currentRegionScope, regionJudgeOf } from "./region-lift";
 
 /**
  * The per-branch clock (DESIGN D7, PR 18): each part of the build gets the windows of the clock that fits it, all on one shared
@@ -637,10 +638,38 @@ export function coordinatedSourcesClock(
     // the stagger step: a belt-fed window that inputs share, moved to each machine's turn, on the clock the input step leaves
     const left: SerializableClockWindows = { ...composed, ...inputs_taken?.changes };
     let staggered = left;
-    const staggers = metered.size === 0 ? null : staggeredInputWindows(made, left, metered, output_decisions ?? {});
+    // inside a repeated group's generation (region-lift.ts): the step judges each proposal on the clock lifted onto the whole build,
+    // with recovery by the worse of the two readings, and it also proposes what a group planned alone can give (RegionStaggerOptions)
+    const region = currentRegionScope();
+    const region_judge = region === undefined || metered.size === 0 ? null : regionJudgeOf(region, made, left_open);
+    let clusters: SerializableClockWindows = {};
+    if (region_judge !== null && result.metered_input_windows !== undefined) {
+        // the inputs the input step left already bounded, observed as that step observes an input with no window: their windows
+        // opened on the clock it leaves, each one's main cluster
+        const bounded = Object.entries(result.metered_input_windows).filter(([, decision]) => decision.kind === "already_bounded").map(([id]) => id);
+        if (bounded.length > 0) {
+            const opened: SerializableClockWindows = { ...left, ...Object.fromEntries(bounded.map(id => [id, [{ start: 0, end: made.run.duration.ticks - 1 }]])) };
+            const opened_map = new Map(Object.entries(opened).map(([id, ranges]) => [id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
+            let seen: ReturnType<typeof meteredInputWindows> | undefined;
+            finishedClock(made, opened_map, [], finish, left_open, undefined, { on_as_built: run => { seen = meteredInputWindows(made, opened, metered, run); } });
+            const main = seen?.proposals.find(proposal => proposal.form === "main_cluster");
+            if (main !== undefined) clusters = Object.fromEntries(bounded.filter(id => main.changes[id] !== undefined).map(id => [id, main.changes[id]]));
+        }
+    }
+    const staggers = metered.size === 0 ? null : staggeredInputWindows(made, left, metered, output_decisions ?? {}, region_judge === null ? undefined : { clusters });
     if (staggers) {
         // each group judged against the clock the group before leaves, with the gates of the input step
-        const { clock, decisions } = chooseStaggeredGroups(staggers.groups, left, judgeOn);
+        const { clock, decisions } = region_judge === null ? chooseStaggeredGroups(staggers.groups, left, judgeOn)
+            : chooseStaggeredGroups(staggers.groups, left, region_judge, "worse_of_two", (belt, outcomes) => {
+                for (const outcome of outcomes) {
+                    const reason = outcome.decision?.kind === "retained" ? outcome.decision.reason : null;
+                    region!.stagger_log.push({ window_cycle_ticks: made.run.duration.ticks, belt, reference: outcome.reference,
+                        wake_ups: outcome.cost === Infinity ? null : outcome.cost / 1000,
+                        outcome: outcome.taken ? "taken" : outcome.decision === null ? "not_reached" : "retained", reason,
+                        ...(outcome.decision?.kind === "retained" && outcome.decision.reason === "joint_check_failed" && { stage: outcome.decision.stage }),
+                        ...(outcome.recovery !== undefined && { recovery: outcome.recovery }) });
+                }
+            });
         if (clock !== left) {
             const { metered_input_windows, metered_output_windows } = result;
             result = { ...finishedClock(made, trialOf(clock, left_open).map, [], finish, left_open),

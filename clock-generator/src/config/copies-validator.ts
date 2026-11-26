@@ -2,6 +2,7 @@ import { BeltConfig, ChestConfig, Config, InserterConfig, MiningDrillConfig } fr
 import { CopiesUnit } from './errors';
 import { assertInsertersInScope } from './inserter-scope';
 import { machineRuleOf } from './machine-prototype';
+import { unitsMakeTheirShare } from './speed-as-capacity';
 
 // ============================================================================
 // Units of a build
@@ -26,6 +27,10 @@ import { machineRuleOf } from './machine-prototype';
 // The config holds copies when the greatest common divisor g of the number of components of each signature is above 1:
 // it is g copies of a smaller unit. Components that merely repeat are fine when some signature has another count
 // (two cable casters and one plastic plant are one unit of a build: {A, A, B} has a divisor of 1).
+//
+// Where the signatures give no copies, they are made again without machine and drill speeds: copies of a build often differ
+// only in a beacon's rounded speed bonus. Units that match then are copies where each makes its share of what the build needs
+// (speed-as-capacity.ts); a slower unit that does not keeps a signature of its own.
 
 type NodeKind = 'machine' | 'chest' | 'drill';
 
@@ -67,8 +72,8 @@ const nodeKey = (kind: NodeKind, id: number): string => `${kind}:${id}`;
 // The rule is a stand-in for what the prototype decides (recipe selection, the modelled burner's energy usage and fuel):
 // it holds while one prototype has each rule's burner (the biochamber alone burns nutrients). The recycler's places-results
 // is not in the key either. Keying on the traits waits until after the R4 replay, as it may change which units match.
-function machineSpec(machine: Config['machines'][number]): string {
-    return `machine|${machine.recipe}|${machine.crafting_speed}|${machine.productivity}|${machineRuleOf(machine)}|${machine.fuel ?? ''}|${machine.energy_consumption_bonus ?? ''}`;
+function machineSpec(machine: Config['machines'][number], with_speed = true): string {
+    return `machine|${machine.recipe}|${with_speed ? machine.crafting_speed : ''}|${machine.productivity}|${machineRuleOf(machine)}|${machine.fuel ?? ''}|${machine.energy_consumption_bonus ?? ''}`;
 }
 
 function chestSpec(chest: ChestConfig): string {
@@ -83,8 +88,8 @@ function chestSpec(chest: ChestConfig): string {
     return `chest|${chest.type}|${JSON.stringify(settings)}`;
 }
 
-function drillSpec(drill: MiningDrillConfig): string {
-    return `drill|${drill.type}|${drill.mined_item_name}|${drill.speed_bonus}|${JSON.stringify(drill.overrides ?? null)}`;
+function drillSpec(drill: MiningDrillConfig, with_speed = true): string {
+    return `drill|${drill.type}|${drill.mined_item_name}|${with_speed ? drill.speed_bonus : ''}|${JSON.stringify(drill.overrides ?? null)}`;
 }
 
 function beltSpec(belt: BeltConfig | undefined, nearLane: number | undefined): string {
@@ -115,12 +120,12 @@ function endOfInserter(config: Config, end: InserterConfig['source'], nodes: Map
     return { outside: beltSpec(config.belts.find(it => it.id === end.id), end.near_lane) };
 }
 
-/** Unit nodes, edges and the components they form */
-function unitsOf(config: Config): { nodes: UnitNode[]; edges: UnitEdge[]; components: UnitNode[][] } {
+/** Unit nodes, edges and the components they form; without speed, machine and drill speeds are left out of the node specs */
+function unitsOf(config: Config, with_speed = true): { nodes: UnitNode[]; edges: UnitEdge[]; components: UnitNode[][] } {
     const nodes = new Map<string, UnitNode>();
     for (const machine of config.machines) {
         const key = nodeKey('machine', machine.id);
-        nodes.set(key, { key, kind: 'machine', id: machine.id, spec: machineSpec(machine) });
+        nodes.set(key, { key, kind: 'machine', id: machine.id, spec: machineSpec(machine, with_speed) });
     }
     for (const chest of config.chests ?? []) {
         // a chest that holds what it holds is part of a unit; an infinity chest is a supply or a sink outside it
@@ -131,7 +136,7 @@ function unitsOf(config: Config): { nodes: UnitNode[]; edges: UnitEdge[]; compon
     }
     for (const drill of config.drills?.configs ?? []) {
         const key = nodeKey('drill', drill.id);
-        nodes.set(key, { key, kind: 'drill', id: drill.id, spec: drillSpec(drill) });
+        nodes.set(key, { key, kind: 'drill', id: drill.id, spec: drillSpec(drill, with_speed) });
     }
 
     const edges: UnitEdge[] = [];
@@ -201,27 +206,61 @@ function greatestCommonDivisor(a: number, b: number): number {
     return b === 0 ? a : greatestCommonDivisor(b, a % b);
 }
 
+/** How units are compared: with speed, a machine's or drill's speed is part of the signature; as capacity (the default), units that
+ * match only without their speeds are copies where each makes its share (speed-as-capacity.ts), once the signatures with speed find none */
+export type UnitSpeed = 'with-speed' | 'as-capacity';
+
 /**
  * Finds out whether the config holds several identical units of a build. Returns the units found and, when the
  * config is that many copies of a smaller unit, the copies with the machine ids of each.
+ *
+ * Where the signatures with speed give no copies, the units are compared again without machine and drill speeds (`speed`
+ * `as-capacity`, the default): of the units that match then, each one that makes its share of every producer group the set holds
+ * counts as one signature, and each other keeps its own. Those sets are used where they give copies.
  */
-export function findRepeatedUnits(config: Config): RepeatedUnits {
+export function findRepeatedUnits(config: Config, speed: UnitSpeed = 'as-capacity'): RepeatedUnits {
     const { nodes, edges, components } = unitsOf(config);
     const nodeMap = new Map(nodes.map(node => [node.key, node] as const));
-    const units: BuildUnit[] = components
-        .map(component => ({
-            machine_ids: component.filter(node => node.kind === 'machine').map(node => node.id).sort((a, b) => a - b),
-            component,
-        }))
+    const machineIdsOf = (component: UnitNode[]) => component.filter(node => node.kind === 'machine').map(node => node.id).sort((a, b) => a - b);
+    const found = components
+        .map(component => ({ machine_ids: machineIdsOf(component), component }))
         .filter(it => it.machine_ids.length > 0)
         .sort((a, b) => a.machine_ids[0] - b.machine_ids[0])
-        .map(it => ({ machine_ids: it.machine_ids, signature: signatureOf(it.component, edges, nodeMap) }));
+        .map(it => ({ unit: { machine_ids: it.machine_ids, signature: signatureOf(it.component, edges, nodeMap) }, component: it.component }));
+    const units: BuildUnit[] = found.map(it => it.unit);
 
-    const bySignature = new Map<string, BuildUnit[]>();
-    for (const unit of units) {
-        bySignature.set(unit.signature, [...(bySignature.get(unit.signature) ?? []), unit]);
+    const groupsOf = (key: (unit: BuildUnit, index: number) => string) => {
+        const out = new Map<string, BuildUnit[]>();
+        units.forEach((unit, index) => out.set(key(unit, index), [...(out.get(key(unit, index)) ?? []), unit]));
+        return out;
+    };
+    const gcdOf = (groups: Map<string, BuildUnit[]>) => [...groups.values()].reduce((g, group) => greatestCommonDivisor(g, group.length), 0) || 1;
+    let bySignature = groupsOf(unit => unit.signature);
+    let gcd = gcdOf(bySignature);
+    if (gcd <= 1 && speed === 'as-capacity' && units.length > 1) {
+        // the same components, their signatures without speed: each set of units that match then, split by whether each makes its share
+        const loose = unitsOf(config, false);
+        const looseMap = new Map(loose.nodes.map(node => [node.key, node] as const));
+        const looseSignature = new Map(loose.components.filter(component => component.some(node => node.kind === 'machine'))
+            .map(component => [machineIdsOf(component).join(','), signatureOf(component, loose.edges, looseMap)] as const));
+        const sets = new Map<string, number[]>();
+        units.forEach((unit, index) => {
+            const key = looseSignature.get(unit.machine_ids.join(',')) ?? unit.signature;
+            sets.set(key, [...(sets.get(key) ?? []), index]);
+        });
+        const keyOfUnit = new Map<number, string>();
+        for (const [key, members] of sets) {
+            const makes = unitsMakeTheirShare(config, members.map(index => found[index].component
+                .filter(node => node.kind === 'machine' || node.kind === 'drill').map(node => node.key)));
+            members.forEach((index, at) => keyOfUnit.set(index, makes[at] ? `capacity|${key}` : `own|${units[index].signature}`));
+        }
+        const regrouped = groupsOf((_, index) => keyOfUnit.get(index)!);
+        const regrouped_gcd = gcdOf(regrouped);
+        if (regrouped_gcd > 1) {
+            bySignature = regrouped;
+            gcd = regrouped_gcd;
+        }
     }
-    const gcd = [...bySignature.values()].reduce((g, group) => greatestCommonDivisor(g, group.length), 0) || 1;
     if (gcd <= 1) {
         return { units, gcd, copies: [] };
     }

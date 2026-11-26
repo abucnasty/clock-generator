@@ -6,6 +6,8 @@ import { costKey } from "../rank";
 import { targetItemOf, targetMachinesOf } from "../sequence/cycle/target-ends";
 import { recoveryWorse, type InputJointStage, type InputWindowJudge } from "./metered-input-windows";
 import type { OutputWindowDecision } from "./metered-output-windows";
+import { CIRCUIT_LATENCY_TICKS } from "../../common/rule-constants";
+import { MARGIN_SHIFT_TICKS } from "./round-robin-polling";
 
 type Range = { start: number; end: number };
 
@@ -126,6 +128,33 @@ export function outputRelationOf(
     return { relation: relations[0], from: siblings.map(it => it.id) };
 }
 
+/**
+ * An output's drain run from its own machine, for a repeated group of machines planned alone, where no other target machine's
+ * output gives the relation: the run ends in the tick its machine's metered taker drops its hand (the taker's turn, the circuit
+ * latency, then its pickup, swing and drop), and lasts the hands the plan gives the output a service interval times its own hand's
+ * whole cycle, with the margin tick. As a relation to the taker's turn on the service interval; null where it does not fit in one.
+ */
+export function ownOutputRelation(arm: Inserter, taker: Inserter, plan: UnclockedRun, service_ticks: number): CircularRun | null {
+    const transfer = plan.run.swing_counts.get(arm.entity_id);
+    if (transfer === undefined || !transfer.stack_size) return null;
+    const hands = Math.ceil(transfer.total_transfer_count.toDecimal() * service_ticks / plan.run.duration.ticks);
+    if (hands < 1) return null;
+    const length = hands * arm.animation.total.ticks + MARGIN_SHIFT_TICKS;
+    if (length >= service_ticks) return null;
+    const lands = CIRCUIT_LATENCY_TICKS + taker.animation.pickup_to_drop.ticks - 1;
+    return { start: mod(lands - length + 1, service_ticks), length };
+}
+
+/**
+ * What the stagger step adds for a repeated group of machines planned alone (a cut group's generation): an own output the output
+ * step left already bounded is eligible where no other target machine's output is its sibling, and takes its relation from its own
+ * machine (`ownOutputRelation`); and each reference arm's own cluster (`clusters`: the main cluster the input step observes of an
+ * input it left already bounded, with those inputs open) is one more proposal, the window the group shares, moved to each arm's turn
+ */
+export interface RegionStaggerOptions {
+    clusters: SerializableClockWindows;
+}
+
 /** A belt-fed arm of a group, its window folded and its taker's turn */
 export interface StaggerArm { id: string; on: readonly boolean[]; service_ticks: number; turn: number }
 
@@ -159,6 +188,8 @@ export function staggerProposals(arms: readonly StaggerArm[], period: number, ou
  */
 export function staggeredInputWindows(
     plan: UnclockedRun, windows: SerializableClockWindows, takers: ReadonlySet<string>, output_decisions: Readonly<Record<string, OutputWindowDecision>>,
+    /** Set only inside a cut group's generation (see RegionStaggerOptions) */
+    region?: RegionStaggerOptions,
 ): { groups: StaggerGroup[]; decisions: Record<string, StaggerDecision> } | null {
     const period = plan.run.duration.ticks;
     const registry = plan.run.simulation_context.entity_registry;
@@ -212,7 +243,10 @@ export function staggeredInputWindows(
         const sinks = new Set(members.map(member => sink_of.get(member.id)!));
         const outputArm = (arm: Inserter) => plan.run.output_inserter_ids.has(arm.entity_id.id) && EntityId.isMachine(arm.source.entity_id) && EntityId.isBelt(arm.sink.entity_id);
         const own = arms.filter(arm => outputArm(arm) && sinks.has(arm.source.entity_id.id));
-        const eligible = own.filter(arm => !clocked(arm) && output_decisions[arm.entity_id.id]?.kind === "bounded");
+        const no_sibling = !arms.some(arm => outputArm(arm) && targets.has(arm.source.entity_id.id) && !sinks.has(arm.source.entity_id.id)
+            && output_decisions[arm.entity_id.id]?.kind === "already_bounded");
+        const eligible = own.filter(arm => !clocked(arm) && (output_decisions[arm.entity_id.id]?.kind === "bounded"
+            || (region !== undefined && no_sibling && output_decisions[arm.entity_id.id]?.kind === "already_bounded")));
         for (const arm of own) if (!eligible.includes(arm)) retain(arm.entity_id.id, "output_not_bounded");
         const outputs = { changes: {} as SerializableClockWindows, staggered: {} as Record<string, Staggered> };
         if (eligible.length > 0) {
@@ -222,27 +256,80 @@ export function staggeredInputWindows(
             const relation = outputRelationOf(siblings, service_ticks);
             for (const arm of eligible) {
                 const id = arm.entity_id.id;
+                if ("reason" in relation && region !== undefined && siblings.length === 0) {
+                    const taker = feeds.find(feed => feed.sink.entity_id.id === arm.source.entity_id.id);
+                    const own_run = taker === undefined ? null : ownOutputRelation(arm, taker, plan, service_ticks);
+                    if (own_run !== null) {
+                        const shift_ticks = mod(own_run.start + takerOf(arm.source.entity_id.id)!.turn, service_ticks);
+                        outputs.changes[id] = repeatedRun({ start: shift_ticks, length: own_run.length }, service_ticks, period);
+                        outputs.staggered[id] = { kind: "staggered", role: "output", relation_from: [`own:${arm.source.entity_id.id}`], shift_ticks, service_ticks };
+                        continue;
+                    }
+                }
                 if ("reason" in relation) { retain(id, relation.reason); continue; }
                 const shift_ticks = mod(relation.relation.start + takerOf(arm.source.entity_id.id)!.turn, service_ticks);
                 outputs.changes[id] = repeatedRun({ start: shift_ticks, length: relation.relation.length }, service_ticks, period);
                 outputs.staggered[id] = { kind: "staggered", role: "output", relation_from: relation.from, shift_ticks, service_ticks };
             }
         }
-        groups.push({ belt: belt.id, proposals: staggerProposals(members, period, outputs) });
+        const proposals = staggerProposals(members, period, outputs);
+        // a repeated group planned alone: each reference arm's own observed cluster as the window the group shares, after the step's own
+        if (region !== undefined) {
+            for (const reference of proposals.map(proposal => members.find(arm => arm.id === proposal.reference)!)) {
+                const cluster = enabledTicks(region.clusters[reference.id], period);
+                if (cluster === null || cluster.every(Boolean) || !cluster.some(Boolean) || !repeatsEvery(cluster, service_ticks)
+                    || circularRuns(cluster, service_ticks).length !== 1) continue;
+                const shared = rangesOf(cluster);
+                const changes: SerializableClockWindows = {};
+                const staggered: Record<string, Staggered> = {};
+                for (const arm of members) {
+                    const shift_ticks = mod(arm.turn - reference.turn, service_ticks);
+                    changes[arm.id] = shiftedWindows(shared, shift_ticks, period);
+                    staggered[arm.id] = { kind: "staggered", role: "input", reference: `cluster:${reference.id}`, shift_ticks, service_ticks };
+                }
+                proposals.push({ reference: `cluster:${reference.id}`, changes: { ...changes, ...outputs.changes }, staggered: { ...staggered, ...outputs.staggered } });
+            }
+        }
+        groups.push({ belt: belt.id, proposals });
     }
     return { groups, decisions };
 }
 
 /**
+ * How the stagger step reads recovery: `either` (a whole build's), refused where the proposal recovers slower than the clock on one
+ * copy or on the copies; `worse_of_two` (a repeated group's, judged on the whole build), refused where the worse of its two readings
+ * is slower than the worse of the clock's, as the copy step reads it
+ */
+export type StaggerRecoveryGate = "either" | "worse_of_two";
+
+/** What the choice found of one proposal, in the order of the proposals */
+export interface StaggerOutcome {
+    reference: string;
+    /** Its cost (`costKey`) where it holds to the long run, else Infinity */
+    cost: number;
+    /** null where it was taken, or where no proposal before it in cost order was refused and none taken (not reached) */
+    decision: StaggerDecision | null;
+    taken: boolean;
+    /** The worse of the two recovery readings of the proposal and of the clock, where the gate read them */
+    recovery?: { proposal: number | null; clock: number | null };
+}
+
+const worseOfTwo = (recovery: { one_copy: number | null; copies: number | null }): number | null =>
+    recovery.one_copy === null || recovery.copies === null ? null : Math.max(recovery.one_copy, recovery.copies);
+
+/**
  * The proposal the clock takes, with the gates of the input step's choice: of those that hold to the long run with fewer
  * wake-ups than the clock (`costKey`), in ascending cost (a tie to the earlier proposal), the first that holds its whole check
- * and recovers no slower than the clock on one copy and on the copies. Null where none does. Each arm's decision: staggered
- * in the proposal taken, else the code of its proposal of the lowest cost (Infinity where it does not hold to the long run).
+ * and recovers no slower than the clock (`gate`: on one copy and on the copies, or by the worse of the two). Null where none does.
+ * Each arm's decision: staggered in the proposal taken, else the code of its proposal of the lowest cost (Infinity where it does
+ * not hold to the long run).
  */
-export function chooseStaggeredWindows(proposals: readonly StaggerProposal[], judge: InputWindowJudge) {
+export function chooseStaggeredWindows(proposals: readonly StaggerProposal[], judge: InputWindowJudge, gate: StaggerRecoveryGate = "either",
+    /** Given what the choice found of each proposal, where a caller logs it */
+    found?: (outcomes: StaggerOutcome[]) => void) {
     const decisions: Record<string, StaggerDecision> = {};
     const current_cost = costKey({ wake_ups_per_minute: judge.longRun({}).wake_ups });
-    type Outcome = { proposal: StaggerProposal; cost: number; decision: StaggerDecision | null };
+    type Outcome = { proposal: StaggerProposal; cost: number; decision: StaggerDecision | null; recovery?: StaggerOutcome["recovery"] };
     const outcomes: Outcome[] = proposals.map(proposal => {
         const run = judge.longRun(proposal.changes);
         if (!run.holds) return { proposal, cost: Infinity, decision: { kind: "retained", reason: "joint_check_failed", stage: run.stage ?? "long_run" } };
@@ -255,13 +342,18 @@ export function chooseStaggeredWindows(proposals: readonly StaggerProposal[], ju
         const stage = judge.wholeCheck(outcome.proposal.changes);
         if (stage !== null) { outcome.decision = { kind: "retained", reason: "joint_check_failed", stage }; continue; }
         const mine = judge.recovery(outcome.proposal.changes), theirs = judge.recovery({});
-        if (recoveryWorse(mine.one_copy, theirs.one_copy) || recoveryWorse(mine.copies, theirs.copies)) {
+        if (gate === "worse_of_two") outcome.recovery = { proposal: worseOfTwo(mine), clock: worseOfTwo(theirs) };
+        const slower = gate === "worse_of_two" ? recoveryWorse(worseOfTwo(mine), worseOfTwo(theirs))
+            : recoveryWorse(mine.one_copy, theirs.one_copy) || recoveryWorse(mine.copies, theirs.copies);
+        if (slower) {
             outcome.decision = { kind: "retained", reason: "recovery_worse" };
             continue;
         }
         taken = outcome.proposal;
         break;
     }
+    found?.(outcomes.map(it => ({ reference: it.proposal.reference, cost: it.cost, decision: it.decision, taken: it.proposal === taken,
+        ...(it.recovery !== undefined && { recovery: it.recovery }) })));
     const ids = [...new Set(proposals.flatMap(proposal => Object.keys(proposal.changes)))];
     for (const id of ids) {
         if (taken !== null && id in taken.changes && taken.staggered[id] !== undefined) {
@@ -280,12 +372,13 @@ export function chooseStaggeredWindows(proposals: readonly StaggerProposal[], ju
  * that took a proposal holding it, the group whose windows the clock keeps; a group that did not take it never overrides it. An arm
  * no group took keeps the decision of the last group that holds it.
  */
-export function chooseStaggeredGroups(groups: readonly StaggerGroup[], clock: SerializableClockWindows, judgeOn: (clock: SerializableClockWindows) => InputWindowJudge) {
+export function chooseStaggeredGroups(groups: readonly StaggerGroup[], clock: SerializableClockWindows, judgeOn: (clock: SerializableClockWindows) => InputWindowJudge,
+    gate: StaggerRecoveryGate = "either", found?: (belt: string, outcomes: StaggerOutcome[]) => void) {
     const decisions: Record<string, StaggerDecision> = {};
     const taken_ids = new Set<string>();
     let current = clock;
     for (const group of groups) {
-        const choice = chooseStaggeredWindows(group.proposals, judgeOn(current));
+        const choice = chooseStaggeredWindows(group.proposals, judgeOn(current), gate, found === undefined ? undefined : outcomes => found(group.belt, outcomes));
         const mine = new Set(choice.taken === null ? [] : Object.keys(choice.taken.changes).filter(id => choice.taken!.staggered[id] !== undefined));
         for (const [id, decision] of Object.entries(choice.decisions)) {
             if (mine.has(id) || !taken_ids.has(id)) decisions[id] = decision;
