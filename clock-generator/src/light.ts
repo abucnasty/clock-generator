@@ -11,6 +11,9 @@
 
 export { ChestType, chestName } from "./common/entity-types";
 
+export { combinatorLetters } from "./crafting/combinator-letters";
+export type { CombinatorGroups, CombinatorLetter } from "./crafting/combinator-letters";
+
 export {
     EnableControlMode,
     EntityReference,

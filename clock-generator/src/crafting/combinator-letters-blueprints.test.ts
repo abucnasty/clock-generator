@@ -72,6 +72,19 @@ describe("the letter at the end of the first line of every combinator that switc
         }
     }, 120_000);
 
+    it("STEEL_PLATE_26_WAGON_CHEST: the drill into a wagon, described as one into a chest, ends its first line in its letter in each blueprint", async () => {
+        const result = generateClockForConfig(await loadConfigFromFile(ConfigPaths.STEEL_PLATE_26_WAGON_CHEST), { logger: quiet });
+        for (const [kind, blueprint] of blueprintsOf(result)) {
+            const drills = (blueprint.entities as Entity[]).filter(entity => (entity.tags?.clock_generator?.drills?.length ?? 0) > 0);
+            expect(drills.length, kind).toBeGreaterThan(0);
+            for (const entity of drills) {
+                const lines = (entity.player_description ?? "").split("\n");
+                expect(lines.some(line => line.startsWith("Tops ")), `${kind}: ${entity.player_description}`).toBe(true);
+                expect(letterOf(lines[0]), `${kind}: ${lines[0]}`).not.toBeNull();
+            }
+        }
+    }, 120_000);
+
     it("was checked on a plain, a modulo and a subtick blueprint", () => {
         expect([...seen].sort()).toEqual(["modulo", "plain", "subtick"]);
     });
