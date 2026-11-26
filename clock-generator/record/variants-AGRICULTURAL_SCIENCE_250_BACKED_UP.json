@@ -3,7 +3,7 @@
   "job": "variants-AGRICULTURAL_SCIENCE_250_BACKED_UP",
   "group": "variants",
   "name": "AGRICULTURAL_SCIENCE_250_BACKED_UP",
-  "config_sha256": "890fda92255ea53a7ebcd3d63b7f2ed71f58fb5835ddfd6cd7ca059fe219254a",
+  "config_sha256": "d3f445deb26b2091bece7e6a34ce1c6c8657f0749ecf5e94af634c0b8c8c0eda",
   "job_results_sha256": "3e4c12b9144ea280ec67a32e42ecf6d9f60d7d8c1f7f1e286a12dd139f65d96b",
   "selected": "takt_batches_observed_swings_2",
   "selected_windows": {
@@ -29,6 +29,6 @@
     {"id": "takt_batches_observed_swings_4", "verdict": "unstable", "holds": false, "rate": 248.46153846153845, "supply": "backed_up", "window_cycle_ticks": 1920, "wake_ups": 4640.329, "descriptions_cut": 0, "clock_sha256": "549da4173b739577148ba958d63c8346b642cf6c97c07007e4cca2693a7e9f90", "windows_sha256": "14a2268aae982d7b40ab3d5bf38cef49479120a8bddd3454cb82607bd489fb72", "results_sha256": "be56c9673fb5c2e94c64145b050870b98af5821179be72bf21f7b745d867bd46"},
     {"id": "takt_batches_observed_swings_3", "verdict": "unstable", "holds": false, "rate": 247.05882352941182, "supply": "backed_up", "window_cycle_ticks": 1440, "wake_ups": null, "descriptions_cut": 0, "clock_sha256": "a5e3edc2e143e04a6b080da5781682381735260d86e5d6d3cb9eed28481e1b21", "windows_sha256": "e4b46fca59b534342b2a49ecdabc652a02d8dcce0718d3654f9bd0b0ab40c043", "results_sha256": "ef463521f12580e3811221dfe3baff2af66aff8cd30e9852c45ab4222d515c10"},
     {"id": "takt_batches_observed_swings_2", "verdict": "stable", "holds": true, "rate": 250, "supply": "backed_up", "window_cycle_ticks": 960, "wake_ups": 1890.975, "descriptions_cut": 0, "clock_sha256": "997b3c3c1a04f50f219d2d6dfa5c3c345dc86da2abcd497fec965ac110bc945b", "windows_sha256": "4cea6ba0f1fb6d65b91923785dae2013f70a8b43693d8f1cb14654a03e060d6a", "results_sha256": "96fbdea51d666adba90d6a23bf873ff2a800c5b675ff35b667d6dd0807576c33"},
-    {"id": "takt_batches_observed_swings_1", "verdict": "unstable", "holds": true, "rate": 250, "supply": "backed_up", "window_cycle_ticks": 480, "wake_ups": 2774.85, "descriptions_cut": 0, "clock_sha256": "de7eacbc9dbbf5b6bf9b55b3b1c0e7792a61d6bf52a21283b61de00b66a2833c", "windows_sha256": "52f9e26c7c6c91e43f5244b3d3292d9453487a666d7748862ffd3275c9109a46", "results_sha256": "a2327cd6ed37b06a88b07a2a5b42e46556ac45cf9a5738b1ea23aea7665dcd87"}
+    {"id": "takt_batches_observed_swings_1", "verdict": "stable", "holds": true, "rate": 250, "supply": "backed_up", "window_cycle_ticks": 480, "wake_ups": 2774.85, "descriptions_cut": 0, "clock_sha256": "de7eacbc9dbbf5b6bf9b55b3b1c0e7792a61d6bf52a21283b61de00b66a2833c", "windows_sha256": "52f9e26c7c6c91e43f5244b3d3292d9453487a666d7748862ffd3275c9109a46", "results_sha256": "4e0d2223335abf2f9257a19a1d442a05a7d8007f6aba91971311a42f18e5f8c3"}
   ]
 }
