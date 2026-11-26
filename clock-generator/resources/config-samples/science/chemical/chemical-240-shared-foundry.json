@@ -14,63 +14,72 @@
       "recipe": "chemical-science-pack",
       "productivity": 100,
       "crafting_speed": 66.0253125,
-      "prototype": "assembling-machine-3"
+      "prototype": "assembling-machine-3",
+      "position": { "x": -5.5, "y": -8.5 }
     },
     {
       "id": 2,
       "recipe": "chemical-science-pack",
       "productivity": 100,
       "crafting_speed": 66.0253125,
-      "prototype": "assembling-machine-3"
+      "prototype": "assembling-machine-3",
+      "position": { "x": 4.5, "y": -8.5 }
     },
     {
       "id": 3,
       "recipe": "chemical-science-pack",
       "productivity": 100,
       "crafting_speed": 66.0253125,
-      "prototype": "assembling-machine-3"
+      "prototype": "assembling-machine-3",
+      "position": { "x": -5.5, "y": 9.5 }
     },
     {
       "id": 4,
       "recipe": "chemical-science-pack",
       "productivity": 100,
       "crafting_speed": 66.0253125,
-      "prototype": "assembling-machine-3"
+      "prototype": "assembling-machine-3",
+      "position": { "x": 4.5, "y": 9.5 }
     },
     {
       "id": 5,
       "recipe": "engine-unit",
       "productivity": 100,
       "crafting_speed": 49.0859375,
-      "prototype": "assembling-machine-3"
+      "prototype": "assembling-machine-3",
+      "position": { "x": -3.5, "y": -4.5 }
     },
     {
       "id": 6,
       "recipe": "engine-unit",
       "productivity": 100,
       "crafting_speed": 49.0859375,
-      "prototype": "assembling-machine-3"
+      "prototype": "assembling-machine-3",
+      "position": { "x": 2.5, "y": -4.5 }
     },
     {
       "id": 7,
       "recipe": "engine-unit",
       "productivity": 100,
       "crafting_speed": 49.0859375,
-      "prototype": "assembling-machine-3"
+      "prototype": "assembling-machine-3",
+      "position": { "x": -3.5, "y": 5.5 }
     },
     {
       "id": 8,
       "recipe": "engine-unit",
       "productivity": 100,
       "crafting_speed": 49.0859375,
-      "prototype": "assembling-machine-3"
+      "prototype": "assembling-machine-3",
+      "position": { "x": 2.5, "y": 5.5 }
     },
     {
       "id": 9,
       "recipe": "casting-pipe",
       "productivity": 50,
       "crafting_speed": 236.75,
-      "prototype": "foundry"
+      "prototype": "foundry",
+      "position": { "x": -0.5, "y": 0.5 }
     }
   ],
   "inserters": [
@@ -90,7 +99,9 @@
       "stack_size": 16,
       "filters": [
         "chemical-science-pack"
-      ]
+      ],
+      "position": { "x": -6.5, "y": -10.5 },
+      "direction": 8
     },
     {
       "source": {
@@ -108,7 +119,9 @@
       "stack_size": 16,
       "filters": [
         "chemical-science-pack"
-      ]
+      ],
+      "position": { "x": 3.5, "y": -10.5 },
+      "direction": 8
     },
     {
       "source": {
@@ -126,7 +139,9 @@
       "stack_size": 16,
       "filters": [
         "chemical-science-pack"
-      ]
+      ],
+      "position": { "x": -6.5, "y": 11.5 },
+      "direction": 0
     },
     {
       "source": {
@@ -144,7 +159,9 @@
       "stack_size": 16,
       "filters": [
         "chemical-science-pack"
-      ]
+      ],
+      "position": { "x": 3.5, "y": 11.5 },
+      "direction": 0
     },
     {
       "source": {
@@ -156,7 +173,9 @@
         "type": "machine",
         "id": 1
       },
-      "stack_size": 16
+      "stack_size": 16,
+      "position": { "x": -6.5, "y": -6.5 },
+      "direction": 8
     },
     {
       "source": {
@@ -168,7 +187,9 @@
         "type": "machine",
         "id": 2
       },
-      "stack_size": 16
+      "stack_size": 16,
+      "position": { "x": 5.5, "y": -6.5 },
+      "direction": 8
     },
     {
       "source": {
@@ -180,7 +201,9 @@
         "type": "machine",
         "id": 3
       },
-      "stack_size": 16
+      "stack_size": 16,
+      "position": { "x": -6.5, "y": 7.5 },
+      "direction": 0
     },
     {
       "source": {
@@ -192,7 +215,9 @@
         "type": "machine",
         "id": 4
       },
-      "stack_size": 16
+      "stack_size": 16,
+      "position": { "x": 5.5, "y": 7.5 },
+      "direction": 0
     },
     {
       "source": {
@@ -203,7 +228,9 @@
         "type": "machine",
         "id": 1
       },
-      "stack_size": 16
+      "stack_size": 16,
+      "position": { "x": -4.5, "y": -6.5 },
+      "direction": 8
     },
     {
       "source": {
@@ -214,7 +241,9 @@
         "type": "machine",
         "id": 2
       },
-      "stack_size": 16
+      "stack_size": 16,
+      "position": { "x": 3.5, "y": -6.5 },
+      "direction": 8
     },
     {
       "source": {
@@ -225,7 +254,9 @@
         "type": "machine",
         "id": 3
       },
-      "stack_size": 16
+      "stack_size": 16,
+      "position": { "x": -4.5, "y": 7.5 },
+      "direction": 0
     },
     {
       "source": {
@@ -236,7 +267,9 @@
         "type": "machine",
         "id": 4
       },
-      "stack_size": 16
+      "stack_size": 16,
+      "position": { "x": 3.5, "y": 7.5 },
+      "direction": 0
     },
     {
       "source": {
@@ -248,7 +281,9 @@
         "type": "machine",
         "id": 5
       },
-      "stack_size": 16
+      "stack_size": 16,
+      "position": { "x": -4.5, "y": -2.5 },
+      "direction": 8
     },
     {
       "source": {
@@ -260,7 +295,9 @@
         "type": "machine",
         "id": 6
       },
-      "stack_size": 16
+      "stack_size": 16,
+      "position": { "x": 3.5, "y": -2.5 },
+      "direction": 8
     },
     {
       "source": {
@@ -272,7 +309,9 @@
         "type": "machine",
         "id": 7
       },
-      "stack_size": 16
+      "stack_size": 16,
+      "position": { "x": -4.5, "y": 3.5 },
+      "direction": 0
     },
     {
       "source": {
@@ -284,7 +323,9 @@
         "type": "machine",
         "id": 8
       },
-      "stack_size": 16
+      "stack_size": 16,
+      "position": { "x": 3.5, "y": 3.5 },
+      "direction": 0
     },
     {
       "source": {
@@ -295,7 +336,9 @@
         "type": "machine",
         "id": 5
       },
-      "stack_size": 16
+      "stack_size": 16,
+      "position": { "x": -2.5, "y": -2.5 },
+      "direction": 8
     },
     {
       "source": {
@@ -306,7 +349,9 @@
         "type": "machine",
         "id": 6
       },
-      "stack_size": 16
+      "stack_size": 16,
+      "position": { "x": 1.5, "y": -2.5 },
+      "direction": 8
     },
     {
       "source": {
@@ -317,7 +362,9 @@
         "type": "machine",
         "id": 7
       },
-      "stack_size": 16
+      "stack_size": 16,
+      "position": { "x": -2.5, "y": 3.5 },
+      "direction": 0
     },
     {
       "source": {
@@ -328,7 +375,9 @@
         "type": "machine",
         "id": 8
       },
-      "stack_size": 16
+      "stack_size": 16,
+      "position": { "x": 1.5, "y": 3.5 },
+      "direction": 0
     }
   ],
   "belts": [
