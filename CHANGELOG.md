@@ -18,6 +18,7 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 - generation: an inserter can take from a belt into a steel chest
 - ui: new Layout view draws a build from above with numbered inserters and belts
 - ui: the Layout view and wiring reference show each combinator's letter and colour on its inserters
+- ui: every example build now opens in the Layout view with its entities in place
 - blueprint: each combinator's description names its letter, the one the page shows
 - generation: one group's clock is tried on every repeated group of machines in a build
 - generation: a notice names the belt that keeps repeated groups of machines from sharing a clock
