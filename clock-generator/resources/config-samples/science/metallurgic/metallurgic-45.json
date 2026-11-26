@@ -10,28 +10,32 @@
       "recipe": "carbon",
       "productivity": 200,
       "crafting_speed": 68.875,
-      "prototype": "cryogenic-plant"
+      "prototype": "cryogenic-plant",
+      "position": { "x": -4.5, "y": 1.5 }
     },
     {
       "id": 2,
       "recipe": "tungsten-carbide",
       "productivity": 100,
       "crafting_speed": 40.3125,
-      "prototype": "assembling-machine-3"
+      "prototype": "assembling-machine-3",
+      "position": { "x": 0.5, "y": 2.5 }
     },
     {
       "id": 3,
       "recipe": "metallurgic-science-pack",
       "productivity": 150,
       "crafting_speed": 180.75,
-      "prototype": "foundry"
+      "prototype": "foundry",
+      "position": { "x": 5.5, "y": 1.5 }
     },
     {
       "id": 4,
       "recipe": "tungsten-plate",
       "productivity": 150,
       "crafting_speed": 191.481,
-      "prototype": "foundry"
+      "prototype": "foundry",
+      "position": { "x": 11.5, "y": 1.5 }
     }
   ],
   "inserters": [
@@ -47,7 +51,9 @@
       "stack_size": 16,
       "filters": [
         "carbon"
-      ]
+      ],
+      "position": { "x": -1.5, "y": 2.5 },
+      "direction": 12
     },
     {
       "source": {
@@ -61,7 +67,9 @@
       "stack_size": 16,
       "filters": [
         "tungsten-carbide"
-      ]
+      ],
+      "position": { "x": 2.5, "y": 2.5 },
+      "direction": 12
     },
     {
       "source": {
@@ -75,7 +83,9 @@
       "stack_size": 16,
       "filters": [
         "metallurgic-science-pack"
-      ]
+      ],
+      "position": { "x": 5.5, "y": -1.5 },
+      "direction": 8
     },
     {
       "source": {
@@ -91,7 +101,9 @@
       "filters": [
         "tungsten-ore",
         "tungsten-ore"
-      ]
+      ],
+      "position": { "x": -0.5, "y": 4.5 },
+      "direction": 8
     },
     {
       "source": {
@@ -107,7 +119,9 @@
       "filters": [
         "tungsten-ore",
         "tungsten-ore"
-      ]
+      ],
+      "position": { "x": 1.5, "y": 4.5 },
+      "direction": 8
     },
     {
       "source": {
@@ -123,7 +137,9 @@
       "filters": [
         "coal",
         "coal"
-      ]
+      ],
+      "position": { "x": -7.5, "y": 1.5 },
+      "direction": 12
     },
     {
       "source": {
@@ -139,7 +155,9 @@
       "filters": [
         "tungsten-ore",
         "tungsten-ore"
-      ]
+      ],
+      "position": { "x": 11.5, "y": 4.5 },
+      "direction": 8
     },
     {
       "source": {
@@ -153,7 +171,9 @@
       "stack_size": 16,
       "filters": [
         "tungsten-plate"
-      ]
+      ],
+      "position": { "x": 8.5, "y": 1.5 },
+      "direction": 4
     }
   ],
   "belts": [
@@ -204,7 +224,8 @@
       "type": "infinity-chest",
       "id": 1,
       "item_filter": [],
-      "remove_unfiltered_items": true
+      "remove_unfiltered_items": true,
+      "position": { "x": 5.5, "y": -2.5 }
     }
   ],
   "overrides": {

@@ -14,28 +14,32 @@
       "recipe": "production-science-pack",
       "productivity": 100,
       "crafting_speed": 63.00781250000001,
-      "prototype": "assembling-machine-3"
+      "prototype": "assembling-machine-3",
+      "position": { "x": -0.5, "y": 3.5 }
     },
     {
       "id": 2,
       "recipe": "rail",
       "productivity": 0,
       "crafting_speed": 46.37125,
-      "prototype": "assembling-machine-3"
+      "prototype": "assembling-machine-3",
+      "position": { "x": 0.5, "y": -0.5 }
     },
     {
       "id": 3,
       "recipe": "casting-steel",
       "productivity": 300,
       "crafting_speed": 122.5,
-      "prototype": "foundry"
+      "prototype": "foundry",
+      "position": { "x": -2.5, "y": -5.5 }
     },
     {
       "id": 4,
       "recipe": "casting-iron-stick",
       "productivity": 150,
       "crafting_speed": 66.5,
-      "prototype": "foundry"
+      "prototype": "foundry",
+      "position": { "x": 2.5, "y": -5.5 }
     }
   ],
   "inserters": [
@@ -52,7 +56,9 @@
       "filters": [
         "production-science-pack"
       ],
-      "id": 1
+      "id": 1,
+      "position": { "x": 1.5, "y": 3.5 },
+      "direction": 12
     },
     {
       "source": {
@@ -67,7 +73,9 @@
       "filters": [
         "iron-stick"
       ],
-      "id": 2
+      "id": 2,
+      "position": { "x": 0.5, "y": -2.5 },
+      "direction": 0
     },
     {
       "source": {
@@ -82,7 +90,9 @@
       "filters": [
         "rail"
       ],
-      "id": 3
+      "id": 3,
+      "position": { "x": -0.5, "y": 1.5 },
+      "direction": 0
     },
     {
       "source": {
@@ -97,7 +107,9 @@
       "filters": [
         "steel-plate"
       ],
-      "id": 4
+      "id": 4,
+      "position": { "x": -0.5, "y": -2.5 },
+      "direction": 0
     },
     {
       "source": {
@@ -114,7 +126,9 @@
         "productivity-module",
         "electric-furnace"
       ],
-      "id": 5
+      "id": 5,
+      "position": { "x": 0.5, "y": 5.5 },
+      "direction": 8
     }
   ],
   "belts": [
@@ -166,7 +180,8 @@
         "target": {
           "type": "machine",
           "id": 2
-        }
+        },
+        "position": { "x": -2.5, "y": -0.5 }
       }
     ]
   }
