@@ -17,6 +17,8 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 - ui: enter an exact fraction in the setpoint rate field
 - generation: an inserter can take from a belt into a steel chest
 - ui: new Layout view draws a build from above with numbered inserters and belts
+- ui: the Layout view and wiring reference show each combinator's letter and colour on its inserters
+- blueprint: each combinator's description names its letter, the one the page shows
 
 ### Changed
 - generation: science output inserters can keep enable windows when one machine feeds several science assemblers

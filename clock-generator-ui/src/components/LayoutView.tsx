@@ -14,6 +14,9 @@ import { tileSizeOf } from '../utils/layoutSizes';
 import type { EntityClickType } from './ConfigFlowDiagram';
 import { LayoutGround, LayoutPicture, type BoxName } from './LayoutPicture';
 import { FactorioIcon } from './FactorioIcon';
+import { CombinatorTag } from './CombinatorTag';
+import type { ClockInstallFacts } from '../worker/installFacts';
+import { combinatorOfEntity, layoutCombinatorsOf, switchesText, type LayoutCombinator } from '../utils/layoutCombinators';
 
 /** What a build with no position at all says, in place of a picture */
 const NO_POSITIONS = 'This build has no positions; paste a Sidecar export';
@@ -32,6 +35,12 @@ interface LayoutViewProps {
     orbits: FoundOrbit[] | null;
     selection: { kind: EntityClickType; id: number } | null;
     onSelectionChange(selection: { kind: EntityClickType; id: number } | null): void;
+    /**
+     * What the install steps know of the selected clock, given only while that clock is current for the build: the letter and
+     * colour of each combinator go on its inserters and drills, in the legend and on the selected line. Null (or without
+     * letters): the view is as it is with no clock
+     */
+    install?: ClockInstallFacts | null;
     height?: number;
 }
 
@@ -65,11 +74,21 @@ function Notes({ layout, chests }: { layout: Layout; chests: readonly ChestFormD
     );
 }
 
+/** The colour of a region or a belt, with an edge that holds 3 to 1 on the panel in both themes (the text colour) */
 function Swatch({ colour }: { colour: string }) {
-    return <Box component="span" sx={{ display: 'inline-block', width: 14, height: 14, bgcolor: colour, border: '1px solid #1a1a1a', borderRadius: '2px', verticalAlign: 'text-bottom', mr: 0.75 }} />;
+    return <Box component="span" sx={{ display: 'inline-block', width: 14, height: 14, bgcolor: colour, border: '1px solid', borderColor: 'text.primary', borderRadius: '2px', verticalAlign: 'text-bottom', mr: 0.75 }} />;
 }
 
-function Legend({ layout, regions, belts }: { layout: Layout; regions: ReturnType<typeof regionTintsOf>; belts: readonly BeltFormData[] }) {
+interface LegendProps {
+    layout: Layout;
+    regions: ReturnType<typeof regionTintsOf>;
+    belts: readonly BeltFormData[];
+    combinators: readonly LayoutCombinator[];
+    selectedCombinator: LayoutCombinator | undefined;
+    onSelectCombinator(combinator: LayoutCombinator): void;
+}
+
+function Legend({ layout, regions, belts, combinators, selectedCombinator, onSelectCombinator }: LegendProps) {
     const regionNumbers = regions === null ? [] : Array.from({ length: regions.count }, (_, index) => index + 1);
     const machinesIn = (region: number) => [...(regions?.of ?? [])].flatMap(([key, number]) => number === region && key.startsWith('machine:') ? [Number(key.slice('machine:'.length))] : []).sort((a, b) => a - b);
     return (
@@ -78,7 +97,18 @@ function Legend({ layout, regions, belts }: { layout: Layout; regions: ReturnTyp
                 <Typography variant="caption" key={`region-${region}`}><Swatch colour={regionColour(region)} />Region {region}: machines {machinesIn(region).join(', ')}</Typography>
             ))}
             {regions !== null && <Typography variant="caption"><Swatch colour={regionColour(0)} />Between the regions</Typography>}
-            {regions !== null && regions.twins.size > 0 && <Typography variant="caption">=N: the matching inserter of another region</Typography>}
+            {combinators.length === 0 && regions !== null && regions.twins.size > 0 && <Typography variant="caption">=N: the matching inserter of another region</Typography>}
+            {combinators.map(combinator => (
+                <Typography variant="caption" key={`combinator-${combinator.key}`} component="button" type="button" onClick={() => onSelectCombinator(combinator)}
+                    aria-pressed={selectedCombinator === combinator} data-layout-combinator={combinator.letter.letter}
+                    sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, border: 0, p: 0, bgcolor: 'transparent', color: 'inherit', font: 'inherit', cursor: 'pointer', textAlign: 'left',
+                        fontWeight: selectedCombinator === combinator ? 700 : undefined }}>
+                    <CombinatorTag letter={combinator.letter} />
+                    <FactorioIcon name="decider-combinator" size={16} titled />
+                    {combinator.items.map(item => <FactorioIcon key={item} name={item} size={16} titled />)}
+                    {switchesText(combinator)}
+                </Typography>
+            ))}
             {layout.belts.filter(belt => belt.tiles > 0).map(belt => (
                 <Typography variant="caption" key={`belt-${belt.id}`} sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
                     <Swatch colour={beltColour(belt.id)} />{entityLabel('belt', belt.id)}
@@ -98,11 +128,15 @@ function Legend({ layout, regions, belts }: { layout: Layout; regions: ReturnTyp
  * The Layout view of the Build panel: the build drawn from above from the positions its config holds, north up, with the
  * numbers of its inserters and the belts they reach. It only reads: a click selects, as in the diagram, and nothing is edited.
  */
-export function LayoutView({ machines, inserters, belts, chests, drills, orbits, selection, onSelectionChange, height = 640 }: LayoutViewProps) {
+export function LayoutView({ machines, inserters, belts, chests, drills, orbits, selection, onSelectionChange, install = null, height = 640 }: LayoutViewProps) {
     const { recipeLabel, itemLabel } = useGameNames();
     const layout = useMemo(() => layoutOf({ machines, drills, inserters, belts, chests }, tileSizeOf), [machines, drills, inserters, belts, chests]);
     const tints = useMemo(() => regionTintsOf(orbits), [orbits]);
     const bounds = useMemo(() => boundsOf(layout), [layout]);
+    const combinatorList = useMemo(() => layoutCombinatorsOf(install), [install]);
+    // null with no clock: the view is then exactly the view of the build alone
+    const combinators = useMemo(() => combinatorList.length === 0 ? null : combinatorOfEntity(combinatorList), [combinatorList]);
+    const selectedCombinator = selection === null || combinators === null ? undefined : combinators.get(`${selection.kind}:${selection.id}`);
     const names = useMemo(() => new Map<string, BoxName>([
         // a machine is its recipe's picture, a drill its ore's, a chest its type's; the words stay as the name and the hover text
         ...machines.map(machine => [`machine:${machine.id}`, { title: entityLabel('machine', machine.id), id: machine.id, icon: machine.recipe,
@@ -179,7 +213,11 @@ export function LayoutView({ machines, inserters, belts, chests, drills, orbits,
     }
     return (
         <Box sx={{ mb: 3 }}>
-            {selection && <Typography variant="body2" sx={{ mb: 0.5 }}>Selected: {labelOf(chests, selection)}.</Typography>}
+            {selection && (
+                <Typography variant="body2" sx={{ mb: 0.5 }}>
+                    Selected: {labelOf(chests, selection)}.{selectedCombinator !== undefined && ` Combinator ${selectedCombinator.letter.letter}: ${switchesText(selectedCombinator)}.`}
+                </Typography>
+            )}
             <Box sx={{ position: 'relative', height, border: '1px solid', borderColor: 'divider', borderRadius: 1, overflow: 'hidden' }}>
                 <svg ref={setFrame} width="100%" height="100%" role="group" aria-label="The layout of the build" style={{ display: 'block', touchAction: 'none', cursor: 'grab', background: LAYOUT_GROUND }}
                     onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerEnd} onPointerLeave={onPointerEnd}
@@ -187,7 +225,7 @@ export function LayoutView({ machines, inserters, belts, chests, drills, orbits,
                     onClickCapture={event => { if (drag.current?.moved) event.stopPropagation(); }}>
                     <LayoutGround x={transform.x} y={transform.y} zoom={transform.zoom} />
                     <g transform={`translate(${transform.x} ${transform.y}) scale(${transform.zoom})`}>
-                        <LayoutPicture layout={layout} names={names} tints={tints} selection={selection} onSelect={onSelect} />
+                        <LayoutPicture layout={layout} names={names} tints={tints} selection={selection} onSelect={onSelect} combinators={combinators} />
                     </g>
                 </svg>
                 <Box sx={{ position: 'absolute', left: 8, bottom: 8, display: 'flex', flexDirection: 'column', bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
@@ -196,7 +234,8 @@ export function LayoutView({ machines, inserters, belts, chests, drills, orbits,
                     <IconButton size="small" aria-label="Fit View" title="Fit View" onClick={fit}><CenterFocusStrong fontSize="small" /></IconButton>
                 </Box>
             </Box>
-            <Legend layout={layout} regions={tints} belts={belts} />
+            <Legend layout={layout} regions={tints} belts={belts} combinators={combinatorList} selectedCombinator={selectedCombinator}
+                onSelectCombinator={combinator => onSelectionChange({ kind: combinator.kind, id: combinator.ids[0] })} />
             <Notes layout={layout} chests={chests} />
         </Box>
     );

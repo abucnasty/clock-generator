@@ -44,7 +44,7 @@ describe("generateClockForConfig", () => {
             const described = rocket_fuel.blueprint.entities
                 .map(entity => entity.player_description ?? "")
                 .find(description => description.startsWith("By-product: "));
-            expect(described).toContain("1 inserter [item=jellynut-seed] (11)\nInserter 11: [entity=biochamber] [recipe=jellynut-processing] → [item=jellynut-seed] → [entity=turbo-transport-belt]\n");
+            expect(described).toContain("1 inserter [item=jellynut-seed] (11) (F)\nInserter 11: [entity=biochamber] [recipe=jellynut-processing] → [item=jellynut-seed] → [entity=turbo-transport-belt]\n");
             expect(described).toContain("of every 32 ticks; outside the main plan");
         });
 

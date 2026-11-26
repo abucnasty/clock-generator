@@ -87,6 +87,7 @@ describe("the light entry", () => {
             "config/setpoint-rate.ts",
             "config/setpoint-refusal.ts",
             "crafting/candidates/coordinated-sources-parts.ts",
+            "crafting/combinator-letters.ts",
             "crafting/entity-name.ts",
             "crafting/machine-name.ts",
             "crafting/maker-log.ts",

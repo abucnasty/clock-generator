@@ -113,21 +113,21 @@ describe("combinator descriptions of the rocket fuel biochambers", async () => {
 
     it("name source, item and sink of every inserter, the biochambers by the machine their former type gives them", () => {
         expect(identity_lines.map(lines => lines.join("\n")).sort()).toEqual([
-            "2 inserters [item=rocket-fuel] (2, 4)\nInserters 2, 4: [entity=biochamber] → [item=rocket-fuel] → [entity=turbo-transport-belt]",
-            "2 inserters [item=bioflux] (1, 5)\nInserters 1, 5: [entity=turbo-transport-belt] → [item=bioflux] → [entity=biochamber] [recipe=rocket-fuel-from-jelly]",
-            "4 inserters [item=jelly] (6, 7, 8, 9)\nInserters 6, 7, 8, 9: [entity=biochamber] → [item=jelly] → [entity=biochamber] [recipe=rocket-fuel-from-jelly]",
-            "By-product: 1 inserter [item=jellynut-seed] (11)\nInserter 11: [entity=biochamber] [recipe=jellynut-processing] → [item=jellynut-seed] → [entity=turbo-transport-belt]",
-            "Fuel: 2 inserters [item=nutrients] (10, 13)\nInserters 10, 13: [entity=turbo-transport-belt] → [item=nutrients] → [entity=biochamber] [recipe=rocket-fuel-from-jelly]",
-            "Fuel: 1 inserter [item=nutrients] (12)\nInserter 12: [entity=turbo-transport-belt] → [item=nutrients] → [entity=biochamber] [recipe=jellynut-processing]",
-            "1 inserter [item=jellynut] (3)\nInserter 3: [entity=turbo-transport-belt] → [item=jellynut] → [entity=biochamber] [recipe=jellynut-processing]",
+            "2 inserters [item=rocket-fuel] (2, 4) (B)\nInserters 2, 4: [entity=biochamber] → [item=rocket-fuel] → [entity=turbo-transport-belt]",
+            "2 inserters [item=bioflux] (1, 5) (A)\nInserters 1, 5: [entity=turbo-transport-belt] → [item=bioflux] → [entity=biochamber] [recipe=rocket-fuel-from-jelly]",
+            "4 inserters [item=jelly] (6, 7, 8, 9) (D)\nInserters 6, 7, 8, 9: [entity=biochamber] → [item=jelly] → [entity=biochamber] [recipe=rocket-fuel-from-jelly]",
+            "By-product: 1 inserter [item=jellynut-seed] (11) (F)\nInserter 11: [entity=biochamber] [recipe=jellynut-processing] → [item=jellynut-seed] → [entity=turbo-transport-belt]",
+            "Fuel: 2 inserters [item=nutrients] (10, 13) (E)\nInserters 10, 13: [entity=turbo-transport-belt] → [item=nutrients] → [entity=biochamber] [recipe=rocket-fuel-from-jelly]",
+            "Fuel: 1 inserter [item=nutrients] (12) (G)\nInserter 12: [entity=turbo-transport-belt] → [item=nutrients] → [entity=biochamber] [recipe=jellynut-processing]",
+            "1 inserter [item=jellynut] (3) (C)\nInserter 3: [entity=turbo-transport-belt] → [item=jellynut] → [entity=biochamber] [recipe=jellynut-processing]",
         ].sort());
     });
 
     it("give the fuel and by-product windows as their conditions read them", () => {
         const texts = (result.blueprint.entities ?? []).map(entity => entity.player_description ?? "");
-        expect(texts.find(text => text.includes("(11)\n"))!.split("\n")[2])
+        expect(texts.find(text => text.includes("(11) (F)\n"))!.split("\n")[2])
             .toBe("Clears it: open [virtual-signal=signal-clock] 7–11 of every 32 ticks; outside the main plan");
-        expect(texts.find(text => text.includes("(10, 13)\n"))!.split("\n")[2])
+        expect(texts.find(text => text.includes("(10, 13) (E)\n"))!.split("\n")[2])
             .toBe("Open [virtual-signal=signal-B] 1–8, once every 192 ticks; does not swing while the fuel slot is full");
     });
 });

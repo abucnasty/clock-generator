@@ -4,6 +4,8 @@
  * on the install and wiring steps).
  */
 
+import type { CombinatorLetter } from 'clock-generator/browser';
+
 interface InstallInput {
     /** The string is a book of two blueprints of the same clock */
     book: boolean;
@@ -13,6 +15,8 @@ interface InstallInput {
     drills: number[][];
     /** The first line of each combinator's description, by `wiringRowKey`; a combinator with no line is missing */
     lines?: Record<string, string>;
+    /** The letter, colour and tag shape of each combinator, by `wiringRowKey`; a combinator with none is missing */
+    letters?: Record<string, CombinatorLetter>;
 }
 
 export type InstallStepId = 'import' | 'book' | 'place' | 'wire' | 'enable' | 'drills' | 'others' | 'none' | 'lock';
@@ -22,6 +26,9 @@ export interface InstallStep {
     title: string;
     detail: string;
 }
+
+/** What a letter is for: the first line of a combinator's description in the game has the letter the page gives it, last */
+const LETTER_SENTENCE = ' The first line of the combinator\'s description has its letter last, such as (E). The wiring reference and the Layout view show the same letter.';
 
 /** Every player-facing string of the install steps */
 export const INSTALL_COPY = {
@@ -48,7 +55,8 @@ export const INSTALL_COPY = {
     wire: {
         title: 'Wire the output of each combinator to its inserters.',
         detail: 'A combinator whose description starts with a count of inserters, such as "2 inserters", switches them on; '
-            + 'under it, each inserter has a line of source, item and sink, such as "[car] → [iron plate] → [electric furnace]". '
+            + 'under it, each inserter has a line of source, item and sink, such as "[car] → [iron plate] → [electric furnace]".'
+            + LETTER_SENTENCE + ' '
             + 'With a green wire, connect its output to each inserter in the wiring reference; the numbers are the ones on '
             + 'Configure. The combinator\'s description names the same inserters; this list has all of it. The Clock, the '
             + 'Clock lock and every combinator described "Part of the clock" are the clock itself: leave them.',
@@ -64,7 +72,8 @@ export const INSTALL_COPY = {
     },
     drills: {
         title: 'Wire each combinator\'s output to its mining drills, and set them to switch on with it.',
-        detail: 'A combinator whose description starts with a count of drills, such as "1 drill", switches that mining drill on. With '
+        detail: 'A combinator whose description starts with a count of drills, such as "1 drill", switches that mining drill on.'
+            + LETTER_SENTENCE + ' With '
             + 'a green wire, connect its output to each drill in the wiring reference; the numbers are the ones on Configure. '
             + 'Then open the drill, find Circuit network connection, choose Enable if, and set the condition to '
             + 'Anything > 0, with Read resources off: a drill that reads its resources puts its ore on the wire, and '
@@ -156,6 +165,11 @@ interface WiringEntry extends WiringMoves {
 export interface WiringRow {
     /** As its description starts: "Inserters 1, 5", "Drill 2" */
     combinator: string;
+    kind: 'inserter' | 'drill';
+    /** The config ids of its inserters or drills, ascending */
+    ids: number[];
+    /** Its letter, colour and tag shape; absent when the clock has none for it */
+    letter?: CombinatorLetter;
     /** The first line of the combinator's description as the game shows it, rich text and all; absent when the clock has none */
     line?: string;
     /** What to wire to it, one line each */
@@ -177,7 +191,7 @@ const namesText = (kind: 'Inserter' | 'Drill', ids: number[]) => `${kind}${ids.l
  * first line of the combinator's description when the clock has it.
  */
 export function wiringList(
-    facts: Pick<InstallInput, 'wiring' | 'drills' | 'lines'>,
+    facts: Pick<InstallInput, 'wiring' | 'drills' | 'lines' | 'letters'>,
     movesOf: (id: string) => WiringMoves,
 ): WiringRow[] {
     const rows = (kind: 'Inserter' | 'Drill', groups: number[][]): WiringRow[] => groups
@@ -185,10 +199,14 @@ export function wiringList(
         .filter(ids => ids.length > 0)
         .sort((a, b) => a[0] - b[0])
         .map(ids => {
-            const line = facts.lines?.[wiringRowKey(kind === 'Inserter' ? 'inserter' : 'drill', ids)];
+            const key = wiringRowKey(kind === 'Inserter' ? 'inserter' : 'drill', ids);
+            const line = facts.lines?.[key], letter = facts.letters?.[key];
             return {
                 combinator: namesText(kind, ids),
+                kind: kind === 'Inserter' ? 'inserter' : 'drill',
+                ids,
                 ...(line !== undefined ? { line } : {}),
+                ...(letter !== undefined ? { letter } : {}),
                 entries: ids.map(id => ({ label: `${kind} ${id}`, ...movesOf(`${kind.toLowerCase()}:${id}`) })),
             };
         });

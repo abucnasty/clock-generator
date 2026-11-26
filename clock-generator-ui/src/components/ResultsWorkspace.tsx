@@ -27,6 +27,8 @@ import { Panel } from './Panel';
 import { DeeperSearchNotice } from './DeeperSearchNotice';
 import { DetailsPanel } from './DetailsPanel';
 import { InstallClockDialog } from './InstallClockDialog';
+import type { FoundOrbit } from 'clock-generator/browser';
+import type { LayoutLists } from '../utils/layoutOf';
 import { DeveloperToolsPanel } from './DeveloperToolsPanel';
 import { ResultSummaryCard } from './ResultSummaryCard';
 import { StaleResultsBanner } from './StaleResultsBanner';
@@ -44,6 +46,9 @@ import type { Problem } from '../utils/firstProblem';
 interface ResultsWorkspaceProps {
     onEditPickup?: (id: number) => void;
     installOpen: boolean;
+    /** The build the clocks are for, and what the engine found of its regions: the install dialog draws a small picture of it beside each row of the wiring reference */
+    installBuild?: LayoutLists | null;
+    installOrbits?: FoundOrbit[] | null;
     onInstallClose: () => void;
     onInstall: () => void;
     copyLabel: string;
@@ -323,7 +328,8 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
 
             {selected && <InstallClockDialog open={props.installOpen} onClose={props.onInstallClose}
                 selected={selected} blueprintString={props.blueprintString} staleFor={props.staleFor}
-                copyLabel={props.copyLabel} copied={props.copied} onCopy={props.onCopy} />}
+                copyLabel={props.copyLabel} copied={props.copied} onCopy={props.onCopy}
+                build={props.installBuild} orbits={props.installOrbits} />}
 
             {/* Debug logging remains opt-in; timelines are available in the normal workspace. */}
             {props.developerTools && (
