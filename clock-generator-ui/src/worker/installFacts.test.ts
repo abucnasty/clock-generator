@@ -120,6 +120,51 @@ describe('installFactsOf', () => {
         });
     });
 
+    describe('letters: the generator\'s rule on the rows above', () => {
+        it('gives the inserter rows A, B, ... by their first id, then the drills the letters after them, by the same key as the lines', () => {
+            // the schedule's entities are numbered from 3: each row's combinator has the first line the generator writes
+            const facts = factsOf({
+                schedule: schedule([[5, 14], [1, 11], [7]]),
+                blueprint: described({
+                    3: { description: '2 inserters [item=coal] (5, 14) (B)' }, 4: { description: '2 inserters [item=coal] (1, 11) (A)' }, 5: { description: '1 inserter [item=coal] (7) (C)' },
+                    9: { description: '1 drill [item=iron-ore] (2)', tags: { drills: [2] } }, 10: { description: '1 drill [item=iron-ore] (1)', tags: { drills: [1] } },
+                }),
+            });
+            expect(facts.letters).toEqual({
+                'inserter:1,11': { letter: 'A', colour: 0, round: false },
+                'inserter:5,14': { letter: 'B', colour: 1, round: false },
+                'inserter:7': { letter: 'C', colour: 2, round: false },
+                'drill:1': { letter: 'D', colour: 3, round: false },
+                'drill:2': { letter: 'E', colour: 4, round: false },
+            });
+        });
+
+        it('gives a drill of a clock from before the tags, or one no description names, no letter and leaves the others\' letters as they are', () => {
+            const facts = factsOf({
+                schedule: schedule([[1]]),
+                blueprint: described({ 1: { description: 'Drill 3 for [item=stone]' }, 3: { description: '1 inserter [item=coal] (1) (A)' } }),
+                clock_windows: { 'drill:8': [{ start: 1, end: 30 }] },
+            });
+            expect(facts.drills).toEqual([[3], [8]]);
+            expect(Object.keys(facts.letters ?? {})).toEqual(['inserter:1']);
+        });
+
+        it('gives a row with no first line no letter, and does not count it', () => {
+            const facts = factsOf({
+                schedule: schedule([[1], [2], [3]]),
+                blueprint: described({ 3: { description: '1 inserter [item=coal] (1) (A)' }, 5: { description: '1 inserter [item=coal] (3) (B)' } }),
+            });
+            expect(facts.wiring).toEqual([[1], [2], [3]]);
+            expect(facts.letters).toEqual({ 'inserter:1': { letter: 'A', colour: 0, round: false }, 'inserter:3': { letter: 'B', colour: 1, round: false } });
+        });
+
+        it('gives a round tag to the twelfth combinator, in the first colour again', () => {
+            const rows = Array.from({ length: 12 }, (_, index) => [index + 1]);
+            const facts = factsOf({ schedule: schedule(rows), blueprint: described(Object.fromEntries(rows.map(([id]) => [id + 2, { description: `1 inserter [item=coal] (${id})` }]))) });
+            expect(facts.letters?.['inserter:12']).toEqual({ letter: 'L', colour: 0, round: true });
+        });
+    });
+
     it('is plain data that survives postMessage', () => {
         const facts = factsOf({ schedule: schedule([[2, 1], [4]]), blueprint: blueprint('Drill 1 for z'), modulo_blueprint: someBlueprint });
         expect(structuredClone(facts)).toEqual(facts);

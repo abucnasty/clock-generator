@@ -1,14 +1,17 @@
-import { memo, useId, useState, type KeyboardEvent, type ReactNode, type SVGProps } from 'react';
+import { memo, useId, useMemo, useState, type KeyboardEvent, type ReactNode, type SVGProps } from 'react';
 import type { Layout, LayoutBeltTile, LayoutBox, LayoutInserter } from '../utils/layoutOf';
 import { TILE_GRID_SHADE } from '../theme/tileGrid';
 import { LAYOUT_TILE_PX as PX } from '../utils/layoutBounds';
+import { badgeBox, layoutMarks, MARK_HEIGHT, px, type Box } from '../utils/layoutMarks';
+import { combinatorColour, COMBINATOR_INK } from '../utils/combinatorColours';
+import type { LayoutCombinator } from '../utils/layoutCombinators';
 import { beltColour, LAYOUT_GROUND, regionColour } from '../utils/layoutColours';
 import type { RegionTints } from '../utils/layoutRegions';
 import { entityLabel } from '../utils/entityLabel';
 import { FactorioIcon } from './FactorioIcon';
 import type { EntityClickType } from './ConfigFlowDiagram';
 
-/** The colours of the picture: it is drawn on its own light ground, so they hold in either theme */
+/** The colours of the picture: it is drawn on its own dark ground, so they hold in either theme */
 const INK = '#1a1a1a';
 /** The selection and the keyboard focus, each in a colour no belt, region or box has */
 const SELECTED = '#e6007e';
@@ -27,9 +30,13 @@ interface LayoutPictureProps {
     tints: RegionTints | null;
     selection: { kind: EntityClickType; id: number } | null;
     onSelect(kind: EntityClickType, id: number): void;
+    /**
+     * The combinators of a clock that is current for the build, by "inserter:5" or "drill:2": each carries its tag after the
+     * number, and the one the selection is in joins its entities by a line. Null: no tag, and the inserters carry the matching
+     * inserter's number of another region
+     */
+    combinators?: ReadonlyMap<string, LayoutCombinator> | null;
 }
-
-const px = (tiles: number) => tiles * PX;
 
 /** An entity of the picture that a click or Enter selects */
 function Pickable({ label, selected, onPick, children }: { label: string; selected: boolean; onPick(): void; children: ReactNode }) {
@@ -122,30 +129,6 @@ function BeltTile({ tile, onPick, selected }: { tile: LayoutBeltTile; onPick(): 
     );
 }
 
-interface Box { x: number; y: number; width: number; height: number }
-
-/** Where an inserter's number badge is, with the matching inserter's number beside it, in picture units */
-function badgeBox(inserter: LayoutInserter, twins: readonly number[] | undefined): Box & { badgeWidth: number } {
-    const badgeWidth = 8 + String(inserter.number).length * 7;
-    const twinWidth = twins !== undefined && twins.length > 0 ? 2 + 5.8 * `=${twins.join(',')}`.length : 0;
-    return { x: px(inserter.x) - PX * 0.5 - badgeWidth * 0.45, y: px(inserter.y) - PX * 0.5 - 6, width: badgeWidth + twinWidth, height: 15, badgeWidth };
-}
-
-const overlap = (a: Box, b: Box) => Math.max(0, Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x)) * Math.max(0, Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y));
-
-/**
- * The label of a belt tile ("b4"), at the corner of its tile that no inserter number covers: the badge of an inserter next to
- * the tile reaches over the tile's own corner, so the four corners are tried and the one with the least cover is taken
- */
-function beltLabelAt(tile: LayoutBeltTile, covers: readonly Box[]): { x: number; y: number; width: number } {
-    const width = 5.4 * `b${tile.beltId}`.length + 2, height = 9;
-    const left = px(tile.x - 0.5), top = px(tile.y - 0.5);
-    const corners = [[left + 2, top + PX - 3], [left + PX - 2 - width, top + PX - 3], [left + PX - 2 - width, top + 9], [left + 2, top + 9]];
-    const covered = (corner: number[]) => covers.reduce((sum, box) => sum + overlap({ x: corner[0], y: corner[1] - height + 1, width, height }, box), 0);
-    const [x, y] = corners.reduce((best, corner) => (covered(corner) < covered(best) ? corner : best));
-    return { x, y, width };
-}
-
 /** The hand of an inserter: from the side it picks from to the side it drops on, inside its own tile */
 function InserterBody({ inserter }: { inserter: LayoutInserter }) {
     const vector = inserter.direction === null ? null : DIRECTION_VECTOR[inserter.direction];
@@ -178,15 +161,51 @@ function InserterBadge({ inserter, twins, selected }: { inserter: LayoutInserter
 }
 
 /**
+ * The tag of a combinator: its letter on its colour, in a square, or in a round tag past the eleventh combinator, which
+ * uses a colour a second time. A dark rim keeps it apart from the build under it.
+ */
+function CombinatorTagMark({ box, entity, combinator, selected }: { box: Box; entity: string; combinator: LayoutCombinator; selected: boolean }) {
+    const { letter, round } = combinator.letter;
+    return (
+        <g pointerEvents="none" data-combinator-tag={letter} data-tag-for={entity} data-tag-shape={round ? 'round' : 'square'}>
+            <title>{`Combinator ${letter}`}</title>
+            <rect x={box.x} y={box.y} width={box.width} height={box.height} rx={round ? MARK_HEIGHT / 2 : 3} fill={combinatorColour(combinator.letter)}
+                stroke={selected ? SELECTED : COMBINATOR_INK} strokeWidth={selected ? 3.5 : 1.5} />
+            <text x={box.x + box.width / 2} y={box.y + 11.5} textAnchor="middle" fontSize={11} fontWeight={700} fill={COMBINATOR_INK}>{letter}</text>
+        </g>
+    );
+}
+
+/** The line that joins the entities of a combinator, in its colour on a dark casing: dashed, so a belt under it shows */
+function JoinLine({ layout, combinator }: { layout: Layout; combinator: LayoutCombinator }) {
+    const points = combinator.ids.flatMap(id => {
+        const place = combinator.kind === 'inserter' ? layout.inserters.find(inserter => inserter.number === id) : layout.boxes.find(box => box.kind === 'drill' && box.id === id);
+        return place === undefined ? [] : [`${px(place.x)},${px(place.y)}`];
+    });
+    if (points.length < 2) return null;
+    return (
+        <g pointerEvents="none" data-combinator-join={combinator.letter.letter}>
+            <polyline points={points.join(' ')} fill="none" stroke={COMBINATOR_INK} strokeWidth={6} strokeLinejoin="round" strokeLinecap="round" />
+            <polyline points={points.join(' ')} fill="none" stroke={combinatorColour(combinator.letter)} strokeWidth={3} strokeDasharray="7 5" strokeLinejoin="round" />
+        </g>
+    );
+}
+
+/**
  * The build from above, in tiles of PX pixels, north up, as the config gives its positions: machines, drills and chests as
  * boxes, belts as the tiles inserters reach, each inserter as a hand from the side it picks from to the side it drops on,
- * with its number. It draws what the config holds and no more.
+ * with its number. It draws what the config holds and no more. Of a clock that is current for the build it also draws the
+ * letter and colour of each combinator on the inserters and drills it switches on.
  */
-function LayoutPictureComponent({ layout, names, tints, selection, onSelect }: LayoutPictureProps) {
+function LayoutPictureComponent({ layout, names, tints, selection, onSelect, combinators = null }: LayoutPictureProps) {
     const isSelected = (kind: EntityClickType, id: number) => selection?.kind === kind && selection.id === id;
     const tintOf = (kind: string, id: number) => tints?.of.get(`${kind}:${id}`);
     const marked = (samePlace: readonly unknown[]) => samePlace.length > 0;
-    const covers = layout.inserters.map(inserter => badgeBox(inserter, tints?.twins.get(inserter.id)));
+    const marks = useMemo(
+        () => layoutMarks(layout, tints?.twins, combinators === null ? null : new Map([...combinators].map(([key, combinator]) => [key, combinator.letter.letter]))),
+        [layout, tints, combinators],
+    );
+    const selected = selection === null || combinators === null ? undefined : combinators.get(`${selection.kind}:${selection.id}`);
     return (
         <g>
             {/* halos first, so no region tint covers an entity */}
@@ -216,17 +235,23 @@ function LayoutPictureComponent({ layout, names, tints, selection, onSelect }: L
                     {marked(inserter.samePlace) && <Rect x={inserter.x} y={inserter.y} width={1} height={1} fill="none" stroke={WARNING} strokeWidth={2} strokeDasharray="3 2" data-same-place />}
                 </Pickable>
             ))}
+            {selected !== undefined && <JoinLine layout={layout} combinator={selected} />}
             {layout.inserters.map((inserter, index) => (
-                <InserterBadge key={`badge-${index}`} inserter={inserter} twins={tints?.twins.get(inserter.id)} selected={isSelected('inserter', inserter.id)} />
+                <InserterBadge key={`badge-${index}`} inserter={inserter} twins={combinators === null ? tints?.twins.get(inserter.id) : undefined} selected={isSelected('inserter', inserter.id)} />
             ))}
-            {/* the belt labels last, each at a corner of its tile that no number covers */}
-            {layout.beltTiles.map(tile => {
-                const label = beltLabelAt(tile, covers);
+            {/* the belt labels, each at a corner of its tile that no number covers */}
+            {layout.beltTiles.map((tile, index) => {
+                const label = { x: marks.beltLabels[index].x, y: marks.beltLabels[index].y + 8 };
                 return (
                     <text key={`label-${tile.beltId}|${tile.x}|${tile.y}`} x={label.x} y={label.y} fontSize={8.5} fontWeight={700} fill="#ffffff" stroke={INK} strokeWidth={2} paintOrder="stroke" pointerEvents="none" data-belt-label>
                         {`b${tile.beltId}`}
                     </text>
                 );
+            })}
+            {/* the tags last, each after its number, clear of the numbers, the belt labels and the other tags */}
+            {combinators !== null && [...marks.tags].map(([key, box]) => {
+                const combinator = combinators.get(key);
+                return combinator === undefined ? null : <CombinatorTagMark key={`tag-${key}`} box={box} entity={key} combinator={combinator} selected={selected === combinator} />;
             })}
         </g>
     );

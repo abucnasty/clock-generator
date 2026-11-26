@@ -9,6 +9,13 @@ import { FactorioIcon } from './FactorioIcon';
 import { GameName } from './GameName';
 import { RichText } from './RichText';
 import { WakeRowMoves } from './WakeRowMoves';
+import { CombinatorTag } from './CombinatorTag';
+import { LayoutRowPicture } from './LayoutRowPicture';
+import { combinatorColour } from '../utils/combinatorColours';
+import { boundsOf } from '../utils/layoutBounds';
+import { regionColour } from '../utils/layoutColours';
+import type { Layout } from '../utils/layoutOf';
+import type { RegionTints } from '../utils/layoutRegions';
 
 /** Where the steps being folded away is remembered, so a player who knows them is not shown them again */
 const COLLAPSED_KEY = 'clock-generator-install-steps-collapsed';
@@ -19,6 +26,13 @@ const WIRING_BOX_PX = 8 * 30 + 36;
 
 /** The lines of the list: one per inserter or drill, and a line more for a combinator of several, or for the combinator's own line */
 const linesOf = (rows: WiringRow[]) => rows.reduce((lines, row) => lines + row.entries.length + (row.line !== undefined || row.entries.length > 1 ? 1 : 0), 0);
+
+/** What the rows of the wiring list draw of the build: its places, and the regions the engine found in it */
+export interface WiringPictures {
+    layout: Layout;
+    /** Null where the answer is null, still loading, or holds no region: no row then shows one */
+    regions: RegionTints | null;
+}
 
 function readCollapsed(): boolean {
     try {
@@ -78,13 +92,25 @@ function WiringEndText({ end }: { end: WiringEnd }) {
     );
 }
 
+/** The tint of the region an inserter is in, with its number; nothing where the engine's answer gives it none (or the place between the regions) */
+function RegionSquare({ region }: { region: number | undefined }) {
+    if (region === undefined || region < 1) return null;
+    return (
+        <Box component="span" role="img" aria-label={`Region ${region}`} data-region-square={region}
+            sx={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box', width: 16, height: 16, ml: 0.5, bgcolor: regionColour(region), color: '#1a1a1a',
+                border: '1px solid', borderColor: 'text.primary', borderRadius: '2px', font: '700 10px/1 sans-serif', verticalAlign: 'text-bottom' }}>
+            <span aria-hidden="true">{region}</span>
+        </Box>
+    );
+}
+
 /**
  * One inserter or drill, as its combinator's description has it: source, the item it moves, then the sink with the recipe
  * of a machine: "Inserter 1 — Belt 1 → [icon] → Machine 2 ([recipe icon])". A drill is its own source: "Drill 1 → [icon] →
  * Machine 2". A screen reader hears "Inserter 1, Belt 1, Iron plate, Machine 2, Iron gear". A run that does not name the
  * ends keeps the earlier line, "Inserter 1 — [icon]: Belt 1 to Machine 1".
  */
-function WiringEntryText({ entry }: { entry: WiringRow['entries'][number] }) {
+function WiringEntryText({ entry, region }: { entry: WiringRow['entries'][number]; region?: number }) {
     if (entry.to !== undefined) {
         const items = (
             <Box component="span" sx={{ display: 'inline-flex', gap: 0.5 }}>
@@ -99,6 +125,7 @@ function WiringEntryText({ entry }: { entry: WiringRow['entries'][number] }) {
         return (
             <Box component="span" data-wiring-moves="" sx={{ display: 'inline-flex', flexWrap: 'wrap', alignItems: 'center', columnGap: 0.75, maxWidth: '100%' }}>
                 <span>{entry.label}</span>
+                <RegionSquare region={region} />
                 {entry.from !== undefined ? (
                     <>
                         <span aria-hidden="true">—</span>
@@ -116,6 +143,7 @@ function WiringEntryText({ entry }: { entry: WiringRow['entries'][number] }) {
     return (
         <>
             {entry.label}
+            <RegionSquare region={region} />
             {moves && (
                 <>
                     <span aria-hidden="true"> — </span>
@@ -128,42 +156,73 @@ function WiringEntryText({ entry }: { entry: WiringRow['entries'][number] }) {
 }
 
 /**
- * One combinator: its first line as the game shows it (what a player reads on the combinator they placed), then the
- * inserters or drills to wire to its output, one line each. A clock with no line for it keeps the earlier form: one
- * line for one inserter, a heading and its inserters for several.
+ * One combinator: its swatch and letter, its first line as the game shows it (what a player reads on the combinator they
+ * placed), then the inserters or drills to wire to its output, one line each, and beside them a small picture of the build with
+ * those inserters ringed. A clock with no line for it keeps the earlier form: one line for one inserter, a heading and its
+ * inserters for several.
  */
-function WiringItem({ row }: { row: WiringRow }) {
+function WiringItem({ row, pictures }: { row: WiringRow; pictures?: WiringPictures }) {
+    // an entry is the inserter or drill of the id at its place in the row, as the engine and the Layout view key it
+    const regionOf = (entry: WiringRow['entries'][number]) => pictures?.regions?.of.get(`${row.kind}:${row.ids[row.entries.indexOf(entry)]}`);
+    const swatch = row.letter !== undefined && <CombinatorTag letter={row.letter} />;
+    const picture = pictures !== undefined && row.letter !== undefined && boundsOf(pictures.layout) !== null ? pictures : undefined;
+    const notDrawn = picture === undefined ? [] : picture.layout.leftOut.filter(entity => entity.kind === row.kind && row.ids.includes(entity.id));
+    let body;
     if (row.line === undefined && row.entries.length === 1) {
-        return (
-            <Box component="li" sx={{ py: 0.5 }} data-wiring-row={row.combinator} data-wiring-entry="">
-                <WiringEntryText entry={row.entries[0]} />
-            </Box>
+        body = (
+            <>
+                {swatch}{swatch && ' '}
+                <WiringEntryText entry={row.entries[0]} region={regionOf(row.entries[0])} />
+            </>
+        );
+    } else {
+        body = (
+            <>
+                {row.line === undefined ? (
+                    <>
+                        {swatch}{swatch && ' '}
+                        <Box component="span" sx={{ fontWeight: 600 }}>{row.combinator}</Box>
+                        {row.letter === undefined && <Box component="span" sx={{ color: 'text.secondary' }}> ({INSTALL_COPY.oneCombinator})</Box>}
+                    </>
+                ) : (
+                    <Box component="span" data-wiring-line="">{swatch}{swatch && ' '}<RichText text={row.line} /></Box>
+                )}
+                <Box component="ul" sx={{ m: 0, pl: 2.5, ...(row.line === undefined ? {} : { color: 'text.secondary' }) }}>
+                    {row.entries.map(entry => (
+                        <li key={entry.label} data-wiring-entry=""><WiringEntryText entry={entry} region={regionOf(entry)} /></li>
+                    ))}
+                </Box>
+            </>
         );
     }
+    const single = row.line === undefined && row.entries.length === 1;
     return (
-        <Box component="li" sx={{ py: 0.5 }} data-wiring-row={row.combinator}>
-            {row.line === undefined ? (
-                <>
-                    <Box component="span" sx={{ fontWeight: 600 }}>{row.combinator}</Box>
-                    <Box component="span" sx={{ color: 'text.secondary' }}> ({INSTALL_COPY.oneCombinator})</Box>
-                </>
-            ) : (
-                <Box component="span" data-wiring-line=""><RichText text={row.line} /></Box>
-            )}
-            <Box component="ul" sx={{ m: 0, pl: 2.5, ...(row.line === undefined ? {} : { color: 'text.secondary' }) }}>
-                {row.entries.map(entry => (
-                    <li key={entry.label} data-wiring-entry=""><WiringEntryText entry={entry} /></li>
-                ))}
-            </Box>
+        <Box component="li" sx={{ py: 0.5 }} data-wiring-row={row.combinator} {...(single ? { 'data-wiring-entry': '' } : {})}>
+            {picture !== undefined && row.letter !== undefined ? (
+                <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                    <Box sx={{ flex: '1 1 16em', minWidth: 0 }}>{body}</Box>
+                    <Box sx={{ flexShrink: 0 }}>
+                        <LayoutRowPicture layout={picture.layout} kind={row.kind} ids={row.ids} colour={combinatorColour(row.letter)}
+                            label={`Where ${row.combinator.charAt(0).toLowerCase()}${row.combinator.slice(1)} are in the build`} />
+                        {notDrawn.length > 0 && (
+                            <Typography variant="caption" component="p" sx={{ m: 0, mt: 0.5, maxWidth: 200 }} data-wiring-not-drawn>
+                                Not drawn, no position: {notDrawn.map(entity => `${entity.kind === 'inserter' ? 'Inserter' : 'Drill'} ${entity.id}`).join(', ')}.
+                            </Typography>
+                        )}
+                    </Box>
+                </Box>
+            ) : body}
         </Box>
     );
 }
 
 /** What to wire to each combinator: what each inserter carries and between which ends */
-export function WiringList({ install, movesOf }: Pick<InstallStepsProps, 'install' | 'movesOf'>) {
+export function WiringList({ install, movesOf, pictures }: Pick<InstallStepsProps, 'install' | 'movesOf'> & { pictures?: WiringPictures }) {
     const captionId = useId();
     const rows = wiringList(install, movesOf);
-    const scrolls = linesOf(rows) > WIRING_ROWS_SHOWN;
+    // a row that carries a picture is tall: the list is no box of its own then, and the dialog's body scrolls
+    const carriesPictures = pictures !== undefined && boundsOf(pictures.layout) !== null && rows.some(row => row.letter !== undefined);
+    const scrolls = !carriesPictures && linesOf(rows) > WIRING_ROWS_SHOWN;
     return (
         <Box
             role="region"
@@ -189,7 +248,7 @@ export function WiringList({ install, movesOf }: Pick<InstallStepsProps, 'instal
                 aria-labelledby={captionId}
                 sx={{ m: 0, mt: 0.5, pl: 2.5, overflowWrap: 'anywhere' }}
             >
-                {rows.map(row => <WiringItem key={row.combinator} row={row} />)}
+                {rows.map(row => <WiringItem key={row.combinator} row={row} pictures={pictures} />)}
             </Typography>
         </Box>
     );
