@@ -203,7 +203,7 @@ function WiringItem({ row, pictures }: { row: WiringRow; pictures?: WiringPictur
                     <Box sx={{ flex: '1 1 16em', minWidth: 0 }}>{body}</Box>
                     <Box sx={{ flexShrink: 0 }}>
                         <LayoutRowPicture layout={picture.layout} kind={row.kind} ids={row.ids} colour={combinatorColour(row.letter)}
-                            label={`Where ${row.combinator.charAt(0).toLowerCase()}${row.combinator.slice(1)} are in the build`} />
+                            label={`Where ${row.combinator.charAt(0).toLowerCase()}${row.combinator.slice(1)} ${row.ids.length > 1 ? 'are' : 'is'} in the build`} />
                         {notDrawn.length > 0 && (
                             <Typography variant="caption" component="p" sx={{ m: 0, mt: 0.5, maxWidth: 200 }} data-wiring-not-drawn>
                                 Not drawn, no position: {notDrawn.map(entity => `${entity.kind === 'inserter' ? 'Inserter' : 'Drill'} ${entity.id}`).join(', ')}.

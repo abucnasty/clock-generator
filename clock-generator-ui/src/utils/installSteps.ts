@@ -55,11 +55,11 @@ export const INSTALL_COPY = {
     wire: {
         title: 'Wire the output of each combinator to its inserters.',
         detail: 'A combinator whose description starts with a count of inserters, such as "2 inserters", switches them on; '
-            + 'under it, each inserter has a line of source, item and sink, such as "[car] → [iron plate] → [electric furnace]". '
+            + 'under it, each inserter has a line of source, item and sink, such as "[car] → [iron plate] → [electric furnace]".'
+            + LETTER_SENTENCE + ' '
             + 'With a green wire, connect its output to each inserter in the wiring reference; the numbers are the ones on '
             + 'Configure. The combinator\'s description names the same inserters; this list has all of it. The Clock, the '
-            + 'Clock lock and every combinator described "Part of the clock" are the clock itself: leave them.'
-            + LETTER_SENTENCE,
+            + 'Clock lock and every combinator described "Part of the clock" are the clock itself: leave them.',
         drills: ' A combinator whose first line starts with "1 drill" switches that mining drill on: wire it the same way.',
     },
     enable: {
@@ -72,13 +72,13 @@ export const INSTALL_COPY = {
     },
     drills: {
         title: 'Wire each combinator\'s output to its mining drills, and set them to switch on with it.',
-        detail: 'A combinator whose description starts with a count of drills, such as "1 drill", switches that mining drill on. With '
+        detail: 'A combinator whose description starts with a count of drills, such as "1 drill", switches that mining drill on.'
+            + LETTER_SENTENCE + ' With '
             + 'a green wire, connect its output to each drill in the wiring reference; the numbers are the ones on Configure. '
             + 'Then open the drill, find Circuit network connection, choose Enable if, and set the condition to '
             + 'Anything > 0, with Read resources off: a drill that reads its resources puts its ore on the wire, and '
             + 'Anything > 0 then keeps it on. The Clock, the Clock lock and every combinator described "Part of the clock" '
-            + 'are the clock itself: leave them.'
-            + LETTER_SENTENCE,
+            + 'are the clock itself: leave them.',
     },
     others: {
         title: 'Leave the other inserters alone.',

@@ -88,6 +88,7 @@ describe('the pictures beside the rows of the wiring list (utility 320)', () => 
             expect(picture.querySelector('img, image, foreignObject')).toBeNull();
         }
         expect(within(rowOf(container, 'Inserters 5, 14')).getByRole('img', { name: 'Where inserters 5, 14 are in the build' })).toBeTruthy();
+        expect(within(rowOf(container, 'Inserter 7')).getByRole('img', { name: 'Where inserter 7 is in the build' })).toBeTruthy();
     });
 
     it('gives a build with no positions no picture, and the row stays as it was', () => {
