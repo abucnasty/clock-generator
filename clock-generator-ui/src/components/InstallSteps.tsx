@@ -156,7 +156,7 @@ function WiringEntryText({ entry, region }: { entry: WiringRow['entries'][number
 }
 
 /**
- * One combinator: its swatch and letter, its first line as the game shows it (what a player reads on the combinator they
+ * One combinator: its swatch and letter, its first line as the game shows it (what a user reads on the combinator they
  * placed), then the inserters or drills to wire to its output, one line each, and beside them a small picture of the build with
  * those inserters ringed. A clock with no line for it keeps the earlier form: one line for one inserter, a heading and its
  * inserters for several.
