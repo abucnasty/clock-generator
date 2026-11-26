@@ -18,6 +18,12 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 - generation: a clock for builds where one machine feeds several machines that make the target
 - ui: enter an exact fraction in the setpoint rate field
 - generation: an inserter can take from a belt into a steel chest
+- ui: new Layout view draws a build from above with numbered inserters and belts
+- ui: the Layout view and wiring reference show each combinator's letter and colour on its inserters
+- ui: every example build now opens in the Layout view with its entities in place
+- blueprint: each combinator's description names its letter, the one the page shows
+- generation: one group's clock is tried on every repeated group of machines in a build
+- generation: a notice names the belt that keeps repeated groups of machines from sharing a clock
 
 ### Changed
 - generation: science output inserters can keep enable windows when one machine feeds several science assemblers
@@ -25,6 +31,8 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 - generation: repeated groups of machines in one build share one clock and its enable deciders
 - ui: configuration files name the setpoint's item; older files still open
 - ui: a belt pickup that drops elsewhere is refused with clearer text
+- generation: copies that differ only in machine or drill speed are found as copies
+- generation: copies that each have their own output lane are not checked for each other's drops
 
 ### Removed
 - ui: the Diagnostics tab no longer shows how many copies on shared lanes would hold
@@ -33,6 +41,7 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 - ui: inserter refusals use form labels and name the containers, machines and items involved
 - generation: clocks whose output starts at once are no longer refused one hand short
 - generation: a belt-fed steel chest with a slot limit now gets a stable clock
+- ui: the Build check warns when copies drop more onto one lane than it carries
 
 ## [0.31.1] - 2026-11-20
 

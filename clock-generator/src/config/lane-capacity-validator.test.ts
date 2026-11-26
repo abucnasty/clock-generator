@@ -32,9 +32,11 @@ const moving = (belt: Belt): Belt => ({ ...belt, lanes: belt.lanes.map(lane => (
  * Gear assemblers (2 iron plates a gear) fed from belt 1 (or an infinity chest) and dropping onto belt 2: the plates taken are twice the gears
  * a second, the gears dropped the target. Fast enough for any target here.
  */
-const gears = (parts: { items_per_second: number; copies?: number; machines?: number; input?: Belt | 'chest'; output?: Belt; drop_lane?: 1 | 2 }): Config => {
+const gears = (parts: { items_per_second: number; copies?: number; machines?: number; input?: Belt | 'chest'; output?: Belt; drop_lane?: 1 | 2;
+    side?: Side | ((machine: number) => Side | undefined) }): Config => {
     const machines = Array.from({ length: parts.machines ?? 1 }, (_, index) => index + 1);
     const chest = parts.input === 'chest';
+    const sideOf = (machine: number) => typeof parts.side === 'function' ? parts.side(machine) : parts.side;
     return {
         setpoint: { item: 'iron-gear-wheel', items_per_second: parts.items_per_second, copies: parts.copies ?? 1 },
         machines: machines.map(id => ({ id, recipe: 'iron-gear-wheel', productivity: 0, crafting_speed: 1000 })),
@@ -42,12 +44,29 @@ const gears = (parts: { items_per_second: number; copies?: number; machines?: nu
         ...(chest ? { chests: [{ id: 1, type: 'infinity-chest' as const, item_filter: [{ item_name: 'iron-plate', request_count: 100 }] }] } : {}),
         inserters: machines.flatMap(id => [
             inserter(2 * id - 1, { type: chest ? 'chest' : 'belt', id: 1 }, { type: 'machine', id }),
-            inserter(2 * id, { type: 'machine', id }, {
-                type: 'belt', id: 2, ...(parts.drop_lane === undefined ? {} : { drop: { lane: parts.drop_lane, position: id } }),
-            }),
+            {
+                ...inserter(2 * id, { type: 'machine', id }, {
+                    type: 'belt', id: 2, ...(parts.drop_lane === undefined ? {} : { drop: { lane: parts.drop_lane, position: id } }),
+                    ...(sideOf(id)?.belt_direction === undefined ? {} : { belt_direction: sideOf(id)!.belt_direction }),
+                    ...(sideOf(id)?.drop_capture === undefined ? {} : { drop_capture: sideOf(id)!.drop_capture }),
+                }),
+                ...(sideOf(id)?.direction === undefined ? {} : { direction: sideOf(id)!.direction }),
+            },
         ]),
     };
 };
+
+/** How an output inserter stands to the belt it drops on: the way it faces (the side it takes from) and the way the belt runs */
+interface Side {
+    direction?: number;
+    belt_direction?: number;
+    drop_capture?: { status: 'side-loaded'; tiles: number };
+}
+
+// beside a belt that runs north: an inserter east of it faces east, takes from the east and drops on the belt's right
+// side, which puts its items on the far lane, the left one (lane 1); one west of it drops on the right lane (lane 2)
+const RIGHT_SIDE: Side = { direction: 4, belt_direction: 0 };
+const LEFT_SIDE: Side = { direction: 12, belt_direction: 0 };
 
 const feasibilityIssuesOf = (config: Config) => {
     const facts = toPlannerFacts(config);
@@ -232,6 +251,129 @@ describe('copies', () => {
 
     it('gives no warning for a config whose plan cannot be made', () => {
         expect(laneSharedByCopiesWarning({ ...gears({ items_per_second: 60, copies: 3 }), inserters: [] })).toBeNull();
+    });
+});
+
+describe('the side a drop lands on, on a belt that lists one lane', () => {
+    /** The warning's lanes: belt, lanes, inserters, a copy's drop to two decimals, what the lanes carry */
+    const warned = (config: Config) => lanesSharedByCopies(config).map(issue =>
+        [issue.belt_id, issue.lanes, issue.inserter_ids, Math.round(issue.items_per_second * 100) / 100, issue.capacity_per_second]);
+    const perCopy = (config: Config): Config => ({ ...config, belts: config.belts.map(it => it.id !== 2 ? it
+        : { ...it, lanes: [{ ...it.lanes[0], sharing: 'per_copy' as const }] }) } as Config);
+
+    it('warns when the copies drop more onto one side than a lane carries', () => {
+        // 3 copies of a unit that drops 53.33 gears a second, all on the right side: 160 on a lane of 120
+        expect(warned(gears({ items_per_second: 160, copies: 3, input: 'chest', side: RIGHT_SIDE }))).toEqual([[2, [1], [2], 53.33, 120]]);
+        expect(laneSharedByCopiesWarning(gears({ items_per_second: 160, copies: 3, input: 'chest', side: RIGHT_SIDE }))).toBe(
+            'If the 3 copies share the iron gear wheel lane (lane 1 of belt 2), they drop 1.33 times what it carries (3 × 53.33 = 160 a second, of 120). '
+            + 'This is only a warning. If each copy has a lane of its own, set the lane to per copy.');
+        // the left side lands on lane 2, which the belt does not list: the warning names the belt's one lane
+        expect(warned(gears({ items_per_second: 160, copies: 3, input: 'chest', side: LEFT_SIDE }))).toEqual([[2, [1], [2], 53.33, 120]]);
+    });
+
+    it('says nothing when each side is within a lane', () => {
+        expect(warned(gears({ items_per_second: 100, copies: 3, input: 'chest', side: RIGHT_SIDE }))).toEqual([]);
+        // two machines a copy, one on each side: 105 a second on each side, 210 in all, more than one lane carries
+        expect(warned(gears({ items_per_second: 210, copies: 3, machines: 2, input: 'chest', side: machine => machine === 1 ? RIGHT_SIDE : LEFT_SIDE }))).toEqual([]);
+    });
+
+    it('reads the drop as on both lanes where its side is not known', () => {
+        const unknown: [string, Side][] = [
+            ['no direction', { belt_direction: 0 }],
+            ['no belt direction', { direction: 4 }],
+            ['end-on', { direction: 8, belt_direction: 0 }],
+            ['end-on, from the other end', { direction: 0, belt_direction: 0 }],
+            ['a direction that is not cardinal', { direction: 2, belt_direction: 0 }],
+            ['a belt direction that is not cardinal', { direction: 4, belt_direction: 6 }],
+            ['a side-loaded drop', { ...RIGHT_SIDE, drop_capture: { status: 'side-loaded', tiles: 3 } }],
+        ];
+        for (const [, side] of unknown) {
+            expect(warned(gears({ items_per_second: 160, copies: 3, input: 'chest', side }))).toEqual([]);
+            // 300 a second is over both lanes together
+            expect(warned(gears({ items_per_second: 300, copies: 3, input: 'chest', side }))).toEqual([[2, [1, 2], [2], 100, 240]]);
+        }
+    });
+
+    it('reads the side, not a stated drop lane, on a belt that lists one lane', () => {
+        // a stated drop is on lane 1 of a belt that lists one lane, whichever side it is on
+        const drop_lane = 1;
+        expect(warned(gears({ items_per_second: 160, copies: 3, input: 'chest', side: LEFT_SIDE, drop_lane }))).toEqual([[2, [1], [2], 53.33, 120]]);
+        expect(warned(gears({ items_per_second: 160, copies: 3, input: 'chest', side: RIGHT_SIDE, drop_lane }))).toEqual([[2, [1], [2], 53.33, 120]]);
+        expect(warned(gears({ items_per_second: 210, copies: 3, machines: 2, input: 'chest', drop_lane,
+            side: machine => machine === 1 ? RIGHT_SIDE : LEFT_SIDE }))).toEqual([]);
+        expect(warned(gears({ items_per_second: 160, copies: 3, input: 'chest', drop_lane }))).toEqual([]);
+        // lane 2 is not a lane of the belt, which the build refuses before the lanes are read
+        expect(() => lanesSharedByCopies(gears({ items_per_second: 160, copies: 3, input: 'chest', side: LEFT_SIDE, drop_lane: 2 })))
+            .toThrow('Inserter 2 drops on lane 2 of belt 2, which has 1');
+    });
+
+    it('does not read the side on a belt that lists two lanes, or where the configuration states its output belt', () => {
+        const two = belt(2, ['iron-gear-wheel', 'iron-gear-wheel']);
+        expect(warned(gears({ items_per_second: 160, copies: 3, input: 'chest', output: two, side: LEFT_SIDE }))).toEqual([]);
+        expect(warned(gears({ items_per_second: 180, copies: 3, input: 'chest', output: two, side: LEFT_SIDE, drop_lane: 1 }))).toEqual([[2, [1], [2], 60, 120]]);
+        const stated = { ...gears({ items_per_second: 160, copies: 3, input: 'chest', side: RIGHT_SIDE }),
+            output_belt: { stretches: [{ points: [{ x: 0, y: 0 }] }] } } as unknown as Config;
+        expect(warned(stated)).toEqual([]);
+    });
+
+    it('takes a lane that is per copy as both sides of a belt that lists one lane', () => {
+        expect(warned(perCopy(gears({ items_per_second: 160, copies: 3, input: 'chest', side: RIGHT_SIDE })))).toEqual([]);
+        expect(warned(perCopy(gears({ items_per_second: 160, copies: 3, input: 'chest', side: LEFT_SIDE })))).toEqual([]);
+        expect(warned(perCopy(gears({ items_per_second: 2 * 160, copies: 3, machines: 2, input: 'chest',
+            side: machine => machine === 1 ? RIGHT_SIDE : LEFT_SIDE })))).toEqual([]);
+    });
+
+    it('warns of two copies that drop more onto one side than a lane carries, which one unit is not refused for', () => {
+        // 2 copies of a unit that drops 130 gears a second onto one side, from two machines
+        const config = gears({ items_per_second: 260, copies: 2, machines: 2, input: 'chest', side: RIGHT_SIDE });
+        expect(warned(config)).toEqual([[2, [1], [2, 4], 130, 120]]);
+        expect(laneSharedByCopiesWarning(config)).toContain('(2 × 130 = 260 a second, of 120)');
+        expect(laneCapacityIssues(config)).toEqual([]);
+        expect(lanesExactlyFull(config)).toEqual([]);
+        // one copy of it: no warning and no refusal
+        const one = gears({ items_per_second: 130, copies: 1, machines: 2, input: 'chest', side: RIGHT_SIDE });
+        expect(warned(one)).toEqual([]);
+        expect(laneCapacityIssues(one)).toEqual([]);
+    });
+
+    it('gives no warning for two copies over one side of a lane that is per copy', () => {
+        for (const side of [RIGHT_SIDE, LEFT_SIDE]) {
+            const config = perCopy(gears({ items_per_second: 260, copies: 2, machines: 2, input: 'chest', side }));
+            expect(warned(config)).toEqual([]);
+            expect(laneCapacityIssues(config)).toEqual([]);
+        }
+    });
+
+    it('holds the drops of a known side to their lane and those of an unknown side to both', () => {
+        // three machines a copy, 25 a second each: two on the right side, 150 of 120 there, and one of unknown side
+        expect(warned(gears({ items_per_second: 225, copies: 3, machines: 3, input: 'chest',
+            side: machine => machine === 3 ? undefined : RIGHT_SIDE }))).toEqual([[2, [1], [2, 4], 50, 120]]);
+        // one on each side and one of unknown side, 30 a second each: 90 on each side, 270 on both lanes, of 240
+        expect(warned(gears({ items_per_second: 270, copies: 3, machines: 3, input: 'chest',
+            side: machine => machine === 1 ? RIGHT_SIDE : machine === 2 ? LEFT_SIDE : undefined }))).toEqual([[2, [1, 2], [2, 4, 6], 90, 240]]);
+    });
+
+    it('makes one issue of the heavier side where both sides of one belt are over', () => {
+        // two machines a copy on the right side and one on the left, 45 a second each: 270 and 135 of 120
+        expect(warned(gears({ items_per_second: 405, copies: 3, machines: 3, input: 'chest',
+            side: machine => machine === 3 ? LEFT_SIDE : RIGHT_SIDE }))).toEqual([[2, [1], [2, 4, 6], 90, 120]]);
+    });
+
+    describe('on the utility science 320 sample', () => {
+        it('warns of the lanes of belts 3 and 4, belt 3 first', async () => {
+            const config = await loadConfigFromFile(ConfigPaths.UTILITY_SCIENCE_320_METERED_TAKERS);
+            expect(warned(config)).toEqual([[3, [1], [11, 18, 19], 53.33, 120], [4, [1], [1, 4, 13], 53.33, 120]]);
+            expect(laneSharedByCopiesWarning(config)).toBe(
+                'If the 3 copies share the utility science pack lane (lane 1 of belt 3), they drop 1.33 times what it carries (3 × 53.33 = 160 a second, of 120). '
+                + 'If the 3 copies share the utility science pack lane (lane 1 of belt 4), they drop 1.33 times what it carries (3 × 53.33 = 160 a second, of 120). '
+                + 'This is only a warning. If each copy has a lane of its own, set the lane to per copy.');
+        });
+
+        it('gives the Build check the inserters of both belts', async () => {
+            // the live editor's chips are the inserters of the issues, each once, in order
+            const config = await loadConfigFromFile(ConfigPaths.UTILITY_SCIENCE_320_METERED_TAKERS);
+            expect([...new Set(lanesSharedByCopies(config).flatMap(issue => issue.inserter_ids))].sort((a, b) => a - b)).toEqual([1, 4, 11, 13, 18, 19]);
+        });
     });
 });
 

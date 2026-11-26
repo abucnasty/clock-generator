@@ -14,7 +14,8 @@
       "recipe": "electromagnetic-science-pack",
       "productivity": 175,
       "crafting_speed": 109.475,
-      "prototype": "electromagnetic-plant"
+      "prototype": "electromagnetic-plant",
+      "position": { "x": -48, "y": 0 }
     }
   ],
   "inserters": [
@@ -29,7 +30,9 @@
         "id": 1
       },
       "stack_size": 16,
-      "overrides": {}
+      "overrides": {},
+      "position": { "x": -49.5, "y": -2.5 },
+      "direction": 0
     },
     {
       "source": {
@@ -41,7 +44,9 @@
         "id": 1
       },
       "stack_size": 16,
-      "overrides": {}
+      "overrides": {},
+      "position": { "x": -48.5, "y": 2.5 },
+      "direction": 0
     },
     {
       "source": {
@@ -53,7 +58,9 @@
         "id": 1
       },
       "stack_size": 16,
-      "overrides": {}
+      "overrides": {},
+      "position": { "x": -47.5, "y": 2.5 },
+      "direction": 0
     }
   ],
   "belts": [
@@ -90,7 +97,8 @@
           "item_name": "electromagnetic-science-pack",
           "request_count": 64
         }
-      ]
+      ],
+      "position": { "x": -48.5, "y": 3.5 }
     }
   ],
   "overrides": {}

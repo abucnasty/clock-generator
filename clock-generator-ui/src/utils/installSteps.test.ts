@@ -128,3 +128,26 @@ describe('wiringList', () => {
         expect(firstLineOf('only')).toBe('only');
     });
 });
+
+describe('the letter of a combinator in the steps and in the wiring list', () => {
+    const sentence = 'The first line of the combinator\'s description has its letter last, such as (E). The wiring reference and the Layout view show the same letter.';
+
+    it('says in the wire step, and in the step of a clock that wires only drills, that the first line has the letter the page shows, last', () => {
+        expect(detailOf(installSteps(plain), 'wire')).toContain(sentence);
+        expect(detailOf(installSteps(withDrill), 'wire')).toContain(sentence);
+        expect(detailOf(installSteps(drillOnly), 'drills')).toContain(sentence);
+        // once in a step, and in no other
+        for (const input of [plain, withDrill, drillOnly]) {
+            const said = installSteps(input).filter(step => step.detail.includes(sentence));
+            expect(said).toHaveLength(1);
+            expect(said[0].detail.split(sentence)).toHaveLength(2);
+        }
+    });
+
+    it('gives each row its kind, its ascending ids and its letter by the row\'s key, none where the clock has none', () => {
+        const letters = { 'inserter:1,2': { letter: 'A', colour: 0, round: false }, 'drill:1': { letter: 'C', colour: 2, round: false } };
+        const rows = wiringList({ wiring: [[3], [2, 1]], drills: [[1]], letters }, () => ({ items: [], route: '' }));
+        expect(rows.map(row => [row.kind, row.ids, row.letter?.letter])).toEqual([['inserter', [1, 2], 'A'], ['inserter', [3], undefined], ['drill', [1], 'C']]);
+        expect(rows.map(row => 'letter' in row)).toEqual([true, false, true]);
+    });
+});

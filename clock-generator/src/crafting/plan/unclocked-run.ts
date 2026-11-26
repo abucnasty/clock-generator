@@ -344,6 +344,12 @@ export interface BlueprintGenerationResult {
      * onto its copies, or why the arm kept its own; absent where no part has a copy.
      */
     region_copies?: Record<string, import("../candidates/region-copies").RegionCopyDecision>;
+    /**
+     * A clock of one repeated group of machines, planned alone on its cut config, lifted onto every group of the build (the region
+     * step, region-layer.ts): the group solved, the clock of it that was lifted, the arms that took its windows, and each other
+     * group's shift where a machine the groups share forced one. Absent on every other clock.
+     */
+    region_layer?: import("../region-layer").RegionLayerDecision;
     /** The windows are of a planning run that counts every belt pickup from its entry, not from the take that freed it (see clockWithPickupsFromTheirEntry) */
     pickups_from_entry?: true;
     /**

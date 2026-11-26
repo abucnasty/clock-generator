@@ -18,6 +18,8 @@ import { PRIMARY_PLANNING_MAKER } from '../../../src/crafting/alternatives';
 
 /** The kinds of event a job gives only where its copies share a lane */
 const LANE_KINDS = ['job_lanes', 'lane_facts', 'missed_swings'];
+/** The kinds of event a job gives only where it has repeated groups of machines (asserted on the utility science 320 sample, region-layer.generation.test.ts) */
+const REGION_KINDS = ['region_stagger'];
 
 /** The fields of each kind of event that format maker-log-1 had, which maker-log-2 keeps as they were */
 const FIRST_FORMAT_FIELDS: Record<string, string[]> = {
@@ -63,8 +65,9 @@ describe('the maker log of a blast job', () => {
         again = readLog(second, 'config-ACCUMULATOR_320');
     }, 240_000);
 
-    it('has every event of the schema but those of the lanes the copies share, each line of the job', () => {
-        for (const kind of MAKER_LOG_EVENTS.filter(it => !LANE_KINDS.includes(it))) expect(events.filter(it => it.event === kind).length, `no ${kind} event`).toBeGreaterThan(0);
+    it('has every event of the schema but those of the lanes the copies share and of repeated groups, each line of the job', () => {
+        for (const kind of MAKER_LOG_EVENTS.filter(it => !LANE_KINDS.includes(it) && !REGION_KINDS.includes(it))) expect(events.filter(it => it.event === kind).length, `no ${kind} event`).toBeGreaterThan(0);
+        for (const kind of REGION_KINDS) expect(events.filter(it => it.event === kind), `a ${kind} event`).toEqual([]);
         expect(events.every(it => it.job === 'config-ACCUMULATOR_320')).toBe(true);
         expect(events.every(it => (MAKER_LOG_EVENTS as readonly string[]).includes(it.event))).toBe(true);
     });

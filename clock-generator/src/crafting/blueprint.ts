@@ -18,6 +18,7 @@ import { GENERATOR } from "../generator";
 import { wholeBounds } from "../common/subtick-window-cycle";
 import { GROUP_GAP_TILES, placeByTurns, TurnGroup, turnTicks } from "./turn-groups";
 import { FactorioDataService } from "../data/factorio-data-service";
+import { combinatorKey, combinatorLetters, type CombinatorLetter } from "./combinator-letters";
 
 /** The config's inserters and drills that are not among those with windows: no combinator switches them on */
 function notClocked(entity_registry: ReadableEntityRegistry, clocked: EntityId[]): { inserters: number[]; drills: number[] } {
@@ -27,6 +28,25 @@ function notClocked(entity_registry: ReadableEntityRegistry, clocked: EntityId[]
         .map(entity => entity.entity_id.number)
         .sort((a, b) => a - b);
     return { inserters: numbers(Entity.isInserter), drills: numbers(Entity.isDrill) };
+}
+
+/**
+ * The fuel and by-product inserters of one clock that share a window, in the order the first of each was met: the inserters
+ * one combinator switches on
+ */
+function fuelWindowGroups(inserter_clocks: readonly InserterClock[], entity_registry: ReadableEntityRegistry): { inserter_clock: InserterClock; inserters: Inserter[] }[] {
+    const by_window = new Map<string, { inserter_clock: InserterClock; inserters: Inserter[] }>();
+    for (const inserter_clock of inserter_clocks) {
+        const window_key = `${inserter_clock.window.start_inclusive}-${inserter_clock.window.end_inclusive}`;
+        const inserter = entity_registry.getEntityById(inserter_clock.inserter_id);
+        if (inserter === null || !Entity.isInserter(inserter)) {
+            continue;
+        }
+        const shared = by_window.get(window_key) ?? { inserter_clock, inserters: [] };
+        shared.inserters.push(inserter);
+        by_window.set(window_key, shared);
+    }
+    return Array.from(by_window.values());
 }
 
 /** What the lines of an enabling combinator say about the clock it reads */
@@ -52,6 +72,8 @@ function createDeciderCombinatorForTransfers(
     merged_entity_ids: EntityId[] = [],
     /** The line that says which group's turn the combinator stands first in, for the first combinator of a group */
     turn_line?: string,
+    /** The letter of every combinator of the clock, which ends the first line of the description of this one */
+    letters: ReadonlyMap<string, CombinatorLetter> = new Map(),
 ): { combinator: DeciderCombinatorEntity; inserter_ids: number[] } {
     const entity = entity_registry.getEntityByIdOrThrow(entity_id)
     let description_lines: string[] = []
@@ -76,6 +98,7 @@ function createDeciderCombinatorForTransfers(
         else if (merged !== null && Entity.isDrill(merged)) items.add(merged.item.name);
     }
     const ranges = mapRanges(OpenRange.reduceRanges(inventory_transfers.map(transfer => transfer.tick_range)));
+    const letter = letters.get(combinatorKey(Entity.isInserter(entity) ? "inserter" : "drill", entity_ids.map(it => it.number)))?.letter;
 
     if (swing_counts) {
         description_lines = plannedDescriptionLines(
@@ -89,6 +112,7 @@ function createDeciderCombinatorForTransfers(
             deciderWindows(ranges, clockValueRanges, modulo ? { modulus: modulo.split.modulus, signal: modulo.signal } : undefined, window_cycle.subtick_scale),
             window_cycle.ticks,
             turn_line,
+            letter,
         );
     }
 
@@ -96,14 +120,14 @@ function createDeciderCombinatorForTransfers(
         // the window repeats every modulus ticks on the clock, or on the modulo the decider reads when that is its length
         const signal = modulo && modulo.split.modulus === inserter_clock.modulus ? modulo.signal : SignalId.clock;
         const [window] = clockValueRanges(wholeRanges([inserter_clock.window]));
-        description_lines = unplannedDescriptionLines(entity_ids, entity_registry, items, inserter_clock, window, signal, turn_line);
+        description_lines = unplannedDescriptionLines(entity_ids, entity_registry, items, inserter_clock, window, signal, turn_line, letter);
     }
 
     if (!swing_counts && Entity.isDrill(entity)) {
         // a drill into a chest: its windows are made from the takes out of the chest, outside the swing counts
         description_lines = chestDrillDescriptionLines(entity_ids, entity_registry, items,
             deciderWindows(ranges, clockValueRanges, modulo ? { modulus: modulo.split.modulus, signal: modulo.signal } : undefined, window_cycle.subtick_scale),
-            window_cycle.ticks, turn_line);
+            window_cycle.ticks, turn_line, letter);
     }
 
     const outputs = Array.from(items).map(item_name => SignalId.item(item_name));
@@ -447,6 +471,27 @@ export function createSignalPerInserterBlueprint(
     const fuel_clocks_by_modulus = new Map<number, InserterClock[]>();
     fuel_inserter_clocks.forEach(inserter_clock =>
         fuel_clocks_by_modulus.set(inserter_clock.modulus, (fuel_clocks_by_modulus.get(inserter_clock.modulus) ?? []).concat(inserter_clock)));
+    // The letter of each combinator that switches inserters or drills on, from every one of them before any is built: the order of
+    // the letters is that of the first config id of each group, not the order the combinators are made in. A combinator described
+    // by no line has no ids named and is not in the schedule, so it has none (see createDeciderCombinatorForTransfers).
+    const letters = combinatorLetters(((): { inserters: number[][]; drills: number[][] } => {
+        const groups = { inserters: [] as number[][], drills: [] as number[][] };
+        for (const entityId of sortedEntityIds) {
+            const entity = entityRegistry.getEntityByIdOrThrow(entityId);
+            const described = cycle.entity_transfer_map.get(entityId) !== undefined || Entity.isDrill(entity) || inserter_clocks.get(entityId.id) !== undefined;
+            if (!described) {
+                continue;
+            }
+            const numbers = [entityId, ...(history.merged_entities.get(entityId.id) ?? [])].map(it => it.number);
+            (Entity.isInserter(entity) ? groups.inserters : groups.drills).push(numbers);
+        }
+        for (const clocks of fuel_clocks_by_modulus.values()) {
+            for (const { inserters } of fuelWindowGroups(clocks, entityRegistry)) {
+                groups.inserters.push(inserters.map(it => it.entity_id.number));
+            }
+        }
+        return groups;
+    })());
     const moduloDescription = (modulus: number): string[] =>
         [`${PART_OF_THE_CLOCK} ${SignalId.toDescriptionString(modulo_signals.get(modulus)!)} = ${SignalId.toDescriptionString(counted_signal)} mod ${modulus}`];
     const modulo_combinators = moduli.map(modulus => ArithmeticCombinatorEntity.withConstant({
@@ -542,6 +587,7 @@ export function createSignalPerInserterBlueprint(
             inserter_clocks.get(entityId.id),
             history.merged_entities.get(entityId.id),
             turn_lines.get(entityId),
+            letters,
         );
         deciderCombinatorEntities.push(combinator);
         inserters_of.set(combinator, inserter_ids);
@@ -557,18 +603,7 @@ export function createSignalPerInserterBlueprint(
     fuel_moduli.forEach(modulus => {
         const fuel_clock_signal = merged_clock_ticks === null ? undefined : modulo_signals.get(modulus)!;
         const window_deciders: DeciderCombinatorEntity[] = [];
-        const inserters_by_window = new Map<string, { inserter_clock: InserterClock; inserters: Inserter[] }>();
-        for (const inserter_clock of fuel_clocks.get(modulus) ?? []) {
-            const window_key = `${inserter_clock.window.start_inclusive}-${inserter_clock.window.end_inclusive}`;
-            const inserter = entityRegistry.getEntityById(inserter_clock.inserter_id);
-            if (inserter === null || !Entity.isInserter(inserter)) {
-                continue;
-            }
-            const shared = inserters_by_window.get(window_key) ?? { inserter_clock, inserters: [] };
-            shared.inserters.push(inserter);
-            inserters_by_window.set(window_key, shared);
-        }
-        for (const { inserter_clock, inserters } of inserters_by_window.values()) {
+        for (const { inserter_clock, inserters } of fuelWindowGroups(fuel_clocks.get(modulus) ?? [], entityRegistry)) {
             const inserter = inserters[0];
             const items = new Set(inserter.filtered_items);
             const window = wholeRanges([inserter_clock.window]);
@@ -580,7 +615,8 @@ export function createSignalPerInserterBlueprint(
                 )
                 .setPosition(Position.fromXY(x += 1, 0))
                 .setMultiLinePlayerDescription(unplannedDescriptionLines(inserters.map(it => it.entity_id), entityRegistry, items, inserter_clock,
-                    clockValueRanges(window)[0], fuel_clock_signal ?? null))
+                    clockValueRanges(window)[0], fuel_clock_signal ?? null, undefined,
+                    letters.get(combinatorKey("inserter", inserters.map(it => it.entity_id.number)))?.letter))
                 .setTags({ inserters: inserters.map(it => it.entity_id.number).sort((a, b) => a - b) })
                 .build();
             window_deciders.push(window_decider);

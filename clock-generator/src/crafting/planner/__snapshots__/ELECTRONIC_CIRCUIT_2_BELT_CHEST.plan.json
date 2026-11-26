@@ -1,0 +1,103 @@
+{
+  "schema": 1,
+  "sample": "ELECTRONIC_CIRCUIT_2_BELT_CHEST",
+  "target": {
+    "item": "electronic-circuit",
+    "counts": "made",
+    "per_copy": {
+      "numerator": 2,
+      "denominator": 1
+    }
+  },
+  "unbounded_sources": [
+    {
+      "vertex": "belt:1/lane:1#iron-plate",
+      "kind": "nothing-drops-on"
+    },
+    {
+      "vertex": "belt:1/lane:2#iron-plate",
+      "kind": "nothing-drops-on"
+    },
+    {
+      "vertex": "chest:2#copper-cable",
+      "kind": "infinity-supply"
+    }
+  ],
+  "groups": [
+    {
+      "key": "group:1",
+      "members": [
+        "chest:1#iron-plate",
+        "machine:1"
+      ],
+      "edges": [
+        "inserter:1/iron-plate",
+        "inserter:2/iron-plate",
+        "inserter:3/copper-cable",
+        "inserter:4/electronic-circuit"
+      ],
+      "window_cycles": [
+        {"swings":1,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":480,"denominator":1},"cycles":1,"window_cycle_ticks":480,"kept":true},
+        {"swings":2,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":960,"denominator":1},"cycles":1,"window_cycle_ticks":960,"kept":true},
+        {"swings":3,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":1440,"denominator":1},"cycles":1,"window_cycle_ticks":1440,"kept":true},
+        {"swings":null,"fractional":true,"listed_as":"fractional","pruned":{"rule":"cycle-refused","terms":{"reason":"Cannot satisfy fractional swing constraint: each sub-cycle requires 4 swings, but maximum allowed is 3 due to insertion limits. Total swings: 8, cycle multiplier: 2."}}}
+      ],
+      "utilization": [
+        {
+          "producer": "machine:electronic-circuit",
+          "members": [
+            "machine:1"
+          ],
+          "crafts_needed": {
+            "numerator": 2,
+            "denominator": 1
+          },
+          "crafts_capacity": {
+            "numerator": 5,
+            "denominator": 2
+          },
+          "utilization": {
+            "numerator": 4,
+            "denominator": 5
+          }
+        }
+      ]
+    }
+  ],
+  "composition": {
+    "swings": 1,
+    "fractional": false,
+    "listed_from": {
+      "swings": 1,
+      "planned": 1,
+      "higher_up_to_ticks": 2400
+    },
+    "main_window_cycle": {
+      "ticks": 480,
+      "exact": {
+        "numerator": 480,
+        "denominator": 1
+      }
+    },
+    "lcm_terms": {
+      "cycle_ticks": {
+        "numerator": 480,
+        "denominator": 1
+      },
+      "group_cycles": [
+        {
+          "group": "group:1",
+          "cycles": 1
+        }
+      ],
+      "ignored_items": [],
+      "computed_lcm": 1,
+      "override_lcm": null,
+      "effective_lcm": 1
+    },
+    "over_limit_action": {
+      "action": "none"
+    }
+  },
+  "exhaust": null
+}

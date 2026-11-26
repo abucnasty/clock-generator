@@ -1,0 +1,133 @@
+{
+  "setpoint": {
+    "item": "electronic-circuit",
+    "items_per_second": 2,
+    "copies": 1
+  },
+  "machines": [
+    {
+      "id": 1,
+      "recipe": "electronic-circuit",
+      "prototype": "assembling-machine-3",
+      "crafting_speed": 1.25,
+      "productivity": 0
+    }
+  ],
+  "belts": [
+    {
+      "id": 1,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "iron-plate",
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
+        },
+        {
+          "ingredient": "iron-plate",
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
+        }
+      ]
+    }
+  ],
+  "inserters": [
+    {
+      "id": 1,
+      "source": {
+        "type": "belt",
+        "id": 1,
+        "near_lane": 1,
+        "pickup_length": 1,
+        "pickup_layout": "side-straight"
+      },
+      "sink": {
+        "type": "chest",
+        "id": 1
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "filters": [
+        "iron-plate"
+      ]
+    },
+    {
+      "id": 2,
+      "source": {
+        "type": "chest",
+        "id": 1
+      },
+      "sink": {
+        "type": "machine",
+        "id": 1
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16
+    },
+    {
+      "id": 3,
+      "source": {
+        "type": "chest",
+        "id": 2
+      },
+      "sink": {
+        "type": "machine",
+        "id": 1
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 6,
+      "filters": [
+        "copper-cable"
+      ]
+    },
+    {
+      "id": 4,
+      "source": {
+        "type": "machine",
+        "id": 1
+      },
+      "sink": {
+        "type": "chest",
+        "id": 3
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "filters": [
+        "electronic-circuit"
+      ]
+    }
+  ],
+  "chests": [
+    {
+      "id": 1,
+      "type": "buffer-chest",
+      "storage_size": 4,
+      "item_filter": "iron-plate",
+      "prototype": "steel-chest"
+    },
+    {
+      "id": 2,
+      "type": "infinity-chest",
+      "item_filter": [
+        {
+          "item_name": "copper-cable",
+          "request_count": 192
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "infinity-chest",
+      "item_filter": [],
+      "remove_unfiltered_items": true
+    }
+  ]
+}

@@ -224,6 +224,8 @@ describe("the roles of the lanes of the samples", () => {
     ELECTROMAGNETIC_SCIENCE_240_RECYCLER_BELT_FED: "input input input empty output input input input empty",
     LITHIUM_PLATE_80_SILO_CHEST: "output output",
     IRON_PLATE_80_CAR_CHEST: "output output",
+    // the turbo belt whose two lanes an inserter takes iron plates from into a steel chest
+    ELECTRONIC_CIRCUIT_2_BELT_CHEST: "input input",
     GRENADE_240_FILLS_BELT_EXACTLY: "output output",
     PRODUCTIVITY_MODULE_80_CHEST_CHAIN: "input output empty",
     IRON_ORE_VOIDER_400_EXACT_SPEED: "",
@@ -248,6 +250,6 @@ describe("the roles of the lanes of the samples", () => {
             }
             for (const role of expected ?? []) counts.set(role, (counts.get(role) ?? 0) + 1);
         }
-        expect(Object.fromEntries(counts)).toEqual({ input: 90, buffer: 2, output: 45, empty: 11 });
+        expect(Object.fromEntries(counts)).toEqual({ input: 92, buffer: 2, output: 45, empty: 11 });
     });
 });

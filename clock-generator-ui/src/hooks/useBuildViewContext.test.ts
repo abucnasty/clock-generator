@@ -79,3 +79,24 @@ describe('working-context hydration and pending restoration', () => {
         hook.rerender(); runFrames(); expect(scrollTo).toHaveBeenCalledTimes(2);
     });
 });
+
+describe('the view of the build', () => {
+    it('saves and loads the layout view, and still loads a saved list or diagram', () => {
+        const hook = mount();
+        complete(hook);
+        act(() => hook.result.current.patch({ configView: 'layout' }));
+        expect(readBuildViewContext(localStorage, 'one').configView).toBe('layout');
+        // reopening the same build opens on it
+        options = { ...options, buildId: 'again', ready: null };
+        writeBuildViewContext(localStorage, 'again', { ...defaultBuildViewContext(), configView: 'layout', entityConfigKey: serializeConfig(options.form) });
+        hook.rerender();
+        expect(complete(hook).context.configView).toBe('layout');
+        for (const view of ['list', 'diagram'] as const) {
+            localStorage.setItem(contextKeyOf('old'), JSON.stringify({ version: 1, configView: view }));
+            expect(readBuildViewContext(localStorage, 'old').configView).toBe(view);
+        }
+        // a view this site does not know opens as the list
+        localStorage.setItem(contextKeyOf('old'), JSON.stringify({ version: 1, configView: 'map' }));
+        expect(readBuildViewContext(localStorage, 'old').configView).toBe('list');
+    });
+});

@@ -4,6 +4,7 @@ import type { z } from 'zod';
 import type { SetpointOutput } from 'clock-generator/light';
 import type {
     CoordinatedSourcesInput,
+    RegionLayerInput,
     AlwaysOnReasons,
     AsBuiltStabilityCheck,
     BeltConfigSchema,
@@ -38,6 +39,7 @@ import type {
     MachineTargetRate,
     TargetRateMax,
     OutputTransferSummary,
+    FoundOrbit,
     OutputTransferGenerationIssue,
     PortableStateTransitionHistory,
     SerializableTransferHistory,
@@ -301,6 +303,8 @@ export interface TaskRequest {
     assessedSignatures?: string[];
     /** For the per-branch clock's task: the parts of every run before it and the clock they recommend */
     coordinatedSources?: CoordinatedSourcesInput;
+    /** For the region step's task: the repeated groups of machines and the clock every run before it recommends */
+    regionLayer?: RegionLayerInput;
 }
 
 /**
@@ -496,6 +500,8 @@ export type EngineQuery =
     | { kind: 'machine-target-rates'; config: Config }
     | { kind: 'target-rate-max'; config: Config }
     | { kind: 'output-transfers'; config: Config }
+    /** The copied regions of a build, for the Layout view to tint */
+    | { kind: 'region-orbits'; config: Config }
     | { kind: 'inserter-coverage'; config: Config }
     | { kind: 'repeated-unit-conversion'; config: Config }
     /** The role of each lane the belts of a config state, as the engine reads it from what the inserters carry */
@@ -560,6 +566,8 @@ export interface EngineAnswers {
     /** The most the target can be before the feasibility pass refuses it; null when the pass cannot say */
     'target-rate-max': TargetRateMax | null;
     'output-transfers': { transfers: OutputTransferSummary[]; generation_issues: OutputTransferGenerationIssue[] };
+    /** What the finder gives, plain arrays and records that survive a copy between threads; null where the build has none */
+    'region-orbits': FoundOrbit[] | null;
     /**
      * The coverage of each machine, or the refusal of the first inserter that is out of scope (a belt pickup by another
      * inserter than the legendary stack inserter, a blacklist, a side-loaded pickup) with no coverage, as Check does; and

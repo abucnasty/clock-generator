@@ -1,9 +1,9 @@
-import { AccountTree, List } from '@mui/icons-material';
+import { AccountTree, GridView, List } from '@mui/icons-material';
 import { Chip, ToggleButton, ToggleButtonGroup } from '@mui/material';
 import type { ReactNode } from 'react';
 import { Panel } from './Panel';
 
-export type BuildView = 'list' | 'diagram';
+export type BuildView = 'list' | 'diagram' | 'layout';
 
 interface BuildPanelProps {
     view: BuildView;
@@ -12,7 +12,7 @@ interface BuildPanelProps {
 }
 
 /**
- * The build, in one card: its machines, belts and chests, inserters and drills as sections, with the List/Diagram
+ * The build, in one card: its machines, belts and chests, inserters and drills as sections, with the List/Diagram/Layout
  * toggle in the card's title bar, the place of a card's own actions.
  */
 export function BuildPanel({ view, onViewChange, children }: BuildPanelProps) {
@@ -38,6 +38,10 @@ export function BuildPanel({ view, onViewChange, children }: BuildPanelProps) {
                         Diagram{' '}
                         {/* in the button's own colour, which is black on the selected orange */}
                         <Chip label="beta" size="small" variant="outlined" sx={{ ml: 0.75, color: 'inherit', borderColor: 'currentColor' }} />
+                    </ToggleButton>
+                    <ToggleButton value="layout" aria-label="Layout view">
+                        <GridView fontSize="small" sx={{ mr: 0.5 }} />
+                        Layout
                     </ToggleButton>
                 </ToggleButtonGroup>
             )}

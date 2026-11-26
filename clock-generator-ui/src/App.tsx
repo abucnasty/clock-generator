@@ -22,6 +22,7 @@ import { useConfigForm, type BuildMutationSnapshot } from './hooks/useConfigForm
 import type { BeltFormData, InserterFormData } from './hooks/useConfigForm';
 import { useInserterValidation } from './hooks/useInserterValidation';
 import { useOutputTransfers } from './hooks/useOutputTransfers';
+import { useRegionOrbits } from './hooks/useRegionOrbits';
 import { useAnnounce, useDismissMessage, useNotify } from './hooks/useMessages';
 import { useSharedBuildLink } from './hooks/useSharedBuildLink';
 import { useStickyHeaderHeight } from './hooks/useStickyHeaderHeight';
@@ -54,6 +55,7 @@ import { buildValidationIssues, isRefused, navigateToOutputRouteRepair, refusedI
 import { importedAsOneUnitText } from './utils/pasteText';
 import { ConfigFlowDiagram } from './components/ConfigFlowDiagram';
 import { BuildPanel, type BuildView } from './components/BuildPanel';
+import { LayoutView } from './components/LayoutView';
 import { PanelSection } from './components/Panel';
 import { advancedSetCount } from './utils/advancedSummary';
 import { ChangelogDialog } from './components/ChangelogDialog';
@@ -345,6 +347,9 @@ function App() {
     // null until the engine has looked for missing inserters; until then the check catches them
     const checkedCoverage = useInserterValidation(engineConfig, isInitialized);
     const { transfers: outputTransfers, generationIssues: outputGenerationIssues, updating: outputTransfersLoading } = useOutputTransfers(engineConfig, isInitialized);
+    // asked only while the Layout view or the install dialog is open: they are the ones that tint the regions
+    const [installOpen, setInstallOpen] = useState(false);
+    const regionOrbits = useRegionOrbits(engineConfig, isInitialized && (configView === 'layout' || installOpen));
     // the lanes as the engine reads them: each lane's role, and the end of a lane that states none
     const { facts: laneFacts, roles: laneRoles } = useLaneFacts(engineConfig, isInitialized);
     const inputEnds = inputLaneEnds(laneFacts);
@@ -453,7 +458,6 @@ function App() {
     const selectedClock = alternatives[selectedAlternativeIndex];
     const selectedName = selectedClock ? fullClockName(selectedClock) : null;
     const rateWarning = rateWarningOf(selectedClock);
-    const [installOpen, setInstallOpen] = useState(false);
     const copyLabel = copyBlueprintLabelOf(selectedClock, resultsAreStale, isRunning);
 
     // what the rule editor checks a rule against: the selected clock while it is for this build, else the last check
@@ -830,6 +834,9 @@ function App() {
     const offerUndoOfReplace = useCallback((message: string) => offerUndoOfBuild(message), [offerUndoOfBuild]);
 
     const drillConfigs = useMemo(() => config.drills?.configs ?? [], [config.drills]);
+    // the build as the install dialog draws it, a small picture beside each row of its wiring reference
+    const installBuild = useMemo(() => ({ machines: config.machines, drills: drillConfigs, inserters: config.inserters, belts: config.belts, chests: config.chests }),
+        [config.machines, drillConfigs, config.inserters, config.belts, config.chests]);
     const openDiagramFullscreen = useCallback(() => setDiagramFullscreen(true), []);
 
     // Shared by the inline and fullscreen diagrams
@@ -1343,6 +1350,18 @@ function App() {
                                             onBulkUpdate={updateInsertersUndoable}
                                         />
                                     </>
+                                ) : configView === 'layout' ? (
+                                    <LayoutView
+                                        machines={config.machines}
+                                        inserters={config.inserters}
+                                        belts={config.belts}
+                                        chests={config.chests}
+                                        drills={drillConfigs}
+                                        orbits={regionOrbits}
+                                        selection={flowDiagramProps.selection}
+                                        onSelectionChange={flowDiagramProps.onSelectionChange}
+                                        install={staleFor === null ? selectedClock?.install ?? null : null}
+                                    />
                                 ) : (
                                     <Box sx={{ mb: 3 }}>
                                         <ConfigFlowDiagram
@@ -1405,6 +1424,8 @@ function App() {
                             <ResultsWorkspace key={library.currentId}
                                 onEditPickup={reviewPickup}
                                 installOpen={installOpen}
+                                installBuild={installBuild}
+                                installOrbits={regionOrbits}
                                 onInstallClose={() => setInstallOpen(false)}
                                 onInstall={() => setInstallOpen(true)}
                                 copyLabel={copyLabel}

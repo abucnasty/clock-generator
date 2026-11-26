@@ -1,4 +1,5 @@
 import type { BlueprintGenerationResult } from 'clock-generator/browser';
+import { combinatorLetters, type CombinatorLetter } from 'clock-generator/light';
 import { firstLineOf, wiringRowKey } from '../utils/installSteps';
 
 /** What the install steps of a clock need to know about its blueprint, as plain data that crosses `postMessage` */
@@ -20,6 +21,12 @@ export interface ClockInstallFacts {
      * (rich text and all), by `wiringRowKey` ("inserter:1,5", "drill:2"). A combinator with no description has none
      */
     lines: Record<string, string>;
+    /**
+     * The letter, colour and tag shape of each combinator whose first line ends in one, by `wiringRowKey`: the rule the
+     * generator gives that line (`combinatorLetters`), run on the rows above. A combinator of a clock from before the letters
+     * has none, and neither has a drill no description names, nor a row with no first line. Absent from a result kept from before this field
+     */
+    letters?: Record<string, CombinatorLetter>;
 }
 
 /** The first line of a drill's combinator description in a clock from before the tags, "Drills 1, 2 for [item=iron-ore] …" */
@@ -48,10 +55,10 @@ export function installFactsOf(
         }
         const tagged = entity.tags?.clock_generator;
         if (tagged !== undefined) {
-            return tagged.drills !== undefined && tagged.drills.length > 0 ? [{ ids: tagged.drills, description: entity.player_description }] : [];
+            return tagged.drills !== undefined && tagged.drills.length > 0 ? [{ ids: tagged.drills, description: entity.player_description, lettered: true }] : [];
         }
         const header = DRILL_HEADER.exec(entity.player_description ?? '');
-        return header ? [{ ids: header[1].split(', ').map(Number), description: entity.player_description }] : [];
+        return header ? [{ ids: header[1].split(', ').map(Number), description: entity.player_description, lettered: false }] : [];
     });
     // every drill with wake windows has a combinator. The descriptions say which drills share one; a clocked drill no
     // description names (were their wording to change) still gets a row of its own, so a build that clocks only drills
@@ -76,10 +83,19 @@ export function installFactsOf(
     for (const drill of described) {
         keep('drill', drill.ids, drill.description);
     }
+    // the letters are the generator's rule on the combinators it tagged: a drill row found by its words, or by its wake windows
+    // alone, is of a clock from before the letters (or has no combinator), so it takes none and leaves the others as they are
+    // and a row with no first line has none either: the generator names no combinator without one
+    const hasLine = (kind: 'inserter' | 'drill', ids: number[]) => lines[wiringRowKey(kind, ids)] !== undefined;
+    const given = combinatorLetters({
+        inserters: wiring.filter(ids => hasLine('inserter', ids)),
+        drills: described.filter(drill => drill.lettered && hasLine('drill', drill.ids)).map(drill => drill.ids),
+    });
     return {
         book: result.modulo_blueprint !== undefined,
         wiring,
         drills: ordered(drills),
         lines,
+        letters: Object.fromEntries(given),
     };
 }

@@ -206,6 +206,12 @@ export const MISSING_RECORDING_CASES: MissingRecordingCase[] = [
         start: "backpressure",
     },
     {
+        // iron plates come by a belt and a steel chest of 4 slots (400 plates); the iron cut goes first, so the chest's stock is the baseline's, and the copper cable comes from an infinity chest
+        name: "electronic-circuit-2-belt-chest", job: "config-ELECTRONIC_CIRCUIT_2_BELT_CHEST", config: "ELECTRONIC_CIRCUIT_2_BELT_CHEST", copies: 1,
+        losses: [{kind: "cut", item: "iron-plate"}, {kind: "block"}, {kind: "cut", item: "copper-cable"}],
+        start: "backpressure",
+    },
+    {
         name: "logistic-science-240", job: "config-LOGISTIC_SCIENCE_240", config: "LOGISTIC_SCIENCE_240", copies: 22,
         losses: [{kind: "cut", item: "transport-belt"}, {kind: "block"}, {kind: "cut", item: "inserter"}],
         start: "backpressure",

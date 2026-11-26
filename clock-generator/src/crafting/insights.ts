@@ -21,7 +21,9 @@ import { describeDropSpacing, dropSpacing, dropSpacingTable } from "../config/dr
 import { describeOnePerCopyFeed, lanesExactlyFull, lanesExactlyFullNote, onePerCopyFeeds } from "../config/lane-capacity-validator";
 import { machineNameOf, type MachineToName } from "./machine-name";
 import { buildToNameOf } from "./build-names";
-import { beltNameInText, capitalized, chestNameInText, drillNameInText, entityNameOf, lanesInSentence, NO_BUILD, textWords, theName, type BuildToName } from "./entity-name";
+import type { BuildRegions } from "./graph/build-regions";
+import { joinedRegionsOfConfig } from "./graph/regions";
+import { beltNameInText, capitalized, chestNameInText, drillNameInText, entityNameOf, lanesInSentence, listedInText, NO_BUILD, textWords, theName, type BuildToName } from "./entity-name";
 
 /** Facts of one machine of the build, for explaining what its limits allow */
 export interface MachineFactsEntry {
@@ -618,6 +620,48 @@ export function outputLineNotJudgedInsights(config: Config): ClockInsight[] {
             why: "",
             explanation: "A clock that is stable here can make less in the game. State the output line: set output_belt, or give each of these inserters "
                 + "a drop (the lane and the position)." };
+    });
+}
+
+/**
+ * Where the build would have repeated groups of machines but for the lanes that arms of two or more groups drop on (`joinedRegionsOf`):
+ * one notice for each such group of the planner, naming those lanes, or their belt where the model's lane is a default (no arm that
+ * drops on it states its drop, and the belt lists two lanes of its item), and the inserters by number. None where the copies
+ * conversion can make the build one unit with copies: that is the step to take there.
+ */
+export function regionsJoinedInsights(config: Config, regions: BuildRegions | undefined): ClockInsight[] {
+    if (regions === undefined || regions.copies_conversion === "available") return [];
+    let joined;
+    try {
+        joined = joinedRegionsOfConfig(config, regions.orbits);
+    } catch {
+        return [];
+    }
+    const number = (key: string) => Number(key.split(":")[1]);
+    const keys = config.inserters.map((inserter, index) => `inserter:${inserter.id ?? index + 1}`);
+    return joined.map(({ anchor, lanes }) => {
+        const places = new Map<string, string>();
+        const order = (key: string) => key.split("/").map(number);
+        const sorted = [...lanes].sort((a, b) => order(a.lane)[0] - order(b.lane)[0] || order(a.lane)[1] - order(b.lane)[1]);
+        for (const { lane, inserters } of sorted) {
+            const [belt, side] = lane.split("/").map(number);
+            const item = config.belts.find(it => it.id === belt)?.lanes[side - 1]?.ingredient;
+            const listed = config.belts.find(it => it.id === belt)?.lanes.filter(it => it.ingredient === item).length ?? 0;
+            const stated = inserters.some(key => {
+                const sink = config.inserters[keys.indexOf(key)]?.sink;
+                return sink?.type === "belt" && sink.drop !== undefined;
+            });
+            const place = stated || listed === 1 ? `lane ${side} of belt ${belt}` : `belt ${belt}`;
+            if (!places.has(place)) places.set(place, "");
+        }
+        const where = listedInText([...places.keys()]);
+        const arms = [...new Set(lanes.flatMap(it => it.inserters))].map(number).sort((a, b) => a - b);
+        return { id: `repeated-groups-joined-${anchor.replace(":", "-")}`, scope: "build" as const,
+            title: `${capitalized(where)} ${places.size === 1 ? "keeps" : "keep"} the repeated groups of machines from sharing one clock`,
+            what: `The build has groups of machines that repeat, but inserters ${listedInText(arms.map(String))} of more than one group drop onto ${where}. `
+                + "So the generator plans the build as one group.",
+            why: "",
+            explanation: "Where each group drops onto a lane of its own, the generator can try one group's clock on every group." };
     });
 }
 

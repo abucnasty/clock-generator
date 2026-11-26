@@ -70,15 +70,15 @@ const productivityChain: JobCheck[] = [
         run: ({ generated }) => {
             const descriptions = (id: string) => deciderDescriptions(byMaker(generated, id));
             expect(descriptions('planned-belt-slack')).toContainEqual([
-                '2 inserters [item=plastic-bar] [item=electronic-circuit] (6, 9)',
+                '2 inserters [item=plastic-bar] [item=electronic-circuit] (6, 9) (F)',
                 '2.424 swings each in 1 enable window per 72-tick window cycle: open 35–60',
             ]);
             expect(descriptions('planned-belt-slack')).toContainEqual([
-                '2 inserters [item=advanced-circuit] [item=electronic-circuit] (8, 10)',
+                '2 inserters [item=advanced-circuit] [item=electronic-circuit] (8, 10) (H)',
                 '3.333 swings each in 1 enable window per 72-tick window cycle: open 3–28',
             ]);
             expect(descriptions('planned-belt-slack-shared')).toContainEqual([
-                '3 inserters [item=copper-cable] [item=plastic-bar] [item=electronic-circuit] (5, 6, 9)',
+                '3 inserters [item=copper-cable] [item=plastic-bar] [item=electronic-circuit] (5, 6, 9) (D)',
                 '2.424 to 4.848 swings (inserters 6, 9: 2.424; inserter 5: 4.848) in 2 enable windows per 72-tick window cycle: open 1–4, 35–72',
             ]);
         },
@@ -256,14 +256,14 @@ const utility320: JobCheck[] = [
         },
     },
     {
-        // The two halves of the build are copies of one another about the cryogenic plant: each arm of one half has the window of its turn
-        // partner in the other, so the halves share their enable deciders
+        // The two halves of the build are copies of one another about the cryogenic plant: the clock is made for one half alone and used on
+        // both, each arm of the other half with the window of its turn partner, so the halves share their enable deciders
         name: 'copied regions share one clock',
         run: ({ generated }) => {
             const selected = selectedOf(generated);
             const clock = selected.result;
-            expect([selected.id, selected.verdict, selected.assessment.items_per_second.toFixed(2), clock.simulation_duration.ticks])
-                .toEqual(['coordinated_sources', 'stable', '320.00', 324]);
+            expect([selected.id, selected.maker, selected.verdict, selected.assessment.items_per_second.toFixed(2), clock.simulation_duration.ticks])
+                .toEqual(['coordinated_sources_region', 'region-layer', 'stable', '320.00', 324]);
             const wake_ups = clock.stability_check.as_built?.wake_ups?.wake_ups_per_minute;
             expect(wake_ups).toBeDefined();
             expect(Number(wake_ups!.toFixed(2))).toBeLessThanOrEqual(498.71);
@@ -272,23 +272,14 @@ const utility320: JobCheck[] = [
             expect(selected.deciders).toBeLessThanOrEqual(11);
             const PARTNERS: [number, number][] = [[1, 11], [2, 12], [3, 20], [4, 18], [5, 14], [6, 16], [9, 17], [10, 21], [13, 19]];
             for (const [a, b] of PARTNERS) expect(clock.clock_windows[`inserter:${a}`], `inserter ${a} and ${b}`).toEqual(clock.clock_windows[`inserter:${b}`]);
-            // the copy step reports the arms it moved: the second half's windows, 18 ticks earlier, on both halves; the plant's arms are in no region
-            const copied = { kind: 'copied', from: 'machine:4/region:2', shift_ticks: -18 };
-            expect(clock.region_copies).toEqual(Object.fromEntries([
-                ...[1, 2, 3, 4, 5, 6, 9, 10, 13].map(id => [`inserter:${id}`, { ...copied, region: 'machine:4/region:1' }]),
-                ...[11, 12, 14, 16, 17, 18, 19, 20, 21].map(id => [`inserter:${id}`, { ...copied, region: 'machine:4/region:2' }]),
-                ...[7, 8, 15].map(id => [`inserter:${id}`, { kind: 'retained', reason: 'no_orbit' }]),
-            ]));
-            // each earlier step's field reports that step's own decisions, also for the arms whose windows the copy then moved
-            const kinds = (field: Record<string, { kind: string; reason?: string }> | undefined) =>
-                Object.fromEntries(Object.entries(field ?? {}).map(([id, it]) => [id, it.reason ? `${it.kind}: ${it.reason}` : it.kind]));
-            expect(kinds(clock.metered_output_windows)).toEqual({ 'inserter:1': 'bounded', 'inserter:4': 'bounded', 'inserter:13': 'bounded',
-                'inserter:11': 'already_bounded', 'inserter:18': 'already_bounded', 'inserter:19': 'already_bounded' });
-            expect(kinds(clock.metered_input_windows)).toEqual({ 'inserter:2': 'already_bounded', 'inserter:3': 'already_bounded',
-                'inserter:10': 'already_bounded', 'inserter:12': 'bounded', 'inserter:20': 'bounded', 'inserter:21': 'bounded' });
-            expect(kinds(clock.staggered_input_windows)).toEqual({ 'inserter:1': 'staggered', 'inserter:2': 'staggered', 'inserter:3': 'staggered',
-                'inserter:4': 'staggered', 'inserter:10': 'staggered', 'inserter:13': 'staggered',
-                'inserter:12': 'retained: not_identical', 'inserter:20': 'retained: not_identical', 'inserter:21': 'retained: not_identical' });
+            // the region step reports the half the clock was made for and the arms of the other half that take their partner's windows; the
+            // plastic arm 15 takes arm 8's, and the coal arm 7 keeps its own. The copy step does not run on it
+            expect(clock.region_layer).toEqual({ region: 'machine:4/region:1', strategy: 'coordinated_sources',
+                lifted: [11, 12, 20, 18, 14, 16, 17, 21, 19, 15].map(id => `inserter:${id}`) });
+            expect(clock.region_copies).toBeUndefined();
+            expect([clock.metered_output_windows, clock.metered_input_windows, clock.staggered_input_windows]).toEqual([undefined, undefined, undefined]);
+            // the whole build's own clock of the same strategy is listed beside it
+            expect(byId(generated, 'coordinated_sources')).toBeDefined();
         },
     },
 ];
@@ -429,11 +420,13 @@ const networks = (wires: number[][], green: boolean): string[] => {
     for (const node of Array.from(parent.keys())) sets.set(find(node), [...(sets.get(find(node)) ?? []), node]);
     return Array.from(sets.values()).map(members => members.sort().join(',')).sort();
 };
+// The selected clock is one group's Takt Batches clock on both groups, which takes no turns; the turns are the Round-Robin Polling clock's,
+// listed beside it
 const grenade: JobCheck[] = [
     {
-        name: 'the selected clock stands its combinators in two groups, a gap between them, each in the order of its turn',
+        name: 'the Round-Robin Polling clock stands its combinators in two groups, a gap between them, each in the order of its turn',
         run: ({ generated }) => {
-            const { blueprint } = selectedOf(generated).result;
+            const { blueprint } = byId(generated, 'round_robin_polling').result;
             const at = (kind: 'inserters' | 'drills', ids: number[]) => tagged(blueprint.entities, kind, ids).position.x;
             // the machines of one row of the belt are a group: the output swings (1 and 2), the plate inserters (3 and 4), the coal drills (1 and 2)
             const north = [at('inserters', [1, 2]), at('inserters', [3, 4]), at('drills', [1, 2])];
@@ -452,7 +445,7 @@ const grenade: JobCheck[] = [
     {
         name: 'the first combinator of each group says which turn is its, and no other combinator does',
         run: ({ generated }) => {
-            const { blueprint } = selectedOf(generated).result;
+            const { blueprint } = byId(generated, 'round_robin_polling').result;
             const lines = (entity: Entities[number]) => (entity.player_description ?? '').split('\n');
             const groupLines = blueprint.entities.flatMap(entity => lines(entity).filter(line => line.startsWith('Group ')).map(line => [entity, line] as const));
             expect(groupLines.map(([entity, line]) => [entity.tags?.clock_generator?.inserters, line])).toEqual([
@@ -462,7 +455,7 @@ const grenade: JobCheck[] = [
             // after the lines that say what the combinator switches on and when: the header, the line of each inserter, the counts
             for (const [entity] of groupLines) expect(lines(entity).filter(line => !ROUTE_LINE.test(line))[2]).toMatch(/^Group /);
             expect(lines(tagged(blueprint.entities, 'inserters', [1, 2])).slice(0, 3)).toEqual([
-                '2 inserters [item=grenade] (1, 2)',
+                '2 inserters [item=grenade] (1, 2) (A)',
                 'Inserters 1, 2: [entity=assembling-machine-3] → [item=grenade] → [entity=turbo-transport-belt]',
                 '1 swing each in 1 enable window per 112-tick window cycle: open 1',
             ]);
@@ -471,7 +464,7 @@ const grenade: JobCheck[] = [
     {
         name: 'laying the combinators out by group changes nothing else: the same entities in the same order, conditions, outputs, tags and networks',
         run: ({ config, generated }) => {
-            const selected = selectedOf(generated).result;
+            const selected = byId(generated, 'round_robin_polling').result;
             // the same windows as a clock that is not in groups: one row in the order of the entity ids
             const flat = clockFromWindows({ ...config, overrides: { ...config.overrides, terminal_swing_count: 1 } }, selected.clock_windows, 112, quiet);
             const [grouped, plain] = [selected.blueprint, flat.blueprint];
@@ -673,9 +666,9 @@ const reasonsOfClocks = (reasons: Record<string, unknown>): JobCheck => ({
 });
 
 const chemical240: JobCheck[] = [
+    // the example states the places of the takers, so the lane model runs them where they stand: the gaps halve, and phase_shifted_batch is stable
     reasonsOfClocks({
-        takt_batches_observed: { code: "belt_gaps", data: { missed: 456, with_gap: 228 } },
-        phase_shifted_batch: { code: "belt_gaps", data: { missed: 452, with_gap: 224 } },
+        takt_batches_observed: { code: "belt_gaps", data: { missed: 228, with_gap: 114 } },
     }),
 ];
 

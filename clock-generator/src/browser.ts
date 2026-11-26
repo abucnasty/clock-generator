@@ -134,6 +134,11 @@ export {
     runClockAlternativeTask,
     runCoordinatedSourcesTask,
     COORDINATED_SOURCES_MAKER,
+    runRegionLayerTask,
+    REGION_LAYER_MAKER,
+    regionLayerInputOf,
+    regionLayerTaskOf,
+    RegionLayerInput,
     CoordinatedSourcesInput,
     CoordinatedSourcesPart,
     combineClockAlternativeRuns,
@@ -169,6 +174,8 @@ export {
     AlwaysOnReason,
     AlwaysOnReasons,
 } from './crafting/generate-blueprint';
+
+export { combinatorLetters, CombinatorLetter, CombinatorGroups } from './crafting/combinator-letters';
 
 export {
     FuelPlan,
@@ -356,6 +363,9 @@ export type { SharedItemDeadlockRisk } from './crafting/deadlock-risk';
 export { DEFAULT_KICK_START_ITEMS } from './crafting/runner/cold-start';
 
 export { sidecarPickupInserters } from "./config/pickup-capture";
+
+export { regionOrbitsOfConfig } from "./crafting/graph/regions";
+export type { FoundOrbit } from "./crafting/graph/regions";
 
 export { deriveOutputTransfers } from "./config/output-transfer";
 export type { OutputTransferTarget, OutputTransferResult, OutputTransferSummary } from "./config/output-transfer";

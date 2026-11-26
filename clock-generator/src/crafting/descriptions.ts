@@ -144,17 +144,17 @@ function routesOf(entity_ids: EntityId[], registry: ReadableEntityRegistry, shar
 
 /**
  * The lines that say what a combinator switches on. The header has the count, the items it outputs and the config ids:
- * "2 inserters [item=iron-gear-wheel] [item=copper-plate] (1, 5)". Under it, a line for each route, in the one shape the
+ * "2 inserters [item=iron-gear-wheel] [item=copper-plate] (1, 5) (E)", the letter last (combinator-letters.ts), when it has one. Under it, a line for each route, in the one shape the
  * wiring reference uses too, source, then the items it moves, then the sink with its recipe:
  * "Inserter 1: [entity=car] → [item=iron-ore] → machine 1 [recipe=iron-plate]", "Inserters 7, 8: [entity=rocket-silo] → [item=lithium] → [entity=electric-furnace] [recipe=lithium-plate]".
  * A drill's line starts at the drill with its item: "Drill 1: [entity=big-mining-drill] → [item=stone] → machine 2 [recipe=rail]".
  */
-function identityLines(entity_ids: EntityId[], registry: ReadableEntityRegistry, item_icons: string, compaction: Compaction, prefix = "", by_product = false): { header: string; routes: string[] } {
+function identityLines(entity_ids: EntityId[], registry: ReadableEntityRegistry, item_icons: string, compaction: Compaction, prefix = "", by_product = false, letter?: string): { header: string; routes: string[] } {
     const sorted = entity_ids.map(it => it.number).sort((a, b) => a - b);
     const noun = EntityId.isDrill(entity_ids[0]) ? "drill" : "inserter";
     const name = (ids: number[]) => compaction.bare ? ids.join(", ") : `${plural(ids.length, noun)} ${ids.join(", ")}`.replace(/^./, first => first.toUpperCase());
     return {
-        header: `${prefix}${sorted.length} ${plural(sorted.length, noun)} ${compaction.headerWithoutItems ? "" : `${item_icons} `}(${sorted.join(", ")})`,
+        header: `${prefix}${sorted.length} ${plural(sorted.length, noun)} ${compaction.headerWithoutItems ? "" : `${item_icons} `}(${sorted.join(", ")})${letter === undefined ? "" : ` (${letter})`}`,
         routes: routesOf(entity_ids, registry, item_icons, by_product, compaction.merged).map(route => `${name(route.ids)}: ${route.text}`),
     };
 }
@@ -244,6 +244,8 @@ export function plannedDescriptionLines(
     window_cycle_text: string,
     /** The line of the group's turn, after the counts */
     turn_line?: string,
+    /** The combinator's letter, which ends its first line (combinator-letters.ts) */
+    letter?: string,
 ): string[] {
     const drill = EntityId.isDrill(entity_ids[0]);
     const counts = Array.from(new Set(swings_a_window_cycle.map(it => it.swings.toDecimal()))).sort((a, b) => a - b);
@@ -265,7 +267,7 @@ export function plannedDescriptionLines(
         what = `${drill ? `Mines ${count_text(swings)}` : `${count_text(swings)} ${plural(swings.toDecimal() === 1 ? 1 : 2, "swing")}`}${each}`;
     }
     return fitted(compaction => {
-        const { header, routes } = identityLines(entity_ids, registry, itemIcons(item_names), compaction);
+        const { header, routes } = identityLines(entity_ids, registry, itemIcons(item_names), compaction, "", false, letter);
         return withTurn([
             header,
             ...routes,
@@ -319,10 +321,11 @@ export function chestDrillDescriptionLines(
     windows: DeciderWindows,
     window_cycle_text: string,
     turn_line?: string,
+    letter?: string,
 ): string[] {
     const sink = sinkOfDrills(drill_ids, registry);
     return fitted(compaction => {
-        const { header, routes } = identityLines(drill_ids, registry, itemIcons(item_names), compaction);
+        const { header, routes } = identityLines(drill_ids, registry, itemIcons(item_names), compaction, "", false, letter);
         return withTurn([
             header,
             ...routes,
@@ -346,12 +349,13 @@ export function unplannedDescriptionLines(
     window: OpenRange,
     signal: SignalId | null,
     turn_line?: string,
+    letter?: string,
 ): string[] {
     const items = itemIcons(item_names);
     const open = `${signal === null ? CLOCK_ICON : SignalId.toDescriptionString(signal)} ${rangeText(window)}`;
     if (inserter_clock.kind === "fuel") {
         return fitted(compaction => {
-            const { header, routes } = identityLines(inserter_ids, registry, items, compaction, "Fuel: ");
+            const { header, routes } = identityLines(inserter_ids, registry, items, compaction, "Fuel: ", false, letter);
             return withTurn([
                 header,
                 ...routes,
@@ -360,7 +364,7 @@ export function unplannedDescriptionLines(
         });
     }
     return fitted(compaction => {
-        const { header, routes } = identityLines(inserter_ids, registry, items, compaction, "By-product: ", true);
+        const { header, routes } = identityLines(inserter_ids, registry, items, compaction, "By-product: ", true, letter);
         return withTurn([
             header,
             ...routes,

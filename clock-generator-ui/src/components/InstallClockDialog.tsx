@@ -12,12 +12,16 @@ import { buildWakeWindowRows } from '../utils/wakeWindows';
 import { AppDialog } from './AppDialog';
 import { Disclosure } from './Disclosure';
 import { BlueprintOutput } from './BlueprintOutput';
-import { InstallSteps, WiringList } from './InstallSteps';
+import { InstallSteps, WiringList, type WiringPictures } from './InstallSteps';
 import { TabBody } from './TabBody';
 import { HANDS_TEXT } from '../utils/targetCounts';
+import type { FoundOrbit } from 'clock-generator/browser';
+import { layoutOf, type LayoutLists } from '../utils/layoutOf';
+import { regionTintsOf } from '../utils/layoutRegions';
+import { tileSizeOf } from '../utils/layoutSizes';
 
 /** On-demand help shared by the toolbar and fullscreen workspace. Closing keeps the last reference tab. */
-export function InstallClockDialog({ open, onClose, selected, blueprintString, staleFor, copyLabel, copied, onCopy }: {
+export function InstallClockDialog({ open, onClose, selected, blueprintString, staleFor, copyLabel, copied, onCopy, build = null, orbits = null }: {
     open: boolean;
     onClose: () => void;
     selected: ClockAlternativeView;
@@ -26,6 +30,10 @@ export function InstallClockDialog({ open, onClose, selected, blueprintString, s
     copyLabel: string;
     copied: boolean;
     onCopy: () => void;
+    /** The build the clock is for, to draw a small picture beside each row of the wiring reference; none: no picture */
+    build?: LayoutLists | null;
+    /** What the engine found of the copied regions of the build: null while it loads, where there is none and where it could not tell */
+    orbits?: FoundOrbit[] | null;
 }) {
     const id = useId();
     const [tab, setTab] = useState<'guide' | 'wiring'>('guide');
@@ -43,6 +51,9 @@ export function InstallClockDialog({ open, onClose, selected, blueprintString, s
     const moves = useMemo(() => new Map<string, WiringMoves>(open ? buildWakeWindowRows(selected).map(row => [row.id, { items: row.items, route: row.route, ...(row.from ? { from: row.from } : {}), ...(row.to ? { to: row.to } : {}) }]) : []), [open, selected]);
     const movesOf = (entity: string) => moves.get(entity) ?? { items: [], route: '' };
     const warning = cardWarningOf(selected);
+    // the pictures of the rows are of the build as it is, which is the build of the clock while the clock is not stale
+    const pictures = useMemo((): WiringPictures | undefined => open && build !== null && staleFor === null ? { layout: layoutOf(build, tileSizeOf), regions: regionTintsOf(orbits) } : undefined,
+        [open, build, staleFor, orbits]);
     return <AppDialog ref={setModalRoot} open={open} onClose={onClose} maxWidth="md" dividers title="Install in Factorio" cancel="Close"
         actions={blueprintString && <Button variant="contained" color={staleFor || warning ? 'warning' : 'secondary'} onClick={onCopy} startIcon={copied ? <Check /> : <ContentCopy />}>
             {copied ? 'Copied' : copyLabel}
@@ -60,7 +71,7 @@ export function InstallClockDialog({ open, onClose, selected, blueprintString, s
         <TabBody prefix={id} tab="wiring" shown={tab === 'wiring'}>
             {staleFor ? <Typography variant="body2">{INSTALL_COPY.stale}</Typography>
                 : needsNoClock(selected.install) ? <Typography variant="body2">{INSTALL_COPY.none.detail}</Typography>
-                : <WiringList install={selected.install} movesOf={movesOf} />}
+                : <WiringList install={selected.install} movesOf={movesOf} pictures={pictures} />}
         </TabBody>
         <Disclosure summary="Advanced · Blueprint string" sx={{ mt: 2 }}>
             <Box sx={{ mt: 1 }}><BlueprintOutput blueprintString={blueprintString} staleFor={staleFor} copied={copied} onCopy={onCopy} /></Box>

@@ -50,6 +50,8 @@ export const ConfigPaths = {
     UTILITY_SCIENCE_480_LDS_FOUNDRY_CHAIN: path.join(CONFIG_SAMPLES_DIR, 'science', 'utility', 'utility-480-lds-foundry-chain.json'),
     /** The utility science build, 320 a second over 3 copies: two foundries each hand low density structure to three of the six assemblers, and no clock made before Round-Robin Polling with metered takers is stable */
     UTILITY_SCIENCE_320_METERED_TAKERS: path.join(CONFIG_SAMPLES_DIR, 'science', 'utility', 'utility-320-metered-takers.json'),
+    /** One assembling machine 3 makes 2 electronic circuits a second: a turbo belt of iron plates fills a steel chest of 4 slots by an inserter, and a second inserter takes the plates from the chest into the machine */
+    ELECTRONIC_CIRCUIT_2_BELT_CHEST: path.join(CONFIG_SAMPLES_DIR, 'intermediates', 'electronic-circuit', 'electronic-circuit-2-belt-chest.json'),
     /** The original duplicated electromagnetic science scaffold, described as one cell: five cells make 240/s */
     ELECTROMAGNETIC_SCIENCE_240_RECYCLER_BELT_FED: path.join(CONFIG_SAMPLES_DIR, 'science', 'electromagnetic', 'electromagnetic-240-recycler-belt-fed.json'),
     /** The lithium plate build, 80 a second: two cryogenic plants fill a rocket silo used as a chest, which six furnaces empty */

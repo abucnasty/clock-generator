@@ -202,7 +202,7 @@ const RECORD_LINKS: Record<string, RecordLink & {runs?: boolean}> = {
     "over-hood-clock-controls.json": {jobOf: fixture("overhood"), runs: true, runSupply: backed},
     "pickup-clock-controls.json": {jobOf: fixture("pickup"), runs: true, runSupply: backed},
     "electromagnetic-science-330-drained-end-clock-controls.json": {jobOf: config("ELECTROMAGNETIC_SCIENCE_330")},
-    "grenade-clock-controls.json": {jobOf: config("GRENADE_240_FILLS_BELT_EXACTLY")},
+    "grenade-clock-controls.json": {jobOf: config("GRENADE_240_FILLS_BELT_EXACTLY"), offered: ["generated-one-copy", "generated-full-build"]},
     // the game tests of these four families record the clock each fixture names, selected until the per-branch clock (#699), which
     // is recommended over it since and was recorded on the sample's scaffold with record-clock.js; the inserter build's three
     // copies record the per-branch clock itself, the selection

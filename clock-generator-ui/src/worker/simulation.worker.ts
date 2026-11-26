@@ -537,6 +537,8 @@ function answer(asked: EngineQuery): EngineAnswers[EngineQuery['kind']] {
                 transfers: clockGenerator.deriveOutputTransfers(query.config),
                 generation_issues: clockGenerator.outputTransferGenerationIssues(query.config),
             };
+        case 'region-orbits':
+            return clockGenerator.regionOrbitsOfConfig(query.config);
         case 'repeated-unit-conversion':
             return checkRepeatedUnitConversion(query.config);
         case 'lane-roles':
@@ -570,8 +572,9 @@ function handlePlan(runId: number, asked: Config, debugSteps: DebugSteps, stream
         const config = clockGenerator.withoutOutsideSupply(given);
         const notMade: NotMadeClock[] = [];
         // the tasks go out as soon as the primary clock is made: the pool runs them while this worker assesses it
+        // where the build has repeated groups of machines, the region step is the last task
         const plan = clockGenerator.planClockAlternatives(config, { ...options, on_not_made: clock => notMade.push(clock) }, (context, tasks, primarySignature) => postResponse({
-            type: 'planned', runId, context, tasks, primarySignature,
+            type: 'planned', runId, context, tasks: [...tasks, ...[clockGenerator.regionLayerTaskOf(context) ?? []].flat()], primarySignature,
             assumptions: { startDependenceRequested: config.overrides?.check_start_dependence === true },
         }));
         return { type: 'primary-completed', runId, primary: toRunView(plan.primary, config), notMade };
@@ -587,6 +590,7 @@ function handleTask(
     taskId: string,
     assessedSignatures: string[] = [],
     coordinatedSources?: import('clock-generator/browser').CoordinatedSourcesInput,
+    regionLayer?: import('clock-generator/browser').RegionLayerInput,
 ): void {
     runStreaming(runId, debugSteps, streamLogs, (options) => {
         const given = engineBuildOf(asked);
@@ -596,9 +600,11 @@ function handleTask(
         const notMade: NotMadeClock[] = [];
         // the per-branch clock is made from the parts of the runs before it, not from the context
         const onNotMade = (clock: NotMadeClock) => notMade.push(clock);
-        const run = coordinatedSources !== undefined
-            ? clockGenerator.runCoordinatedSourcesTask(config, coordinatedSources, { ...options, on_not_made: onNotMade }, assessedSignatures)
-            : clockGenerator.runClockAlternativeTask(config, context, taskId, { ...options, on_not_made: onNotMade }, assessedSignatures);
+        const run = regionLayer !== undefined
+            ? clockGenerator.runRegionLayerTask(config, regionLayer, { ...options, on_not_made: onNotMade }, assessedSignatures)
+            : coordinatedSources !== undefined
+                ? clockGenerator.runCoordinatedSourcesTask(config, coordinatedSources, { ...options, on_not_made: onNotMade }, assessedSignatures, context.regions)
+                : clockGenerator.runClockAlternativeTask(config, context, taskId, { ...options, on_not_made: onNotMade }, assessedSignatures);
         return { type: 'task-completed', runId, taskId, run: toRunView(run, config), notMade };
     });
 }
@@ -637,7 +643,7 @@ ctx.onmessage = async (event: MessageEvent<WorkerRequest>) => {
             handlePlan(request.runId, request.config, request.debugSteps, request.streamLogs);
             break;
         case 'task':
-            handleTask(request.runId, request.config, request.debugSteps, request.streamLogs, request.context, request.taskId, request.assessedSignatures, request.coordinatedSources);
+            handleTask(request.runId, request.config, request.debugSteps, request.streamLogs, request.context, request.taskId, request.assessedSignatures, request.coordinatedSources, request.regionLayer);
             break;
         case 'query':
             handleQuery(request.requestId, request.query);

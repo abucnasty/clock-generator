@@ -41,6 +41,8 @@ export type GlossaryId =
     | 'build'
     | 'configuration'
     | 'your-configurations'
+    | 'layout'
+    | 'region'
     | 'share-link'
     | 'clock'
     | 'rank'
@@ -153,6 +155,21 @@ export const GLOSSARY: readonly GlossaryEntry[] = [
         definition: 'A build, with its setpoint, copies and overrides: what the site saves and what clocks are made '
             + 'for. Saved as a configuration file (Open configuration file…, Save configuration file, Reset configuration).',
         insteadOf: 'config, build file, "build" for what the site saves',
+    },
+    {
+        id: 'layout',
+        term: 'Layout',
+        definition: 'A picture of a build from above, drawn from the positions the Sidecar mod exports: its machines, its inserters '
+            + 'with their numbers, and the belts the inserters reach. The third view of the Build card, beside List and Diagram.',
+        insteadOf: 'map, floor plan, plan view',
+    },
+    {
+        id: 'region',
+        term: 'region',
+        definition: 'One of several parts of a build that the generator finds to be copies of each other, in the same machines, '
+            + 'inserters and belts. The Layout view tints each region.',
+        insteadOf: 'zone, area, section',
+        provisional: true,
     },
     {
         id: 'your-configurations',
