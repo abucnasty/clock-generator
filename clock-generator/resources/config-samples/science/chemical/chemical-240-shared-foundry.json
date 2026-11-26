@@ -100,8 +100,7 @@
       "filters": [
         "chemical-science-pack"
       ],
-      "position": { "x": -6.5, "y": -10.5 },
-      "direction": 8
+      "position": { "x": -6.5, "y": -10.5 }
     },
     {
       "source": {
@@ -120,8 +119,7 @@
       "filters": [
         "chemical-science-pack"
       ],
-      "position": { "x": 3.5, "y": -10.5 },
-      "direction": 8
+      "position": { "x": 3.5, "y": -10.5 }
     },
     {
       "source": {
@@ -140,8 +138,7 @@
       "filters": [
         "chemical-science-pack"
       ],
-      "position": { "x": -6.5, "y": 11.5 },
-      "direction": 0
+      "position": { "x": -6.5, "y": 11.5 }
     },
     {
       "source": {
@@ -160,8 +157,7 @@
       "filters": [
         "chemical-science-pack"
       ],
-      "position": { "x": 3.5, "y": 11.5 },
-      "direction": 0
+      "position": { "x": 3.5, "y": 11.5 }
     },
     {
       "source": {
