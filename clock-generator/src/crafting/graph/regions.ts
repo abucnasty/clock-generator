@@ -367,3 +367,115 @@ export function regionOrbitsOfConfig(config: Config): FoundOrbit[] | null {
     memo.set(config, found);
     return found;
 }
+
+/** A lane that receives drops from arms of two or more parts that would be repeated groups of machines, with those arms */
+export interface JoiningLane {
+    /** The lane's node key ("belt:3/lane:1") */
+    lane: string;
+    /** The arms of those parts that drop on it, in id order */
+    inserters: string[];
+}
+
+/** Where a planner group has no orbit: the anchor about which it would split into repeated groups but for the lanes that join them */
+export interface JoinedRegions {
+    group: string;
+    anchor: string;
+    lanes: JoiningLane[];
+}
+
+/**
+ * The parts of the group's nodes without the anchor, as `partsOf` makes them once every lane that receives drops and that nothing
+ * inside the group takes from is left out of the joins; with the left-out lanes whose drops come from arms of two or more parts.
+ * A probe only: no orbit is made from it.
+ */
+function partsWithoutDropLanes(graph: PlannerGraph, members: ReadonlySet<string>, anchor: string, kinds: ReadonlyMap<string, string>):
+    { parts: string[][]; joining: string[] } {
+    const parent = new Map<string, string>();
+    const find = (node: string): string => { let root = node; while (parent.get(root) !== root) root = parent.get(root)!; return root; };
+    const join = (a: string, b: string) => { const [x, y] = [find(a), find(b)]; if (x !== y) parent.set(y, x); };
+    const nodes = [...members].filter(node => node !== anchor);
+    nodes.forEach(node => parent.set(node, node));
+    const drops = (lane: string) => graph.edges.filter(edge => edge.via === "inserter" && nodeOf(edge.to) === lane);
+    const left_out = new Set(nodes.filter(node => kinds.get(node) === "lane" && drops(node).length > 0
+        && !graph.edges.some(edge => edge.via === "inserter" && [nodeOf(edge.from), ...edge.from_ports.map(nodeOf)].includes(node) && members.has(nodeOf(edge.to)))));
+    for (const edge of graph.edges) {
+        const ends = [...edge.from_ports.map(nodeOf), nodeOf(edge.to)].filter(node => parent.has(node) && !left_out.has(node));
+        for (const end of ends.slice(1)) join(ends[0], end);
+    }
+    const joining: string[] = [];
+    for (const lane of left_out) {
+        const sources = new Set(drops(lane).flatMap(edge => [nodeOf(edge.from), ...edge.from_ports.map(nodeOf)])
+            .filter(node => parent.has(node) && !left_out.has(node)).map(find));
+        if (sources.size >= 2) { joining.push(lane); parent.delete(lane); continue; }
+        if (sources.size === 1) join([...sources][0], lane);
+    }
+    const parts = new Map<string, string[]>();
+    for (const node of nodes) {
+        if (!parent.has(node)) continue;
+        const root = find(node);
+        if (!parts.has(root)) parts.set(root, []);
+        parts.get(root)!.push(node);
+    }
+    return { parts: [...parts.values()], joining };
+}
+
+/**
+ * The groups the finder finds no orbit in that would split into repeated groups of machines about an anchor (two or more parts of
+ * equal labels, each of at least `REGION_MIN_MACHINES` machines) once the lanes that receive drops and feed nothing in the group
+ * are left out of the joins; for each, the first such anchor and the left-out lanes that arms of two or more of those parts drop on.
+ * `found` is the finder's result on the same facts and graph.
+ */
+export function joinedRegionsOf(facts: PlannerFacts, graph: PlannerGraph, sides: ReadonlyMap<string, number>, found: FoundOrbit[] | null): JoinedRegions[] {
+    const kinds = new Map(facts.nodes.map(node => [node.key, node.kind as string]));
+    const with_orbit = new Set((found ?? []).flatMap(it => it.kind === "orbit" ? [it.orbit.group] : []));
+    const place = new Map<string, number>();
+    const loops = new Map(graph.components.map(component => [component.key, component.members]));
+    graph.order.forEach((entry, at) => {
+        for (const vertex of loops.get(entry) ?? [entry]) if (!place.has(nodeOf(vertex))) place.set(nodeOf(vertex), at);
+    });
+    const out: JoinedRegions[] = [];
+    for (const group of groupsOf(facts, graph).groups) {
+        if (with_orbit.has(group.key)) continue;
+        const members = new Set(group.vertices.map(nodeOf).filter(node => kinds.has(node)));
+        const anchors = [...members].filter(node => kinds.get(node) === "machine").sort((a, b) => place.get(a)! - place.get(b)!);
+        for (const anchor of anchors) {
+            const { parts, joining } = partsWithoutDropLanes(graph, members, anchor, kinds);
+            if (parts.length < 2 || joining.length === 0) continue;
+            const g = cutGraphOf(facts, graph, members, anchor, sides);
+            const colours = refine(g, initialColours(g), { rounds: 0, pairs: 0 });
+            const anchor_arms = g.nodes.filter(node => g.arms.has(node) && (g.out.get(node) ?? []).some(r => r.to === ANCHOR));
+            const with_arms = parts.map(nodes => {
+                const set = new Set(nodes);
+                return { nodes, arms: g.nodes.filter(node => g.arms.has(node) && !anchor_arms.includes(node) && (g.out.get(node) ?? []).some(r => set.has(r.to))) };
+            });
+            const invariant = (part: { nodes: string[]; arms: string[] }) => [...part.nodes, ...part.arms].map(node => colours.get(node)!).sort((a, b) => a - b).join(",");
+            const machines = (part: { nodes: string[] }) => part.nodes.filter(node => kinds.get(node) === "machine").length;
+            const by_invariant = new Map<string, string[][]>();
+            for (const part of with_arms) by_invariant.set(invariant(part), [...by_invariant.get(invariant(part)) ?? [], part.nodes]);
+            const repeated = [...by_invariant.values()].filter(same => same.length >= 2 && same.every(nodes => machines({ nodes }) >= REGION_MIN_MACHINES));
+            if (repeated.length === 0) continue;
+            const part_of = new Map(repeated.flat().flatMap((nodes, index) => nodes.map(node => [node, index] as const)));
+            const lanes = joining.flatMap(lane => {
+                const arms = graph.edges.filter(edge => edge.via === "inserter" && nodeOf(edge.to) === lane)
+                    .filter(edge => [nodeOf(edge.from), ...edge.from_ports.map(nodeOf)].some(node => part_of.has(node)));
+                const from = new Set(arms.flatMap(edge => [nodeOf(edge.from), ...edge.from_ports.map(nodeOf)].filter(node => part_of.has(node)).map(node => part_of.get(node)!)));
+                return from.size >= 2 ? [{ lane, inserters: [...new Set(arms.map(edge => edge.entity))].sort(idOrder) }] : [];
+            });
+            if (lanes.length === 0) continue;
+            out.push({ group: group.key, anchor, lanes });
+            break;
+        }
+    }
+    return out;
+}
+
+const joined_memo = new WeakMap<Config, JoinedRegions[]>();
+
+/** `joinedRegionsOf` of a config, made once per config object; none where its facts or graph cannot be built */
+export function joinedRegionsOfConfig(config: Config, found: FoundOrbit[] | null): JoinedRegions[] {
+    if (joined_memo.has(config)) return joined_memo.get(config)!;
+    const built = graphOf(config);
+    const joined = built === null ? [] : joinedRegionsOf(built.facts, built.graph, nearLanesOf(config), found);
+    joined_memo.set(config, joined);
+    return joined;
+}

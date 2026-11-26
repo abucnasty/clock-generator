@@ -516,25 +516,25 @@
         "recipe_or_resource": "casting-low-density-structure",
         "prototype": "foundry",
         "prototype_type": "assembling-machine",
-        "speed": 185,
+        "speed": 199.75,
         "energy_required": 15,
-        "ticks_per_craft": 4.864864864864865,
-        "crafts_per_tick": 0.20555555555555555,
+        "ticks_per_craft": 4.505632040050062,
+        "crafts_per_tick": 0.22194444444444444,
         "productivity": 300,
         "bonus_per_craft": 3,
-        "ticks_per_bonus": 14.594594594594595,
+        "ticks_per_bonus": 13.516896120150186,
         "inputs": [
           {
             "item": "plastic-bar",
             "per_craft": 5,
-            "per_second": 61.666666666666664,
-            "per_tick": 1.0277777777777777
+            "per_second": 66.58333333333333,
+            "per_tick": 1.1097222222222223
           }
         ],
-        "insertion_duration_ticks": 19.45945945945946,
+        "insertion_duration_ticks": 19.148936170212767,
         "crafts_per_second": {
-          "numerator": 37,
-          "denominator": 3
+          "numerator": 799,
+          "denominator": 60
         }
       },
       "yield": {
@@ -551,8 +551,8 @@
               "denominator": 1
             },
             "per_second": {
-              "numerator": 1541666666666667,
-              "denominator": 31250000000000
+              "numerator": 6658333333333331,
+              "denominator": 125000000000000
             },
             "main": true,
             "stochastic": false
@@ -562,11 +562,11 @@
         "payouts_count_as_finishes": true
       },
       "input_limits": {
-        "overload_multiplier": 16,
+        "overload_multiplier": 17,
         "limits": [
           {
             "item": "plastic-bar",
-            "limit": 80,
+            "limit": 85,
             "kind": "ingredient"
           }
         ]
@@ -577,8 +577,8 @@
           {
             "item": "low-density-structure",
             "rule": "overload",
-            "ingredients_blocked_at": 16,
-            "held_limit": 16,
+            "ingredients_blocked_at": 17,
+            "held_limit": 17,
             "stack": 50
           }
         ]
@@ -612,25 +612,25 @@
         "recipe_or_resource": "plastic-bar",
         "prototype": "cryogenic-plant",
         "prototype_type": "assembling-machine",
-        "speed": 148.7405,
+        "speed": 143.375,
         "energy_required": 1,
-        "ticks_per_craft": 0.403387107075746,
-        "crafts_per_tick": 2.4790083333333333,
+        "ticks_per_craft": 0.4184829991281604,
+        "crafts_per_tick": 2.3895833333333334,
         "productivity": 300,
         "bonus_per_craft": 3,
-        "ticks_per_bonus": 1.210161321227238,
+        "ticks_per_bonus": 1.2554489973844811,
         "inputs": [
           {
             "item": "coal",
             "per_craft": 1,
-            "per_second": 148.7405,
-            "per_tick": 2.4790083333333333
+            "per_second": 143.375,
+            "per_tick": 2.3895833333333334
           }
         ],
-        "insertion_duration_ticks": 5.042338838446825,
+        "insertion_duration_ticks": 5.231037489102005,
         "crafts_per_second": {
-          "numerator": 297481,
-          "denominator": 2000
+          "numerator": 1147,
+          "denominator": 8
         }
       },
       "yield": {
@@ -647,8 +647,8 @@
               "denominator": 1
             },
             "per_second": {
-              "numerator": 297481,
-              "denominator": 250
+              "numerator": 1147,
+              "denominator": 1
             },
             "main": true,
             "stochastic": false

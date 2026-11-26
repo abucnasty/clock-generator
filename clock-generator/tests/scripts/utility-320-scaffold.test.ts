@@ -3,10 +3,8 @@
 // match does not hold is read here: the nine machines and where they stand, their modules, the beacons in reach, the hands.
 // So the reference scaffold stays one when either file is edited.
 //
-// Three things differ from the config on purpose, and are not tested as equal. The README of the sample folder names the
-// first two: the scaffold's first foundry runs at 199.75 where the config says 185, and its cryogenic plant has 8 beacons in
-// reach where the config's crafting speed needs 9. The third: the belts under inserters 1 and 19 run the other way from their
-// belt_direction, which only orders drops in the drop-spacing note.
+// One thing differs from the config on purpose, and is not tested as equal: the belts under inserters 1 and 19 run the other way
+// from their belt_direction, which only orders drops in the drop-spacing note.
 import fs from 'fs';
 import path from 'path';
 import zlib from 'zlib';

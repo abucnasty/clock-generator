@@ -58,10 +58,12 @@ describe("the copied regions of a build", () => {
     });
 
     it("maps foundries of different speeds: the speed is a capacity check", () => {
-        const { facts } = find(config);
+        const slower = structuredClone(config);
+        slower.machines.find(machine => machine.id === 3)!.crafting_speed = 185;
+        const { facts, found } = find(slower);
         const speed = (key: string) => (facts.nodes.find(node => node.key === key) as { production: { speed: number } }).production.speed;
         expect([speed("machine:3"), speed("machine:7")]).toEqual([185, 199.75]);
-        expect(orbitOf(find(config).found).maps[1]["machine:3"]).toBe("machine:7");
+        expect(orbitOf(found).maps[1]["machine:3"]).toBe("machine:7");
     });
 
     it("refuses an orbit where a foundry is too slow for its region's share", () => {

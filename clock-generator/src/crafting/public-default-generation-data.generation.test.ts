@@ -24,7 +24,8 @@ it("keeps the public default listing's reads of caller-initialized recipe data",
         const config = parseConfigFromJson(configText);
         const before = reads;
         generateClockAlternatives(config);
-        expect(reads - before).toBe(8_746);
+        // 2 reads each from the region finder, the copies conversion, the speed-as-capacity rule and the joined-groups notice
+        expect(reads - before).toBe(8_754);
     } finally {
         Object.defineProperty(recipe, "energy_required", original);
     }

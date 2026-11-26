@@ -624,7 +624,7 @@ const BeltLaneConfigSchema = z.object({
     stack_size: z.number().int().positive().describe("The number of items in each stack on the lane."),
     supply_rate: z.number().positive().optional().describe("The items per second that come onto the lane where it starts. The default is the lane's capacity."),
     lane_end: LaneEndConfigSchema.optional().describe("The end of the lane. Without it, the deprecated backed_up_belts sets the end if the configuration states it. If not, the role of the lane sets the end: an input or a buffer lane is a dead end, an output lane is an infinite end."),
-    sharing: LaneSharingConfigSchema.optional().describe("shared (default): all copies take from this lane. per_copy: each copy has a lane of its own."),
+    sharing: LaneSharingConfigSchema.optional().describe("shared (default): all copies take from or drop onto this lane. per_copy: each copy has a lane of its own."),
     /**
      * The supply length: the belt before copy 1's pickup, in tiles along the flow from the middle of the first tile where the
      * items come onto the lane (the most upstream feeder) to the middle of copy 1's pickup tile (the most upstream taker of

@@ -19,7 +19,7 @@ import { machinesInOrder, traitsOf } from "../entities/traits/traits-of";
 import { Logger, defaultLogger } from "../common/logger";
 import { DisturbanceTrialVerdict } from "./disturbance-trial";
 import { SharedItemDeadlockRisk, sharedItemDeadlockRisks } from "./deadlock-risk";
-import { disturbanceTrialInsight, beltPickupNotTestedInsights, chestDrillInsights, ClockInsight, clockInsights, deadlockRiskInsight, dropSpacingInsights, lanesExactlyFullInsights, onePerCopyFeedInsights, assumedCopySpacingInsights, droppedOntoSharedLaneInsights, outputLineNotJudgedInsights, sideLoadedDropInsights, startDependenceInsight, withWakeUpsFromStarts } from "./insights";
+import { disturbanceTrialInsight, regionsJoinedInsights, beltPickupNotTestedInsights, chestDrillInsights, ClockInsight, clockInsights, deadlockRiskInsight, dropSpacingInsights, lanesExactlyFullInsights, onePerCopyFeedInsights, assumedCopySpacingInsights, droppedOntoSharedLaneInsights, outputLineNotJudgedInsights, sideLoadedDropInsights, startDependenceInsight, withWakeUpsFromStarts } from "./insights";
 import { chestDrillFallbackConfig, ChestDrillClock, hasPlannedChestDrill } from "./chest-drill-windows";
 import { chestDrillReasons, entityRoutesOf } from "./enable-control-router";
 import { ClockBelt, clockBeltLabel, delayedHandRoomTicks, fuelRoomTicks } from "./clock";
@@ -55,9 +55,10 @@ import { NotMadeClock, notTriedSentence, WhyNotStable, whyNotStable, whyNotStabl
 import { DEFAULT_KICK_START_ITEMS } from "./runner/cold-start";
 import { ClockSharedLaneLoss, isNotChecked } from "./shared-lane-verdict";
 import { currentLaneFeeders, isInternalError, SharedLaneCheck, verdictWithCopies, VerdictWithCopies, withBuildFeeders } from "./copies-verdict";
-import { buildRegionsOf, currentBuildRegions, firstOrbitOf, withBuildRegions, type BuildRegions } from "./graph/build-regions";
+import { buildRegionsOf, currentBuildRegions, withBuildRegions, type BuildRegions } from "./graph/build-regions";
 import { currentRegionScope, withRegionScope, type RegionScope } from "./candidates/region-lift";
-import { clocksToLift, liftedClockOf, regionCutOf, regionStaggerEvents, type CutClock, type RegionLayerInput } from "./region-layer";
+import { clocksToLift, liftedClockOf, regionCutOf, regionStaggerEvents, type CutClock } from "./region-layer";
+import { REGION_LAYER_LABEL, REGION_LAYER_MAKER, regionLayerInputOf, type RegionLayerInput } from "./region-layer-task";
 import { EntityRouteError } from "./enable-control-router";
 import { buildLanesOf, BuildLane, CheckedLanes, checkedLanesOf, withOtherClocks } from "./checked-lanes";
 import { buildToNameOf, entityNamesInSentence } from "./build-names";
@@ -206,6 +207,11 @@ export interface ClockAlternativeTask {
     coordinated_sources?: true;
     /** The strategy it runs is explored, not shipped (`STRATEGY_STATUS`): its clock is reported beside the selection and never selected */
     explored?: true;
+    /**
+     * The region step: made after the per-branch clock, from the clock every run before it recommends (`regionLayerInputOf`), by
+     * `runRegionLayerTask`. Not among the planned tasks: the site worker adds it where the context has repeated groups (`regionLayerTaskOf`).
+     */
+    region_layer?: true;
 }
 
 
@@ -1204,6 +1210,7 @@ function runAlternativeOf(
             ...assumedCopySpacingInsights(config),
             ...droppedOntoSharedLaneInsights(config),
             ...outputLineNotJudgedInsights(config),
+            ...regionsJoinedInsights(config, currentBuildRegions()),
             ...dropSpacingInsights(trial.result, config),
             ...(start_dependence_note !== null && trial.start_dependence !== null ? [startDependenceInsight(start_dependence_note, trial.start_dependence)] : []),
             ...chestDrillInsights(trial.result, build_names),
@@ -1353,8 +1360,9 @@ export function planClockAlternatives(
 ): ClockAlternativesPlan {
     return withRunMemo(() => withBuildFeeders(config, () => {
         const build = withoutOutsideSupply(config);
-        // the detection, once, before any clock is planned: every planner reads it (`currentBuildRegions`, the context)
-        const regions = buildRegionsOf(build);
+        // the detection, once, before any clock is planned (made here where no generation running has made it): every planner
+        // reads it (`currentBuildRegions`, the context)
+        const regions = currentBuildRegions() ?? buildRegionsOf(build);
         return withBuildRegions(regions, () => planPrimaryAndTasks(build, options, regions, on_tasks));
     }));
 }
@@ -1593,23 +1601,12 @@ function notStableReason(alternatives: readonly ClockAlternative[]): string {
     }).join(" ");
 }
 
-/** The maker slot of the region step (region-layer.ts): its seconds and ticks, the generation of the cut group's included */
-export const REGION_LAYER_MAKER = "region-layer";
-const REGION_LAYER_LABEL = "One group's clock on every repeated group";
 const REGION_LAYER_DESCRIPTION = "The build has repeated groups of machines. This clock was made for one group alone and is used on every group, "
     + "each group's inserters with the enable windows of the matching inserters of that group.";
 
-/**
- * What the region step is given, from the runs before it: the detection, and the clock they recommend. Null where the build has no
- * repeated groups of machines or no clock was made.
- */
-export function regionLayerInputOf(runs: readonly (ClockAlternativeRun | null)[], regions: BuildRegions | undefined): RegionLayerInput | null {
-    if (regions === undefined || firstOrbitOf(regions) === null) return null;
-    const so_far = combineClockAlternativeRuns([...runs], it => it.ranking);
-    const recommended = so_far.alternatives[so_far.selected_index];
-    if (recommended === undefined) return null;
-    return { regions, recommended: { id: recommended.id, wake_ups: recommended.assessment.wake_ups_per_minute,
-        window_cycle_ticks: recommended.result.simulation_duration.ticks, windows: recommended.result.clock_windows } };
+/** What the region step reads of the clock the runs before it recommend */
+export function recommendedForRegions(clock: ClockAlternative) {
+    return { id: clock.id, wake_ups: clock.assessment.wake_ups_per_minute, window_cycle_ticks: clock.result.simulation_duration.ticks, windows: clock.result.clock_windows };
 }
 
 /**
@@ -1639,7 +1636,11 @@ function regionLayerRunOf(config: Config, input: RegionLayerInput, options: Gene
     const { value: listed } = heldAsOneMaker(REGION_LAYER_MAKER, () => {
         const cut_options: GenerateClockOptions = { ...options, logger: silent, on_progress: undefined, on_progress_detail: undefined, on_not_made: undefined,
             maker_log: undefined };
-        const cut = withRegionScope(region, () => withBuildFeeders(made.cut, () => generateAllAlternatives(withoutOutsideSupply(made.cut), cut_options, false)));
+        // the cut group's generation, with the cut config's own detection, never the whole build's
+        const cut = withRegionScope(region, () => withBuildFeeders(made.cut, () => {
+            const build = withoutOutsideSupply(made.cut);
+            return withBuildRegions(buildRegionsOf(build), () => generateAllAlternatives(build, cut_options, false));
+        }));
         const besides = cut.order.map(index => cut.alternatives[index].strategy).find(it => it.id !== null && it.tuning_method !== null);
         const clocks: CutClock[] = cut.alternatives.map(it => ({ id: it.id, label: it.label, verdict: it.verdict, wake_ups: it.assessment.wake_ups_per_minute,
             strategy: it.strategy, result: it.result }));
@@ -1751,8 +1752,11 @@ export function generateQuietClockAlternatives(configuration: Config): ClockAlte
 }
 
 function generateAlternativesWithOptions(config: Config, options: GenerateClockOptions, owns_options: boolean): ClockAlternativesResult {
-    return withMakerLog(options.maker_log, () => withRunMemo(() => withBuildFeeders(config, () =>
-        generateAllAlternatives(withoutOutsideSupply(config), options, owns_options))),
+    return withMakerLog(options.maker_log, () => withRunMemo(() => withBuildFeeders(config, () => {
+        const build = withoutOutsideSupply(config);
+        // the detection, once, before any clock is planned: the generation and every planner read it
+        return withBuildRegions(buildRegionsOf(build), () => generateAllAlternatives(build, options, owns_options));
+    })),
         { repeat_check: options.maker_log_repeat_check === true });
 }
 
@@ -1833,7 +1837,7 @@ function generateAllAlternatives(config: Config, options: GenerateClockOptions, 
     }
     // then, where the build has repeated groups of machines, one group's clocks on every group (region-layer.ts), beside the clocks above;
     // not inside a group's own generation
-    const region_input = currentRegionScope() === undefined ? regionLayerInputOf(runs, plan.context.regions) : null;
+    const region_input = currentRegionScope() === undefined ? regionLayerInputOf(runs, plan.context.regions, it => it.ranking, recommendedForRegions) : null;
     if (region_input !== null) {
         current_step = REGION_LAYER_LABEL;
         total++;

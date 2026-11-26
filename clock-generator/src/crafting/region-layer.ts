@@ -17,6 +17,7 @@ import { firstOrbitOf, type BuildRegions } from "./graph/build-regions";
 import { cutRegionConfig } from "./graph/region-config";
 import { liftedSources, offsetsOf, regionLiftOf, shiftedLift, wholePlanOn, type RegionLift, type RegionStaggerEntry } from "./candidates/region-lift";
 import { finishedClock } from "./candidates/round-robin-polling";
+import type { RecommendedForRegions } from "./region-layer-task";
 import { fractionalSwingsOf, type BlueprintGenerationResult, type GenerateClockOptions } from "./plan/unclocked-run";
 
 /** What the result of a lifted clock says of it (`BlueprintGenerationResult.region_layer`) */
@@ -29,20 +30,6 @@ export interface RegionLayerDecision {
     lifted: string[];
     /** Each other group's shift in ticks, by its key, where a machine the groups share forced one; absent with no shift */
     shift?: Record<string, number>;
-}
-
-/** The whole build's recommended clock before the region step: its wakeups (the threshold of what is lifted) and windows (the shift) */
-export interface RecommendedForRegions {
-    id: string;
-    wake_ups: number | null;
-    window_cycle_ticks: number;
-    windows: SerializableClockWindows;
-}
-
-/** What the region step is given: the detection, and the whole build's recommended clock of the clocks listed before it */
-export interface RegionLayerInput {
-    regions: BuildRegions;
-    recommended: RecommendedForRegions;
 }
 
 /** A clock of the cut group, as the step reads it from the cut group's listing */

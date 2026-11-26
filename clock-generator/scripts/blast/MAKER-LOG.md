@@ -22,9 +22,10 @@ Words: a **maker** is one of the generator's slots that makes a clock (`ClockAlt
 A **part** is a clock, or a way of the grouped hands rule, that Coordinated Sources can take windows from. A **composition** is a clock
 Coordinated Sources makes by taking each source's windows from one part. A **reason** is a code with numbers, never a sentence.
 
-## Format `maker-log-5`
+## Format `maker-log-6`
 
 A field's name and meaning do not change. A new field, a field less or a changed meaning is a new format number.
+`maker-log-6` added the event `region_stagger` and one key of `seconds.makers`, `region-layer`. The events of `maker-log-5` are as they were.
 `maker-log-5` drops the field `fewer_copies_seconds` of `seconds` and the purpose `fewer_copies`: the generator no longer runs fewer copies on the shared lanes. The other events of `maker-log-4` are as they were.
 `maker-log-4` added the event `shadow`. The events of `maker-log-3` are as they were.
 `maker-log-3` added the event `ticks` and one key of `seconds.makers`, `primary-planning`. The planning of the primary clock was
@@ -41,7 +42,7 @@ Only `seconds` changes from one run to the next: without that line, two logs of 
 The job and its copies. `shared_lanes`: the lanes the check of the shared lanes runs with the takers of the copies together. `unknown_end_lanes`: lanes of unknown end that the check runs as one copy alone.
 
 ```json
-{"job":"config-FLYING_ROBOT_FRAME_80","group":"config","name":"FLYING_ROBOT_FRAME_80","event":"job","format":"maker-log-5","recipe":"flying-robot-frame","copies":12,"copy_offset":{"x":6,"y":0},"shared_lanes":[{"belt_id":5,"lane":1,"item":"electronic-circuit"}],"unknown_end_lanes":[]}
+{"job":"config-FLYING_ROBOT_FRAME_80","group":"config","name":"FLYING_ROBOT_FRAME_80","event":"job","format":"maker-log-6","recipe":"flying-robot-frame","copies":12,"copy_offset":{"x":6,"y":0},"shared_lanes":[{"belt_id":5,"lane":1,"item":"electronic-circuit"}],"unknown_end_lanes":[]}
 ```
 
 ### `job_lanes`: one a job whose copies share a lane
@@ -244,6 +245,26 @@ A way that failed its margin check before it was offered is a `refused` part of 
 {"job":"config-ACCUMULATOR_320","event":"part","part":"takt_batches_observed_swings_2","kind":"clock","window_cycle_ticks":972,"wake_ups":null,"verdict":"unstable","outcome":"excluded","reasons":[{"code":"not_stable","verdict":"unstable"}]}
 ```
 
+### `region_stagger`: the stagger proposals of a repeated group of machines, judged on the whole build
+
+Where the build has repeated groups of machines, the generator makes the clocks of one group alone and uses them on every group
+(the maker `region-layer`). The stagger step of that generation judges each proposal with the group's windows on every group of the
+whole build. There is one event for each proposal, in the order of the belts and then of the proposals. A job with no repeated group has none.
+
+| Field | Meaning |
+| --- | --- |
+| `region` | the group the clocks were made for (`machine:4/region:1`) |
+| `window_cycle_ticks`, `belt` | the window cycle of the composition, and the belt whose takers share the window |
+| `reference` | the arm whose turn the shared window is moved from (`inserter:2`); `cluster:<arm>` where the window is that arm's own observed cluster |
+| `wake_ups` | the wakeups a minute on one copy of the whole build, to a thousandth, where the proposal holds to the long run; else null |
+| `outcome` | `taken`, `retained`, or `not_reached` (a proposal of a higher cost than the one taken, or none was refused before it) |
+| `reason` | for `retained`: `joint_check_failed` (with `stage`), `no_fewer_wake_ups` or `recovery_worse`; else null |
+| `recovery` | where the recovery gate read it: the worse of the two readings (one copy, copies) of the proposal and of the clock it would change |
+
+```json
+{"job":"config-UTILITY_SCIENCE_320_METERED_TAKERS","event":"region_stagger","region":"machine:4/region:1","window_cycle_ticks":324,"belt":"belt:5","reference":"cluster:inserter:2","wake_ups":498.707,"outcome":"taken","reason":null,"recovery":{"proposal":19,"clock":19}}
+```
+
 ### `not_made`: a strategy that made no clock
 
 ```json
@@ -297,7 +318,7 @@ The example is shortened: four rows.
 
 ### `seconds`: the seconds of the job
 
-`makers`: the seconds each maker took (the key is `maker`). `primary-planning`: the planning of the primary clock and its checks, which is made before every maker. It is no clock's `maker`. The key of the primary clock holds its own run, as before. The other fields are the seconds of the checks: with the copies (`shared_lane_check_seconds`, `copies_trial_seconds`) and the loss trials on one copy (`loss_trials_one_copy_seconds`). The seconds of a check a maker asked for are also in the maker's seconds.
+`makers`: the seconds each maker took (the key is `maker`). `primary-planning`: the planning of the primary clock and its checks, which is made before every maker. It is no clock's `maker`. The key of the primary clock holds its own run, as before. `region-layer`: the clocks of one repeated group of machines, the generation of that group alone included; the makers of that generation have no key of their own. The other fields are the seconds of the checks: with the copies (`shared_lane_check_seconds`, `copies_trial_seconds`) and the loss trials on one copy (`loss_trials_one_copy_seconds`). The seconds of a check a maker asked for are also in the maker's seconds.
 `timetable_seconds`: the reading of the timetable and the ledger of each run of one copy, after the run. The record of a run is made while it runs. Its seconds are in the seconds of the check that runs it. `repeat_check_seconds`: the repeat checks, 0 without the switch.
 A check that makers share is counted where it was first made. The figures are wall-clock seconds, and they change from run to run.
 

@@ -199,6 +199,15 @@ describe("the drops of the grenade build onto its belt", () => {
         expect(spacing.lines.map(line => [line.hands, line.fits])).toEqual([[2, true], [2, true]]);
     });
 
+    it("pair the copies along one belt where its lanes are shared, and not where each copy has a lane of its own", async () => {
+        const shared = dropSpacing(await grenade(), BY_PLACE, 112)!;
+        expect(shared.gap).toBe(12);
+        expect(shared.lines.map(line => [line.hands, line.pairs])).toEqual([[14, 7], [14, 7]]);
+        const per_copy = dropSpacing(await grenade(it => it.belts.forEach(belt => belt.lanes.forEach(lane => { lane.sharing = "per_copy"; }))), BY_PLACE, 112)!;
+        expect(per_copy.gap).toBeNull();
+        expect(per_copy.lines.map(line => [line.hands, line.pairs])).toEqual([[2, 0], [2, 0]]);
+    });
+
     it("are not checked when an inserter of the belt has no place", async () => {
         const config = await grenade(it => { delete it.inserters[7].position; });
         expect(dropLines(config)).toEqual([]);

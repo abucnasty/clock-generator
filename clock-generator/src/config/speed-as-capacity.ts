@@ -37,11 +37,6 @@ function capacityFactsOf(config: Config): CapacityFacts | null {
     return out;
 }
 
-/** Whether the build's capacity can be read; where it cannot, units that differ in speed are never copies */
-export function capacityKnown(config: Config): boolean {
-    return capacityFactsOf(config) !== null;
-}
-
 /**
  * For each unit of one set of units that match without their speed (each unit by its member keys, "machine:3", "drill:1"),
  * whether it makes its share of every producer group whose machines all lie in the set. All false where the capacity cannot be

@@ -12,7 +12,7 @@
       "crafting_speed": 63.00781250000001,
       "prototype": "assembling-machine-3",
       "quality": "legendary",
-      "recipe_quality": "uncommon",
+      "recipe_quality": "normal",
       "position": {
         "x": 77.5,
         "y": -75.5
@@ -25,7 +25,7 @@
       "crafting_speed": 63.00781250000001,
       "prototype": "assembling-machine-3",
       "quality": "legendary",
-      "recipe_quality": "uncommon",
+      "recipe_quality": "normal",
       "position": {
         "x": 83.5,
         "y": -75.5
@@ -35,10 +35,10 @@
       "id": 3,
       "recipe": "casting-low-density-structure",
       "productivity": 300,
-      "crafting_speed": 185,
+      "crafting_speed": 199.75,
       "prototype": "foundry",
       "quality": "legendary",
-      "recipe_quality": "uncommon",
+      "recipe_quality": "normal",
       "position": {
         "x": 80.5,
         "y": -70.5
@@ -48,10 +48,10 @@
       "id": 4,
       "recipe": "plastic-bar",
       "productivity": 300,
-      "crafting_speed": 148.7405,
+      "crafting_speed": 143.375,
       "prototype": "cryogenic-plant",
       "quality": "legendary",
-      "recipe_quality": "uncommon",
+      "recipe_quality": "normal",
       "position": {
         "x": 76.5,
         "y": -64.5
@@ -64,7 +64,7 @@
       "crafting_speed": 63.00781250000001,
       "prototype": "assembling-machine-3",
       "quality": "legendary",
-      "recipe_quality": "uncommon",
+      "recipe_quality": "normal",
       "position": {
         "x": 83.5,
         "y": -65.5
@@ -77,7 +77,7 @@
       "crafting_speed": 63.00781250000001,
       "prototype": "assembling-machine-3",
       "quality": "legendary",
-      "recipe_quality": "uncommon",
+      "recipe_quality": "normal",
       "position": {
         "x": 69.5,
         "y": -63.5
@@ -90,7 +90,7 @@
       "crafting_speed": 199.75,
       "prototype": "foundry",
       "quality": "legendary",
-      "recipe_quality": "uncommon",
+      "recipe_quality": "normal",
       "position": {
         "x": 72.5,
         "y": -58.5
@@ -103,7 +103,7 @@
       "crafting_speed": 63.00781250000001,
       "prototype": "assembling-machine-3",
       "quality": "legendary",
-      "recipe_quality": "uncommon",
+      "recipe_quality": "normal",
       "position": {
         "x": 69.5,
         "y": -53.5
@@ -116,7 +116,7 @@
       "crafting_speed": 63.00781250000001,
       "prototype": "assembling-machine-3",
       "quality": "legendary",
-      "recipe_quality": "uncommon",
+      "recipe_quality": "normal",
       "position": {
         "x": 75.5,
         "y": -53.5
