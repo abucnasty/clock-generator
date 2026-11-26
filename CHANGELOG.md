@@ -11,7 +11,7 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 
 ## [Unreleased]
 
-## [0.32.0] - 2026-11-24
+## [0.32.0] - 2026-11-26
 
 ### Added
 - ui: the setpoint picker lets you choose the output of a recipe with several outputs
