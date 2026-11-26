@@ -27,8 +27,8 @@ export interface InstallStep {
     detail: string;
 }
 
-/** What a letter is for: the first line of a combinator in the game ends in the letter the page gives it */
-const LETTER_SENTENCE = ' Its first line ends in its letter, such as (E): the wiring reference and the Layout view show the same letter.';
+/** What a letter is for: the first line of a combinator's description in the game has the letter the page gives it, last */
+const LETTER_SENTENCE = ' The first line of the combinator\'s description has its letter last, such as (E). The wiring reference and the Layout view show the same letter.';
 
 /** Every player-facing string of the install steps */
 export const INSTALL_COPY = {

@@ -130,9 +130,9 @@ describe('wiringList', () => {
 });
 
 describe('the letter of a combinator in the steps and in the wiring list', () => {
-    const sentence = 'Its first line ends in its letter, such as (E): the wiring reference and the Layout view show the same letter.';
+    const sentence = 'The first line of the combinator\'s description has its letter last, such as (E). The wiring reference and the Layout view show the same letter.';
 
-    it('says in the wire step, and in the step of a clock that wires only drills, that the first line ends in the letter the page shows', () => {
+    it('says in the wire step, and in the step of a clock that wires only drills, that the first line has the letter the page shows, last', () => {
         expect(detailOf(installSteps(plain), 'wire')).toContain(sentence);
         expect(detailOf(installSteps(withDrill), 'wire')).toContain(sentence);
         expect(detailOf(installSteps(drillOnly), 'drills')).toContain(sentence);
