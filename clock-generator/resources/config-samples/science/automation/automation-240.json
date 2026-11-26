@@ -14,7 +14,8 @@
       "recipe": "automation-science-pack",
       "productivity": 100,
       "crafting_speed": 68.890625,
-      "prototype": "assembling-machine-3"
+      "prototype": "assembling-machine-3",
+      "position": { "x": -36.5, "y": 0.5 }
     }
   ],
   "inserters": [
@@ -33,7 +34,9 @@
         "copper-plate",
         "iron-gear-wheel"
       ],
-      "overrides": {}
+      "overrides": {},
+      "position": { "x": -36.5, "y": -1.5 },
+      "direction": 0
     },
     {
       "source": {
@@ -47,7 +50,8 @@
       "stack_size": 16,
       "filters": [
         "automation-science-pack"
-      ]
+      ],
+      "position": { "x": -37.5, "y": 2.5 }
     }
 ,
     {
@@ -60,7 +64,9 @@
         "id": 1,
         "drop": { "lane": 2, "position": 0 }
       },
-      "stack_size": 16
+      "stack_size": 16,
+      "position": { "x": -47.5, "y": -3.5 },
+      "direction": 0
     },
     {
       "source": {
@@ -72,7 +78,9 @@
         "id": 1,
         "drop": { "lane": 2, "position": 1 }
       },
-      "stack_size": 16
+      "stack_size": 16,
+      "position": { "x": -46.5, "y": -3.5 },
+      "direction": 0
     },
     {
       "source": {
@@ -84,7 +92,9 @@
         "id": 1,
         "drop": { "lane": 1, "position": 0 }
       },
-      "stack_size": 16
+      "stack_size": 16,
+      "position": { "x": -47.5, "y": -1.5 },
+      "direction": 8
     },
     {
       "source": {
@@ -96,7 +106,9 @@
         "id": 1,
         "drop": { "lane": 1, "position": 1 }
       },
-      "stack_size": 16
+      "stack_size": 16,
+      "position": { "x": -46.5, "y": -1.5 },
+      "direction": 8
     }
   ],
   "belts": [
@@ -140,12 +152,14 @@
     {
       "type": "infinity-chest",
       "id": 1,
-      "item_filter": [{ "item_name": "copper-plate", "request_count": 100 }]
+      "item_filter": [{ "item_name": "copper-plate", "request_count": 100 }],
+      "position": { "x": -47.5, "y": -4.5 }
     },
     {
       "type": "infinity-chest",
       "id": 2,
-      "item_filter": [{ "item_name": "iron-gear-wheel", "request_count": 100 }]
+      "item_filter": [{ "item_name": "iron-gear-wheel", "request_count": 100 }],
+      "position": { "x": -47.5, "y": -0.5 }
     }
   ],
   "overrides": {},

@@ -666,9 +666,9 @@ const reasonsOfClocks = (reasons: Record<string, unknown>): JobCheck => ({
 });
 
 const chemical240: JobCheck[] = [
+    // the example states the places of the takers, so the lane model runs them where they stand: the gaps halve, and phase_shifted_batch is stable
     reasonsOfClocks({
-        takt_batches_observed: { code: "belt_gaps", data: { missed: 456, with_gap: 228 } },
-        phase_shifted_batch: { code: "belt_gaps", data: { missed: 452, with_gap: 224 } },
+        takt_batches_observed: { code: "belt_gaps", data: { missed: 228, with_gap: 114 } },
     }),
 ];
 

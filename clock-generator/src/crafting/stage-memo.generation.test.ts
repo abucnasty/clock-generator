@@ -8,7 +8,7 @@ import { observeFills } from "./runner/steps/backpressure-fill-step";
 import { SimulationTick } from "./runner/simulation-tick";
 
 // A derived clock with a window cycle time of 216 ticks: the quick and strict checks both ask from offset 18.
-const shared_start_key = "885353b72bae8cd24c7def81b5614d86a5c3004678b9731fcee61e3ba3f68b6e";
+const shared_start_key = "9ed0ebddea131d7592cbffdb332c9b4051afae634240c7015a04f2e935f70bff";
 
 it("reuses the measured start when a strict confirmation sees the quick trial's offset", async () => {
     const configuration = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240);
