@@ -162,7 +162,7 @@ describe('a clock for a drill into a car between two furnaces', () => {
         // the blueprint's name is the item's icon and its name in the game
         expect(selected.result.blueprint.label).toBe('[item=iron-plate] Iron plate clock');
         expect(decider?.player_description?.split('\n')).toEqual([
-            '1 drill [item=iron-ore] (1)',
+            '1 drill [item=iron-ore] (1) (C)',
             'Drill 1: [entity=big-mining-drill] → [item=iron-ore] → [entity=car]',
             `Tops the [entity=car] up just in time, 1 enable window per 144-tick window cycle: open ${window.start + 1}`,
             'Not counted as swings: opens just before the inserters take from the [entity=car]',

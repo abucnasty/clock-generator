@@ -170,6 +170,8 @@ export {
     AlwaysOnReasons,
 } from './crafting/generate-blueprint';
 
+export { combinatorLetters, CombinatorLetter, CombinatorGroups } from './crafting/combinator-letters';
+
 export {
     FuelPlan,
     FuelMachinePlan,

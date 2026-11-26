@@ -224,6 +224,68 @@ describe("the description of an enabling combinator", () => {
     });
 });
 
+describe("the letter at the end of the first line of an enabling combinator", () => {
+    const machine = (id: number, recipe: string, prototype: string) => ({ entity_id: EntityId.forMachine(id), metadata: { recipe: { name: recipe }, prototype } });
+    const carrying = (id: number, source: EntityId, sink: EntityId, ...items: string[]) =>
+        ({ entity_id: EntityId.forInserter(id), source: { entity_id: source }, sink: { entity_id: sink }, filtered_items: new Set(items) });
+    const belt = { entity_id: EntityId.forBelt(1), prototype: "turbo-transport-belt" };
+    const foundry = machine(11, "casting-iron", "foundry");
+    const plant = machine(12, "electronic-circuit", "electromagnetic-plant");
+    const cryo = machine(13, "plastic-bar", "cryogenic-plant");
+    const store = { entity_id: EntityId.forChest(4), chest_type: "buffer-chest", prototype: "steel-chest" };
+    const entities = [
+        belt, foundry, plant, cryo, store,
+        carrying(1, belt.entity_id, plant.entity_id, "iron-plate"),
+        carrying(3, foundry.entity_id, store.entity_id, "copper-cable"), carrying(4, cryo.entity_id, store.entity_id, "plastic-bar"),
+        carrying(11, foundry.entity_id, plant.entity_id, "iron-plate"), carrying(12, foundry.entity_id, plant.entity_id, "copper-cable"),
+        { entity_id: EntityId.forDrill(2), meta: { type: "big-mining-drill" }, sink_id: store.entity_id, item: { name: "iron-ore" } },
+    ];
+    const registry = { getEntityById: (id: EntityId) => entities.find(entity => entity.entity_id.id === id.id) ?? null } as unknown as ReadableEntityRegistry;
+    const values = (ranges: OpenRange[]) => ranges.map(range => OpenRange.from(range.start_inclusive + 1, range.end_inclusive + 1));
+    const windows = deciderWindows([OpenRange.from(0, 11)], values);
+    const bytes = (lines: string[]) => new TextEncoder().encode(lines.join("\n")).length;
+    const planned = (ids: number[], letter?: string, window_cycle_text = "72") => {
+        const entity_ids = ids.map(id => EntityId.forInserter(id));
+        return plannedDescriptionLines(entity_ids, registry, ["copper-cable", "plastic-bar", "iron-plate"],
+            entity_ids.map(entity_id => ({ entity_id, swings: fraction(1) })), windows, window_cycle_text, undefined, letter);
+    };
+
+    it("ends the header of a planned combinator in its letter, and changes no other line", () => {
+        const without = planned([3, 4]);
+        const lines = planned([3, 4], "E");
+        expect(lines[0]).toBe("2 inserters [item=copper-cable] [item=plastic-bar] [item=iron-plate] (3, 4) (E)");
+        expect(lines.slice(1)).toEqual(without.slice(1));
+        expect(lines[0]).toBe(`${without[0]} (E)`);
+    });
+
+    it("ends the header of a drill, a drill into a chest, a fuel and a by-product inserter in its letter", () => {
+        const one = deciderWindows([OpenRange.from(27, 27)], values);
+        const drill = chestDrillDescriptionLines([EntityId.forDrill(2)], registry, ["iron-ore"], one, "72", undefined, "AA");
+        expect(drill[0]).toBe("1 drill [item=iron-ore] (2) (AA)");
+        expect(drill.slice(1)).toEqual(chestDrillDescriptionLines([EntityId.forDrill(2)], registry, ["iron-ore"], one, "72").slice(1));
+        const fuel: InserterClock = { inserter_id: EntityId.forInserter(1), kind: "fuel", modulus: 192, own_clock: true, window: OpenRange.from(0, 7) };
+        expect(unplannedDescriptionLines([EntityId.forInserter(1)], registry, ["nutrients"], fuel, OpenRange.from(1, 8), null, undefined, "G")[0]).toBe("Fuel: 1 inserter [item=nutrients] (1) (G)");
+        const by_product: InserterClock = { inserter_id: EntityId.forInserter(1), kind: "by-product", modulus: 32, own_clock: false, window: OpenRange.from(6, 10) };
+        expect(unplannedDescriptionLines([EntityId.forInserter(1)], registry, ["jellynut-seed"], by_product, OpenRange.from(7, 11), SignalId.clock, undefined, "B")[0])
+            .toBe("By-product: 1 inserter [item=jellynut-seed] (1) (B)");
+    });
+
+    it("counts the letter's bytes before it keeps lines: a description that fits by one letter takes the next compaction instead of losing lines", () => {
+        // the window cycle's text is only interpolated: pad it until the lines without a letter are exactly the 500 bytes the game keeps
+        const padding = "1".repeat(500 - bytes(planned([3, 4], undefined, "1")) + 1);
+        const fits = planned([3, 4], undefined, padding);
+        expect(bytes(fits)).toBe(500);
+        expect(fits[1]).toBe("Inserter 3: [entity=foundry] → [item=copper-cable] → [entity=steel-chest]");
+        const lettered = planned([3, 4], "E", padding);
+        // the letter's 4 bytes do not fit: the lines start at the numbers of their inserters, and no line is cut
+        expect(lettered.some(line => line.endsWith("..."))).toBe(false);
+        expect(bytes(lettered)).toBeLessThanOrEqual(500);
+        expect(lettered[0]).toBe("2 inserters [item=copper-cable] [item=plastic-bar] [item=iron-plate] (3, 4) (E)");
+        expect(lettered[1]).toBe("3: [entity=foundry] → [item=copper-cable] → [entity=steel-chest]");
+        expect(lettered).toHaveLength(fits.length);
+    });
+});
+
 describe("the description of the clock", () => {
     it("gives the rate of every copy and of one, and how to wire the rest", () => {
         expect(clockDescriptionLines({ item_name: "iron-plate", items_per_second: 120, copies: 7, window_cycle_text: "Period 336 ticks; counts 1–336", drills: true,

@@ -70,15 +70,15 @@ const productivityChain: JobCheck[] = [
         run: ({ generated }) => {
             const descriptions = (id: string) => deciderDescriptions(byMaker(generated, id));
             expect(descriptions('planned-belt-slack')).toContainEqual([
-                '2 inserters [item=plastic-bar] [item=electronic-circuit] (6, 9)',
+                '2 inserters [item=plastic-bar] [item=electronic-circuit] (6, 9) (F)',
                 '2.424 swings each in 1 enable window per 72-tick window cycle: open 35–60',
             ]);
             expect(descriptions('planned-belt-slack')).toContainEqual([
-                '2 inserters [item=advanced-circuit] [item=electronic-circuit] (8, 10)',
+                '2 inserters [item=advanced-circuit] [item=electronic-circuit] (8, 10) (H)',
                 '3.333 swings each in 1 enable window per 72-tick window cycle: open 3–28',
             ]);
             expect(descriptions('planned-belt-slack-shared')).toContainEqual([
-                '3 inserters [item=copper-cable] [item=plastic-bar] [item=electronic-circuit] (5, 6, 9)',
+                '3 inserters [item=copper-cable] [item=plastic-bar] [item=electronic-circuit] (5, 6, 9) (D)',
                 '2.424 to 4.848 swings (inserters 6, 9: 2.424; inserter 5: 4.848) in 2 enable windows per 72-tick window cycle: open 1–4, 35–72',
             ]);
         },
@@ -462,7 +462,7 @@ const grenade: JobCheck[] = [
             // after the lines that say what the combinator switches on and when: the header, the line of each inserter, the counts
             for (const [entity] of groupLines) expect(lines(entity).filter(line => !ROUTE_LINE.test(line))[2]).toMatch(/^Group /);
             expect(lines(tagged(blueprint.entities, 'inserters', [1, 2])).slice(0, 3)).toEqual([
-                '2 inserters [item=grenade] (1, 2)',
+                '2 inserters [item=grenade] (1, 2) (A)',
                 'Inserters 1, 2: [entity=assembling-machine-3] → [item=grenade] → [entity=turbo-transport-belt]',
                 '1 swing each in 1 enable window per 112-tick window cycle: open 1',
             ]);
