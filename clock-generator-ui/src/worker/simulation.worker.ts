@@ -603,7 +603,7 @@ function handleTask(
         const run = regionLayer !== undefined
             ? clockGenerator.runRegionLayerTask(config, regionLayer, { ...options, on_not_made: onNotMade }, assessedSignatures)
             : coordinatedSources !== undefined
-                ? clockGenerator.runCoordinatedSourcesTask(config, coordinatedSources, { ...options, on_not_made: onNotMade }, assessedSignatures)
+                ? clockGenerator.runCoordinatedSourcesTask(config, coordinatedSources, { ...options, on_not_made: onNotMade }, assessedSignatures, context.regions)
                 : clockGenerator.runClockAlternativeTask(config, context, taskId, { ...options, on_not_made: onNotMade }, assessedSignatures);
         return { type: 'task-completed', runId, taskId, run: toRunView(run, config), notMade };
     });
