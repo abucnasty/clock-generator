@@ -19,6 +19,8 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 - ui: new Layout view draws a build from above with numbered inserters and belts
 - ui: the Layout view and wiring reference show each combinator's letter and colour on its inserters
 - blueprint: each combinator's description names its letter, the one the page shows
+- generation: one group's clock is tried on every repeated group of machines in a build
+- generation: a notice names the belt that keeps repeated groups of machines from sharing a clock
 
 ### Changed
 - generation: science output inserters can keep enable windows when one machine feeds several science assemblers
@@ -28,6 +30,8 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 - generation: quiet command-line generation does less work
 - generation: quiet command-line generation checks a repeated clock start once
 - ui: a belt pickup that drops elsewhere is refused with clearer text
+- generation: copies that differ only in machine or drill speed are found as copies
+- generation: copies that each have their own output lane are not checked for each other's drops
 
 ### Removed
 - ui: the Diagnostics tab no longer shows how many copies on shared lanes would hold

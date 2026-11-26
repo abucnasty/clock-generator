@@ -1,6 +1,7 @@
 import { canonicalRate } from "./setpoint-rate";
 import { Config, ConfigSchema } from './schema';
 import { findRepeatedUnits } from './copies-validator';
+import { unitCapacity, unitsMakeTheirShare } from './speed-as-capacity';
 import { outsideSupplyOf } from './outside-supply';
 import { fraction } from '../data-types/fraction';
 import { orderByMachineDependencies } from '../common/order-by-machine-dependencies';
@@ -312,12 +313,44 @@ function multipliedCopies(copies: number, multiplicity: number): number {
     return value;
 }
 
+type WitnessedUnit = { component: Component; witness: unknown; places: Place[] };
+
+/** A witness without the speed of its machines and drills */
+function withoutSpeed(proof: unknown): unknown {
+    const out = clone(proof) as { machines: { record: Record<string, unknown> }[]; drills: { record: Record<string, unknown> }[] };
+    out.machines.forEach(machine => { delete machine.record.crafting_speed; });
+    out.drills.forEach(drill => { delete drill.record.speed_bonus; });
+    return out;
+}
+
+/**
+ * The units grouped by their witnesses without speed, each set split by whether each unit makes its share (speed-as-capacity.ts),
+ * where that gives copies; else null
+ */
+function byCapacity(config: Config, groups: ReadonlyMap<string, WitnessedUnit[]>): { groups: Map<string, WitnessedUnit[]>; multiplicity: number } | null {
+    const loose = new Map<string, WitnessedUnit[]>();
+    for (const group of groups.values()) for (const unit of group) {
+        const key = canonical(withoutSpeed(unit.witness));
+        loose.set(key, [...(loose.get(key) ?? []), unit]);
+    }
+    const next = new Map<string, WitnessedUnit[]>();
+    for (const [key, set] of loose) {
+        const makes = unitsMakeTheirShare(config, set.map(unit => [...unit.component.nodes].filter(node => node.startsWith('machine:') || node.startsWith('drill:'))));
+        set.forEach((unit, at) => {
+            const signature = makes[at] ? `capacity|${key}` : `own|${canonical(unit.witness)}`;
+            next.set(signature, [...(next.get(signature) ?? []), unit]);
+        });
+    }
+    const multiplicity = [...next.values()].reduce((value, group) => gcd(value, group.length), 0);
+    return multiplicity > 1 ? { groups: next, multiplicity } : null;
+}
+
 /** A sufficient ordered structural proof; ordinary candidate planning remains a separate worker Check. */
 export function planRepeatedUnitConversion(given: Config): RepeatedUnitConversionResult {
     const config = canonicalRate(given);
     try {
         const analysis = analyze(config);
-        const groups = new Map<string, { component: Component; witness: unknown; places: Place[] }[]>();
+        const groups = new Map<string, WitnessedUnit[]>();
         for (const component of analysis.components) {
             const { proof, places } = witness(config, analysis, component), signature = canonical(proof);
             const group = groups.get(signature) ?? [];
@@ -327,7 +360,19 @@ export function planRepeatedUnitConversion(given: Config): RepeatedUnitConversio
             group.push({ component, witness: proof, places });
             groups.set(signature, group);
         }
-        const multiplicity = [...groups.values()].reduce((value, group) => gcd(value, group.length), 0);
+        let multiplicity = [...groups.values()].reduce((value, group) => gcd(value, group.length), 0);
+        // where the witnesses give no copies, they are compared without machine and drill speeds: units that match then are copies
+        // where each makes its share (speed-as-capacity.ts), and the one of least capacity is kept
+        let by_capacity = false;
+        if (multiplicity <= 1) {
+            const regrouped = byCapacity(config, groups);
+            if (regrouped !== null) {
+                groups.clear();
+                regrouped.groups.forEach((group, signature) => groups.set(signature, group));
+                multiplicity = regrouped.multiplicity;
+                by_capacity = true;
+            }
+        }
         if (multiplicity <= 1) {
             const detected = findRepeatedUnits(config).gcd > 1;
             refuse(detected ? 'nonuniform-units' : 'not-repeated', detected
@@ -336,7 +381,12 @@ export function planRepeatedUnitConversion(given: Config): RepeatedUnitConversio
         const keptNodes = new Set<string>(), keptInserters = new Set<number>();
         for (const group of groups.values()) {
             group.sort((a, b) => a.component.minimumMachine - b.component.minimumMachine);
-            group.slice(0, group.length / multiplicity).forEach(({ component }) => {
+            // copies found by their capacity keep the unit of least capacity; chosen on a copy of the group, which keeps its order
+            // for the copies' gap below
+            const capacity = (unit: { component: Component }) => unitCapacity(config, [...unit.component.nodes]);
+            const kept = !by_capacity ? group : [...group].sort((a, b) => capacity(a)[0] - capacity(b)[0] || capacity(a)[1] - capacity(b)[1]
+                || a.component.minimumMachine - b.component.minimumMachine);
+            kept.slice(0, group.length / multiplicity).forEach(({ component }) => {
                 component.nodes.forEach(key => keptNodes.add(key));
                 component.inserters.forEach(index => keptInserters.add(index));
             });
@@ -390,7 +440,8 @@ export function planRepeatedUnitConversion(given: Config): RepeatedUnitConversio
         if (offset !== undefined) candidate.setpoint.copy_offset = offset;
         if (!ConfigSchema.safeParse(candidate).success) refuse('copies-not-representable', 'The multiplied Copies value is outside the supported schema.');
         analyze(candidate);
-        if (findRepeatedUnits(candidate).gcd > 1) {
+        // the unit kept is checked with its speeds: speed is read as a capacity on the whole build only, where copies differ in it
+        if (findRepeatedUnits(candidate, 'with-speed').gcd > 1) {
             refuse('candidate-still-repeated', 'The retained composition still contains repetition under the existing Copies check.');
         }
         return { kind: 'available', sourceConfigKey: JSON.stringify(config), multiplicity,

@@ -15,7 +15,7 @@ import type { SharedLanesForLog } from "./shared-lane-log";
 import { withTickLedger, withTickMaker, type TickLedgerCount } from "./tick-ledger";
 
 /** The format of the log, on the `job` event: a field's name and meaning do not change, a new field, a field less or a changed meaning is a new number */
-export const MAKER_LOG_FORMAT = "maker-log-5";
+export const MAKER_LOG_FORMAT = "maker-log-6";
 
 /** A reason as a code with numbers: the fields a code has are those `MAKER_REASON_CODES` lists for it */
 export interface MakerReason {
@@ -95,7 +95,7 @@ export interface MakerLogEvent {
 
 /** The events, in the order a log lists them (the order they are made in within a kind) */
 export const MAKER_LOG_EVENTS = ["job", "job_lanes", "clock", "windows", "lane_facts", "missed_swings", "timetable", "ledger", "repeat_check", "composition", "part",
-    "not_made", "ticks", "shadow", "seconds"] as const;
+    "region_stagger", "not_made", "ticks", "shadow", "seconds"] as const;
 
 export type MakerLogSink = (event: MakerLogEvent) => void;
 
@@ -237,6 +237,29 @@ export function heldMakerLog<T>(work: () => T): { value: T; events: MakerLogEven
         return { value: work(), events };
     } finally {
         scope = own;
+    }
+}
+
+/**
+ * Runs `work` as one maker of the generation running (a generation inside it: the region step's of a cut group): its seconds and
+ * ticks go to `maker`, the makers inside it count to no slot of their own, and its events are held (`heldMakerLog`). The checks'
+ * seconds are counted as they would be.
+ */
+export function heldAsOneMaker<T>(maker: string, work: () => T): { value: T; events: MakerLogEvent[] } {
+    const own = scope;
+    if (own === undefined) return { value: work(), events: [] };
+    const started = now();
+    try {
+        return withTickMaker(maker, () => {
+            scope = { ...own, makers: new Map() };
+            try {
+                return heldMakerLog(work);
+            } finally {
+                scope = own;
+            }
+        }, { held: true });
+    } finally {
+        own.makers.set(maker, (own.makers.get(maker) ?? 0) + (now() - started) / 1000);
     }
 }
 

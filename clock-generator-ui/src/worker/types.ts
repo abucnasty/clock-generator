@@ -4,6 +4,7 @@ import type { z } from 'zod';
 import type { SetpointOutput } from 'clock-generator/light';
 import type {
     CoordinatedSourcesInput,
+    RegionLayerInput,
     AlwaysOnReasons,
     AsBuiltStabilityCheck,
     BeltConfigSchema,
@@ -302,6 +303,8 @@ export interface TaskRequest {
     assessedSignatures?: string[];
     /** For the per-branch clock's task: the parts of every run before it and the clock they recommend */
     coordinatedSources?: CoordinatedSourcesInput;
+    /** For the region step's task: the repeated groups of machines and the clock every run before it recommends */
+    regionLayer?: RegionLayerInput;
 }
 
 /**

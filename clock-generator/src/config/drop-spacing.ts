@@ -103,13 +103,17 @@ const beltWords = (ids: readonly number[], names: DropNames = NO_NAMES) => names
     ? (ids.length === 1 ? `belt ${ids[0]}` : `belts ${listed(ids)}`)
     : listed(ids.map(id => theName(beltNameInText(id, names.build, { numbered: names.numbered }))));
 
-/** The step from one copy to the next along a line */
-function copyStepOf(config: Config, axis: "x" | "y"): CopyStep | null {
+/**
+ * The step from one copy to the next along a line. The copies do not share it where the next copy stands across it, or where
+ * every lane of its belt states that each copy has a lane of its own (`sharing` "per_copy").
+ */
+function copyStepOf(config: Config, line: Pick<DropLine, "axis" | "belt_id">): CopyStep | null {
     const offset = config.setpoint.copy_offset;
     if (config.setpoint.copies <= 1 || offset === undefined) return null;
-    const across = axis === "x" ? offset.y : offset.x;
-    const along = axis === "x" ? offset.x : offset.y;
-    return { along, shared: Math.abs(across) < EPSILON };
+    const across = line.axis === "x" ? offset.y : offset.x;
+    const along = line.axis === "x" ? offset.x : offset.y;
+    const per_copy = config.belts.find(belt => belt.id === line.belt_id)?.lanes.every(lane => lane.sharing === "per_copy") === true;
+    return { along, shared: Math.abs(across) < EPSILON && !per_copy };
 }
 
 /**
@@ -302,7 +306,7 @@ export function dropSpacing(config: Config, starts: ReadonlyMap<number, readonly
     const copies = config.setpoint.copies;
     const results: { line: DropLine; step: CopyStep | null; sense: 1 | -1; result: DropSpacingLine }[] = [];
     for (const line of dropLines(config)) {
-        const step = copyStepOf(config, line.axis);
+        const step = copyStepOf(config, line);
         if (copies > 1 && step === null) continue;
         const ticks = line.inserters.map(inserter => starts.get(inserter.id) ?? []).filter(it => it.length > 0);
         if (ticks.length === 0) continue;
@@ -438,7 +442,7 @@ function copyWidth(config: Config, axis: "x" | "y"): number | null {
 export function dropRoom(config: Config, lines: readonly DropLine[], window_cycle_ticks: number): DropRoom | null {
     const copies = config.setpoint.copies;
     const offset = config.setpoint.copy_offset;
-    const shared = lines.filter(line => copyStepOf(config, line.axis)?.shared === true);
+    const shared = lines.filter(line => copyStepOf(config, line)?.shared === true);
     if (!(window_cycle_ticks > 0) || !(copies > 1) || offset === undefined || shared.length === 0) return null;
     const signs = shared.map(line => ((line.axis === "x" ? offset.x : offset.y) < 0 ? -1 : 1) as 1 | -1);
     const gap = Math.abs(shared[0].axis === "x" ? offset.x : offset.y);

@@ -141,6 +141,8 @@ interface Scope {
     open: Set<OpenLoop>;
     /** The maker whose work is now running */
     maker: string | null;
+    /** Whether the maker is held: work inside it counts to it whatever maker it names (`withTickMaker`, `held`) */
+    maker_held: boolean;
     /** The purpose of the work now running */
     purpose: TickPurpose;
     /** Whether the work now running is inside a scope that claims every run in it */
@@ -215,7 +217,7 @@ function count(own: Scope, maker: string | null, purpose: TickPurpose, loop: Tic
  */
 export function withTickLedger<T>(sink: TickLedgerSink | undefined, work: () => T): T {
     if (sink === undefined || scope !== undefined) return work();
-    const own: Scope = { sink, rows: new Map(), memo_hits: new Map(), shadows: new Map(), shadows_open: new Set(), open: new Set(), maker: null,
+    const own: Scope = { sink, rows: new Map(), memo_hits: new Map(), shadows: new Map(), shadows_open: new Set(), open: new Set(), maker: null, maker_held: false,
         purpose: "no_purpose", claimed: false };
     scope = own;
     try {
@@ -245,15 +247,17 @@ export function withTickLedger<T>(sink: TickLedgerSink | undefined, work: () => 
  * Runs `work` with `maker` as the maker its runs are counted to, where a ledger is open. The scopes nest; the innermost maker
  * is the one counted.
  */
-export function withTickMaker<T>(maker: string, work: () => T): T {
+export function withTickMaker<T>(maker: string, work: () => T, options: { held?: boolean } = {}): T {
     const own = scope;
-    if (own === undefined) return work();
+    if (own === undefined || own.maker_held) return work();
     const before = own.maker;
     own.maker = maker;
+    own.maker_held = options.held === true;
     try {
         return work();
     } finally {
         own.maker = before;
+        own.maker_held = false;
     }
 }
 

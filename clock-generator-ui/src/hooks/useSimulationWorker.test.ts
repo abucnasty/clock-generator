@@ -78,16 +78,16 @@ function checkOnNewWorker(index: number) {
 }
 
 /** A task of a plan, which runs on every build unless the fields say otherwise */
-const task = (id: string, label: string, fields: Pick<Partial<ClockAlternativeTask>, 'only_when_needed' | 'fallback' | 'coordinated_sources'> = {}): ClockAlternativeTask =>
+const task = (id: string, label: string, fields: Pick<Partial<ClockAlternativeTask>, 'only_when_needed' | 'fallback' | 'coordinated_sources' | 'region_layer'> = {}): ClockAlternativeTask =>
     ({ id, label, only_when_needed: false, ...fields });
 const twoTasks = [task('one', 'One'), task('two', 'Two')];
 const remaining = task('remaining', 'Remaining');
 
 /** The planner answers its last plan as the planning worker does: the tasks first, then the primary alternative once it is assessed. Gives the run's id */
 function answerPlan(tasks: ClockAlternativeTask[], primary: ClockAlternativeRunView | null = null,
-    { planner = workers[0], startDependenceRequested = false } = {}) {
+    { planner = workers[0], startDependenceRequested = false, context = {} as ClockAlternativeContext } = {}) {
     const { runId } = planner.requests('plan').at(-1)!;
-    planner.send({ type: 'planned', runId, primarySignature: primary?.signature ?? 'primary', context: {} as ClockAlternativeContext,
+    planner.send({ type: 'planned', runId, primarySignature: primary?.signature ?? 'primary', context,
         assumptions: { startDependenceRequested }, tasks });
     planner.send({ type: 'primary-completed', runId, primary });
     return runId;
@@ -417,6 +417,39 @@ describe('tasks alongside the primary alternative', () => {
             finishTask(runId, 'one', { signature: 'one', alternatives: [selectionClock('one', 3)], parts: [on('one', 10)] });
             const sent = requests().find(m => m.taskId === 'per-branch');
             expect(sent?.coordinatedSources).toEqual({ recommended_id: 'one', window_cycle_ids: ['one', 'two'], parts: [on('one', 10), on('two', 5)] });
+        });
+
+        it('is followed by the region step where the build has repeated groups of machines, from the clock every run before it recommends', async () => {
+            await initialize();
+            generate();
+            const regions = { orbits: [{ kind: 'orbit' as const, orbit: { group: 'machine:4', anchor: ['machine:4'], regions: [], maps: [{}, {}] } }],
+                copies_conversion: 'not-repeated' as const };
+            const runId = answerPlan([task('one', 'One'), coordinatedSources, task('region-layer', 'One group\'s clock on every repeated group', { region_layer: true })],
+                null, { context: { regions } as unknown as ClockAlternativeContext });
+            const requests = () => workers.flatMap(w => w.requests('task')).filter(m => m.runId === runId);
+            finishTask(runId, 'one', { signature: 'one', alternatives: [{ ...selectionClock('one', 3), simulationDurationTicks: 10, clockWindows: { 'inserter:1': [] } }],
+                parts: [part('one')] });
+            expect(requests().map(m => m.taskId)).toEqual(['one', 'per-branch']);
+            finishTask(runId, 'per-branch', { signature: 'per-branch', alternatives: [{ ...selectionClock('per-branch', 2), simulationDurationTicks: 20, clockWindows: {} }] });
+            const sent = requests().find(m => m.taskId === 'region-layer');
+            expect(sent?.regionLayer).toEqual({ regions, recommended: { id: 'per-branch', wake_ups: 2, window_cycle_ticks: 20, windows: {} } });
+            expect(sent?.assessedSignatures).toEqual(expect.arrayContaining(['one', 'per-branch']));
+            finishTask(runId, 'region-layer', { signature: 'region-layer', alternatives: [selectionClock('per-branch_region', 1)] });
+            const done = latest();
+            expect(done.isRunning).toBe(false);
+            expect(done.skippedSearches).toEqual([]);
+            expect(done.alternatives.map(it => it.id)).toEqual(['one', 'per-branch', 'per-branch_region']);
+            expect(done.alternatives[done.selectedAlternativeIndex].id).toBe('per-branch_region');
+        });
+
+        it('is followed by no region step where the worker plans none', async () => {
+            await initialize();
+            generate();
+            const runId = answerPlan([task('one', 'One'), coordinatedSources]);
+            finishTask(runId, 'one', { signature: 'one', alternatives: [selectionClock('one', 3)], parts: [part('one')] });
+            finishTask(runId, 'per-branch', null);
+            expect(workers.flatMap(w => w.requests('task')).filter(m => m.runId === runId).map(m => m.taskId)).toEqual(['one', 'per-branch']);
+            expect(latest().isRunning).toBe(false);
         });
 
         it('is not run where no clock was made to start from', async () => {

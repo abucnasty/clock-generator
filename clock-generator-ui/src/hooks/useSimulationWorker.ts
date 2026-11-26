@@ -3,7 +3,7 @@ import type { ValidationDiagnostic } from '../utils/buildValidation';
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import type { Config, ConfigValidation, DebugSteps, LogMessage, SerializableClockWindows, SerializableTransferHistory, PortableStateTransitionHistory, SwingBackoffReport, GenerationProgress } from 'clock-generator/browser';
 import { combineClockAlternativeRuns, coordinatedSourcesInputOf, searchesAreNeeded, searchesToRun } from 'clock-generator/light';
-import type { ClockAlternativeContext, ClockAlternativeTask, NotMadeClock } from 'clock-generator/browser';
+import type { ClockAlternativeContext, ClockAlternativeTask, NotMadeClock, RegionLayerInput } from 'clock-generator/browser';
 import type { ClockAlternativeRunView, ClockAlternativeView, CraftingMachineData, FuelViewData, RecipeInfo, ShiftOptionsView, WorkerRequest, WorkerResponse } from '../worker/types';
 import { askEngine, createSimulationWorker, loadFactorioData } from '../worker/engineClient';
 import type { GeneratedFor } from '../utils/resultsStaleness';
@@ -191,6 +191,11 @@ interface Generation {
      * so it is queued once nothing else is waiting, queued or running
      */
     last: ClockAlternativeTask[];
+    /**
+     * The region step's task (one group's clock on every repeated group), which waits for the per-branch clock: it is made from the
+     * clock every run before it recommends, so it is queued once the per-branch clock is in
+     */
+    regionLast: ClockAlternativeTask[];
     /** Primary run first, then one per task in display order */
     runs: (ClockAlternativeRunView | null)[];
     /** The alternatives of each run that could not be made, in the order of `runs` */
@@ -221,12 +226,25 @@ const signaturesOf = (run: ClockAlternativeRunView): string[] => [run.signature,
 
 /** The labels of the searches a generation did not run; a fallback that was not needed is not one of them */
 const skippedSearchesOf = (generation: Generation): string[] =>
-    generation.skipped.filter(task => !task.fallback && !task.coordinated_sources).map(pendingClockName);
+    generation.skipped.filter(task => !task.fallback && !task.coordinated_sources && !task.region_layer).map(pendingClockName);
 
 const emptyResults = (): ResultsView => ({
     generationAssumptions: null, alternatives: [], selectedAlternativeIndex: 0, pendingAlternatives: [],
     skippedSearches: [], notMade: [], searchedDeeper: false, pickRule: null, generatedFor: null, stoppedEarly: false, pickGone: null,
 });
+
+/**
+ * What the region step is given (the engine's `regionLayerInputOf`): the repeated groups of machines, and the clock every run so far
+ * recommends, read as the step reads a listed clock; null where no clock was made to start from
+ */
+function regionInputOf(generation: Generation): RegionLayerInput | null {
+    const regions = generation.context?.regions;
+    const so_far = combineClockAlternativeRuns(generation.runs, it => it.ranking);
+    const clock = so_far.alternatives[so_far.selected_index];
+    if (regions === undefined || clock === undefined) return null;
+    return { regions, recommended: { id: clock.id, wake_ups: clock.assessment.wake_ups_per_minute, window_cycle_ticks: clock.simulationDurationTicks,
+        windows: clock.clockWindows } };
+}
 
 /** A run for `coordinatedSourcesInputOf`: its alternatives that carry a strategy (a live generation's all do; a clock kept before it was carried does not) */
 function withStrategies(run: ClockAlternativeRunView | null): Parameters<typeof coordinatedSourcesInputOf>[0][number] {
@@ -498,6 +516,14 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
             if (combined.alternatives.length > 0) generation.queue = last;
             else generation.skipped = [...generation.skipped, ...last];
         }
+        // then the region step, once the per-branch clock is in: from the clock every run before it recommends
+        if (generation.regionLast.length > 0 && generation.last.length === 0 && generation.waiting.length === 0 && generation.queue.length === 0
+            && generation.running.size === 0 && !generation.primaryPending) {
+            const last = generation.regionLast;
+            generation.regionLast = [];
+            if (regionInputOf(generation) !== null) generation.queue = last;
+            else generation.skipped = [...generation.skipped, ...last];
+        }
         while (generation.idle.length > 0 && generation.queue.length > 0) {
             const worker = generation.idle.pop()!;
             const task = generation.queue.shift()!;
@@ -514,9 +540,10 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
                 // earlier alias with an empty run, regardless of worker completion order.
                 assessedSignatures: [...new Set([...generation.assessedSignatures,
                     ...generation.runs.slice(0, 1 + generation.tasks.findIndex(candidate => candidate.id === task.id))
-                        .flatMap(run => task.coordinated_sources === true ? (run === null ? [] : signaturesOf(run)) : run?.alternatives.length ? [run.signature] : [])])],
+                        .flatMap(run => task.coordinated_sources === true || task.region_layer === true ? (run === null ? [] : signaturesOf(run)) : run?.alternatives.length ? [run.signature] : [])])],
                 ...(task.coordinated_sources === true && { coordinatedSources: coordinatedSourcesInputOf(generation.runs.map(withStrategies),
                     (({ alternatives, order }) => order.map(index => alternatives[index].id))(combineClockAlternativeRuns(generation.runs, it => it.ranking))) }),
+                ...(task.region_layer === true && { regionLayer: regionInputOf(generation)! }),
             } satisfies WorkerRequest);
         }
         if (generation.running.size > 0 || generation.queue.length > 0 || generation.primaryPending) {
@@ -581,9 +608,10 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
                 generation.tasks = response.tasks;
                 generation.runs = [null, ...response.tasks.map(() => null)];
                 generation.notMade = [[], ...response.tasks.map(() => [])];
-                generation.waiting = response.tasks.filter(task => task.only_when_needed && !task.coordinated_sources);
+                generation.waiting = response.tasks.filter(task => task.only_when_needed && !task.coordinated_sources && !task.region_layer);
                 generation.last = response.tasks.filter(task => task.coordinated_sources === true);
-                generation.queue = orderAlternativeTasks(response.tasks.filter(task => !task.only_when_needed && !task.coordinated_sources));
+                generation.regionLast = response.tasks.filter(task => task.region_layer === true);
+                generation.queue = orderAlternativeTasks(response.tasks.filter(task => !task.only_when_needed && !task.coordinated_sources && !task.region_layer));
                 generation.primaryPending = true;
                 generation.assessedSignatures = [response.primarySignature];
                 // the planning worker goes on with the primary alternative
@@ -767,7 +795,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         setLogs([]);
         const runId = ++runIdRef.current;
         generationRef.current = {
-            runId, config: engineConfig, debugSteps, streamLogs, context: null, tasks: [], queue: [], waiting: [], skipped: [], last: [], runs: [], notMade: [], assumptions: null,
+            runId, config: engineConfig, debugSteps, streamLogs, context: null, tasks: [], queue: [], waiting: [], skipped: [], last: [], regionLast: [], runs: [], notMade: [], assumptions: null,
             running: new Map(), done: new Set(), idle: [], completed: 0, primaryPending: false, assessedSignatures: [],
             previous: shownRef.current, generatedFor: run.generatedFor, pickRule: rule, searchedDeeper: run.searchedDeeper,
         };

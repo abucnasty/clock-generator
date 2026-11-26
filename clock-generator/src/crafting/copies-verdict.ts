@@ -92,6 +92,25 @@ export function withBuildFeeders<T>(given: Config, generate: () => T): T {
     }
 }
 
+/** The feeders of the lanes set for the generation running, as `withLaneFeeders` takes them back */
+export type LaneFeedersScope = LaneFeeders | undefined;
+
+/** The feeders set for the generation running (`withBuildFeeders`), to give back to checks of that build made inside another's */
+export function currentLaneFeeders(): LaneFeedersScope {
+    return build_feeders;
+}
+
+/** Runs checks of a build inside a generation of another (a cut group's) with that build's lane feeders (`currentLaneFeeders`) */
+export function withLaneFeeders<T>(feeders: LaneFeedersScope, check: () => T): T {
+    const outer = build_feeders;
+    build_feeders = feeders;
+    try {
+        return check();
+    } finally {
+        build_feeders = outer;
+    }
+}
+
 /** The feeders of the lanes of the build being generated, where it states any (`withBuildFeeders`) */
 export function buildFeeders(): LaneFeeders | undefined {
     return build_feeders === undefined || build_feeders.size === 0 ? undefined : build_feeders;
