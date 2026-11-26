@@ -6,24 +6,11 @@
 import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import type { Plugin } from 'vite';
+import { EXAMPLES } from './examples.ts';
 
 const DATA = new URL('../../clock-generator/resources/data-filtered.json', import.meta.url);
 const SAMPLES = new URL('../../clock-generator/resources/config-samples/', import.meta.url);
 const PUBLIC = new URL('../public/', import.meta.url);
-
-// One build per science pack, simplest first, so a newcomer's first Generate is quick. Each is copied flat as
-// public/examples/<id>.json and listed in public/examples/index.json, which the examples dialog reads.
-const EXAMPLES = [
-    { id: 'logistic-science', path: 'science/logistic/logistic-240.json' },
-    { id: 'automation-science', path: 'science/automation/automation-240.json' },
-    { id: 'utility-science', path: 'science/utility/utility-120.json' },
-    { id: 'chemical-science', path: 'science/chemical/chemical-240-shared-foundry.json' },
-    { id: 'electromagnetic-science', path: 'science/electromagnetic/electromagnetic-330.json' },
-    { id: 'military-science', path: 'science/military/military-240.json' },
-    { id: 'production-science', path: 'science/production/production-120-two-belts.json' },
-    { id: 'metallurgic-science', path: 'science/metallurgic/metallurgic-45.json' },
-    { id: 'agriculture-science', path: 'science/agricultural/agricultural-250.json' },
-];
 
 /** The generator's files this copies, which the dev server watches */
 const SOURCES = [DATA, ...EXAMPLES.map(({ path }) => new URL(path, SAMPLES))].map((url) => fileURLToPath(url));
