@@ -1,9 +1,10 @@
 import factorioData from '../../../clock-generator/resources/data-filtered.json?raw';
 import { describe, expect, expectTypeOf, it } from 'vitest';
-import { applyResearch, type FactorioData, type ResearchBonuses } from 'clock-generator/browser';
+import { applyResearch, type FactorioData, type ResearchBonuses, type ResearchBuild } from 'clock-generator/browser';
 import { inserterHand, INSERTER_HANDS, laneStack, type Bonuses } from './researchProfiles';
 
 const DATA = JSON.parse(factorioData) as FactorioData;
+const asBuild = (build: unknown) => build as ResearchBuild;
 
 // the engine's numbers and the profile store's are one shape: each is assignable to the other (`tsc -b` judges this)
 expectTypeOf<ResearchBonuses>().toExtend<Bonuses>();
@@ -26,7 +27,7 @@ function engineHand(prototype: string, bonuses: Bonuses): unknown {
         belts: [],
     };
     const base = { machines: [], drills: [], silos: [], inserters: [{ id: 1 }], belts: [] };
-    const result = applyResearch(build as never, base, { profile: 'P', template: null, bonuses }, DATA);
+    const result = applyResearch(asBuild(build), base, { profile: 'P', template: null, bonuses }, DATA);
     return (result.build.inserters[0] as { stack_size?: number }).stack_size;
 }
 
@@ -38,7 +39,7 @@ function engineLane(bonuses: Bonuses): unknown {
         belts: [{ id: 1, type: 'turbo-transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 2 }] }],
     };
     const base = { machines: [], drills: [], silos: [], inserters: [], belts: [{ id: 1 }] };
-    const result = applyResearch(build as never, base, { profile: 'P', template: null, bonuses }, DATA);
+    const result = applyResearch(asBuild(build), base, { profile: 'P', template: null, bonuses }, DATA);
     return (result.build.belts[0].lanes[0] as { stack_size: number }).stack_size;
 }
 
