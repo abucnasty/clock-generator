@@ -1,0 +1,1308 @@
+{
+ "about": "The game's reads of the output side of the automation science 240 sample: transport-line pieces, output inserters and the lanes the side loaders land on, cut to the fields the world is held to. Positions are in the game's frame: the blueprint's plus frame_offset.",
+ "frame_offset": {
+  "x": 583,
+  "y": 441
+ },
+ "pieces": [
+  {
+   "unit": 278,
+   "name": "turbo-transport-belt",
+   "type": "transport-belt",
+   "position": {
+    "x": 397.5,
+    "y": 3.5
+   },
+   "direction": 4,
+   "inputs": [],
+   "outputs": [
+    284
+   ],
+   "belt_shape": "straight"
+  },
+  {
+   "unit": 283,
+   "name": "turbo-underground-belt",
+   "type": "underground-belt",
+   "position": {
+    "x": 398.5,
+    "y": 2.5
+   },
+   "direction": 4,
+   "inputs": [
+    284
+   ],
+   "outputs": [
+    288
+   ],
+   "belt_to_ground_type": "output"
+  },
+  {
+   "unit": 284,
+   "name": "turbo-transport-belt",
+   "type": "transport-belt",
+   "position": {
+    "x": 398.5,
+    "y": 3.5
+   },
+   "direction": 0,
+   "inputs": [
+    278
+   ],
+   "outputs": [
+    283
+   ],
+   "belt_shape": "left"
+  },
+  {
+   "unit": 288,
+   "name": "turbo-underground-belt",
+   "type": "underground-belt",
+   "position": {
+    "x": 399.5,
+    "y": 2.5
+   },
+   "direction": 4,
+   "inputs": [
+    283
+   ],
+   "outputs": [],
+   "belt_to_ground_type": "input",
+   "underground_neighbour": 310
+  },
+  {
+   "unit": 305,
+   "name": "turbo-transport-belt",
+   "type": "transport-belt",
+   "position": {
+    "x": 406.5,
+    "y": 3.5
+   },
+   "direction": 4,
+   "inputs": [],
+   "outputs": [
+    311
+   ],
+   "belt_shape": "straight"
+  },
+  {
+   "unit": 310,
+   "name": "turbo-underground-belt",
+   "type": "underground-belt",
+   "position": {
+    "x": 407.5,
+    "y": 2.5
+   },
+   "direction": 4,
+   "inputs": [
+    311
+   ],
+   "outputs": [
+    315
+   ],
+   "belt_to_ground_type": "output",
+   "underground_neighbour": 288
+  },
+  {
+   "unit": 311,
+   "name": "turbo-transport-belt",
+   "type": "transport-belt",
+   "position": {
+    "x": 407.5,
+    "y": 3.5
+   },
+   "direction": 0,
+   "inputs": [
+    305
+   ],
+   "outputs": [
+    310
+   ],
+   "belt_shape": "left"
+  },
+  {
+   "unit": 315,
+   "name": "turbo-underground-belt",
+   "type": "underground-belt",
+   "position": {
+    "x": 408.5,
+    "y": 2.5
+   },
+   "direction": 4,
+   "inputs": [
+    310
+   ],
+   "outputs": [],
+   "belt_to_ground_type": "input",
+   "underground_neighbour": 337
+  },
+  {
+   "unit": 332,
+   "name": "turbo-transport-belt",
+   "type": "transport-belt",
+   "position": {
+    "x": 415.5,
+    "y": 3.5
+   },
+   "direction": 4,
+   "inputs": [],
+   "outputs": [
+    338
+   ],
+   "belt_shape": "straight"
+  },
+  {
+   "unit": 337,
+   "name": "turbo-underground-belt",
+   "type": "underground-belt",
+   "position": {
+    "x": 416.5,
+    "y": 2.5
+   },
+   "direction": 4,
+   "inputs": [
+    338
+   ],
+   "outputs": [
+    342
+   ],
+   "belt_to_ground_type": "output",
+   "underground_neighbour": 315
+  },
+  {
+   "unit": 338,
+   "name": "turbo-transport-belt",
+   "type": "transport-belt",
+   "position": {
+    "x": 416.5,
+    "y": 3.5
+   },
+   "direction": 0,
+   "inputs": [
+    332
+   ],
+   "outputs": [
+    337
+   ],
+   "belt_shape": "left"
+  },
+  {
+   "unit": 342,
+   "name": "turbo-underground-belt",
+   "type": "underground-belt",
+   "position": {
+    "x": 417.5,
+    "y": 2.5
+   },
+   "direction": 4,
+   "inputs": [
+    337
+   ],
+   "outputs": [],
+   "belt_to_ground_type": "input",
+   "underground_neighbour": 364
+  },
+  {
+   "unit": 359,
+   "name": "turbo-transport-belt",
+   "type": "transport-belt",
+   "position": {
+    "x": 424.5,
+    "y": 3.5
+   },
+   "direction": 4,
+   "inputs": [],
+   "outputs": [
+    365
+   ],
+   "belt_shape": "straight"
+  },
+  {
+   "unit": 364,
+   "name": "turbo-underground-belt",
+   "type": "underground-belt",
+   "position": {
+    "x": 425.5,
+    "y": 2.5
+   },
+   "direction": 4,
+   "inputs": [
+    365
+   ],
+   "outputs": [
+    369
+   ],
+   "belt_to_ground_type": "output",
+   "underground_neighbour": 342
+  },
+  {
+   "unit": 365,
+   "name": "turbo-transport-belt",
+   "type": "transport-belt",
+   "position": {
+    "x": 425.5,
+    "y": 3.5
+   },
+   "direction": 0,
+   "inputs": [
+    359
+   ],
+   "outputs": [
+    364
+   ],
+   "belt_shape": "left"
+  },
+  {
+   "unit": 369,
+   "name": "turbo-transport-belt",
+   "type": "transport-belt",
+   "position": {
+    "x": 426.5,
+    "y": 2.5
+   },
+   "direction": 8,
+   "inputs": [
+    364
+   ],
+   "outputs": [
+    370
+   ],
+   "belt_shape": "right"
+  },
+  {
+   "unit": 370,
+   "name": "turbo-underground-belt",
+   "type": "underground-belt",
+   "position": {
+    "x": 426.5,
+    "y": 3.5
+   },
+   "direction": 4,
+   "inputs": [
+    369
+   ],
+   "outputs": [],
+   "belt_to_ground_type": "input",
+   "underground_neighbour": 381
+  },
+  {
+   "unit": 381,
+   "name": "turbo-underground-belt",
+   "type": "underground-belt",
+   "position": {
+    "x": 431.5,
+    "y": 3.5
+   },
+   "direction": 4,
+   "inputs": [],
+   "outputs": [
+    384
+   ],
+   "belt_to_ground_type": "output",
+   "underground_neighbour": 370
+  },
+  {
+   "unit": 384,
+   "name": "turbo-transport-belt",
+   "type": "transport-belt",
+   "position": {
+    "x": 432.5,
+    "y": 3.5
+   },
+   "direction": 4,
+   "inputs": [
+    381
+   ],
+   "outputs": [
+    389
+   ],
+   "belt_shape": "straight"
+  },
+  {
+   "unit": 389,
+   "name": "turbo-transport-belt",
+   "type": "transport-belt",
+   "position": {
+    "x": 433.5,
+    "y": 3.5
+   },
+   "direction": 4,
+   "inputs": [
+    384
+   ],
+   "outputs": [
+    395
+   ],
+   "belt_shape": "straight"
+  },
+  {
+   "unit": 394,
+   "name": "turbo-transport-belt",
+   "type": "transport-belt",
+   "position": {
+    "x": 434.5,
+    "y": 2.5
+   },
+   "direction": 4,
+   "inputs": [
+    395
+   ],
+   "outputs": [
+    399
+   ],
+   "belt_shape": "right"
+  },
+  {
+   "unit": 395,
+   "name": "turbo-transport-belt",
+   "type": "transport-belt",
+   "position": {
+    "x": 434.5,
+    "y": 3.5
+   },
+   "direction": 0,
+   "inputs": [
+    389
+   ],
+   "outputs": [
+    394
+   ],
+   "belt_shape": "left"
+  },
+  {
+   "unit": 399,
+   "name": "turbo-underground-belt",
+   "type": "underground-belt",
+   "position": {
+    "x": 435.5,
+    "y": 2.5
+   },
+   "direction": 4,
+   "inputs": [
+    394
+   ],
+   "outputs": [],
+   "belt_to_ground_type": "input",
+   "underground_neighbour": 421
+  },
+  {
+   "unit": 416,
+   "name": "turbo-transport-belt",
+   "type": "transport-belt",
+   "position": {
+    "x": 442.5,
+    "y": 3.5
+   },
+   "direction": 4,
+   "inputs": [],
+   "outputs": [
+    422
+   ],
+   "belt_shape": "straight"
+  },
+  {
+   "unit": 421,
+   "name": "turbo-underground-belt",
+   "type": "underground-belt",
+   "position": {
+    "x": 443.5,
+    "y": 2.5
+   },
+   "direction": 4,
+   "inputs": [
+    422
+   ],
+   "outputs": [
+    426
+   ],
+   "belt_to_ground_type": "output",
+   "underground_neighbour": 399
+  },
+  {
+   "unit": 422,
+   "name": "turbo-transport-belt",
+   "type": "transport-belt",
+   "position": {
+    "x": 443.5,
+    "y": 3.5
+   },
+   "direction": 0,
+   "inputs": [
+    416
+   ],
+   "outputs": [
+    421
+   ],
+   "belt_shape": "left"
+  },
+  {
+   "unit": 426,
+   "name": "turbo-underground-belt",
+   "type": "underground-belt",
+   "position": {
+    "x": 444.5,
+    "y": 2.5
+   },
+   "direction": 4,
+   "inputs": [
+    421
+   ],
+   "outputs": [],
+   "belt_to_ground_type": "input",
+   "underground_neighbour": 448
+  },
+  {
+   "unit": 443,
+   "name": "turbo-transport-belt",
+   "type": "transport-belt",
+   "position": {
+    "x": 451.5,
+    "y": 3.5
+   },
+   "direction": 4,
+   "inputs": [],
+   "outputs": [
+    449
+   ],
+   "belt_shape": "straight"
+  },
+  {
+   "unit": 448,
+   "name": "turbo-underground-belt",
+   "type": "underground-belt",
+   "position": {
+    "x": 452.5,
+    "y": 2.5
+   },
+   "direction": 4,
+   "inputs": [
+    449
+   ],
+   "outputs": [
+    453
+   ],
+   "belt_to_ground_type": "output",
+   "underground_neighbour": 426
+  },
+  {
+   "unit": 449,
+   "name": "turbo-transport-belt",
+   "type": "transport-belt",
+   "position": {
+    "x": 452.5,
+    "y": 3.5
+   },
+   "direction": 0,
+   "inputs": [
+    443
+   ],
+   "outputs": [
+    448
+   ],
+   "belt_shape": "left"
+  },
+  {
+   "unit": 453,
+   "name": "turbo-underground-belt",
+   "type": "underground-belt",
+   "position": {
+    "x": 453.5,
+    "y": 2.5
+   },
+   "direction": 4,
+   "inputs": [
+    448
+   ],
+   "outputs": [],
+   "belt_to_ground_type": "input",
+   "underground_neighbour": 475
+  },
+  {
+   "unit": 470,
+   "name": "turbo-transport-belt",
+   "type": "transport-belt",
+   "position": {
+    "x": 460.5,
+    "y": 3.5
+   },
+   "direction": 4,
+   "inputs": [],
+   "outputs": [
+    476
+   ],
+   "belt_shape": "straight"
+  },
+  {
+   "unit": 475,
+   "name": "turbo-underground-belt",
+   "type": "underground-belt",
+   "position": {
+    "x": 461.5,
+    "y": 2.5
+   },
+   "direction": 4,
+   "inputs": [
+    476
+   ],
+   "outputs": [
+    480
+   ],
+   "belt_to_ground_type": "output",
+   "underground_neighbour": 453
+  },
+  {
+   "unit": 476,
+   "name": "turbo-transport-belt",
+   "type": "transport-belt",
+   "position": {
+    "x": 461.5,
+    "y": 3.5
+   },
+   "direction": 0,
+   "inputs": [
+    470
+   ],
+   "outputs": [
+    475
+   ],
+   "belt_shape": "left"
+  },
+  {
+   "unit": 480,
+   "name": "turbo-underground-belt",
+   "type": "underground-belt",
+   "position": {
+    "x": 462.5,
+    "y": 2.5
+   },
+   "direction": 4,
+   "inputs": [
+    475
+   ],
+   "outputs": [],
+   "belt_to_ground_type": "input",
+   "underground_neighbour": 510
+  },
+  {
+   "unit": 491,
+   "name": "turbo-transport-belt",
+   "type": "transport-belt",
+   "position": {
+    "x": 467.5,
+    "y": 0.5
+   },
+   "direction": 4,
+   "inputs": [
+    492
+   ],
+   "outputs": [
+    497
+   ],
+   "belt_shape": "right"
+  },
+  {
+   "unit": 492,
+   "name": "turbo-transport-belt",
+   "type": "transport-belt",
+   "position": {
+    "x": 467.5,
+    "y": 1.5
+   },
+   "direction": 0,
+   "inputs": [
+    493
+   ],
+   "outputs": [
+    491
+   ],
+   "belt_shape": "straight"
+  },
+  {
+   "unit": 493,
+   "name": "turbo-transport-belt",
+   "type": "transport-belt",
+   "position": {
+    "x": 467.5,
+    "y": 2.5
+   },
+   "direction": 0,
+   "inputs": [
+    494
+   ],
+   "outputs": [
+    492
+   ],
+   "belt_shape": "straight"
+  },
+  {
+   "unit": 494,
+   "name": "turbo-transport-belt",
+   "type": "transport-belt",
+   "position": {
+    "x": 467.5,
+    "y": 3.5
+   },
+   "direction": 0,
+   "inputs": [
+    498
+   ],
+   "outputs": [
+    493
+   ],
+   "belt_shape": "right"
+  },
+  {
+   "unit": 497,
+   "name": "turbo-underground-belt",
+   "type": "underground-belt",
+   "position": {
+    "x": 468.5,
+    "y": 0.5
+   },
+   "direction": 4,
+   "inputs": [
+    491
+   ],
+   "outputs": [],
+   "belt_to_ground_type": "input",
+   "underground_neighbour": 522
+  },
+  {
+   "unit": 498,
+   "name": "turbo-transport-belt",
+   "type": "transport-belt",
+   "position": {
+    "x": 468.5,
+    "y": 3.5
+   },
+   "direction": 12,
+   "inputs": [
+    503
+   ],
+   "outputs": [
+    494
+   ],
+   "belt_shape": "straight"
+  },
+  {
+   "unit": 503,
+   "name": "turbo-transport-belt",
+   "type": "transport-belt",
+   "position": {
+    "x": 469.5,
+    "y": 3.5
+   },
+   "direction": 12,
+   "inputs": [],
+   "outputs": [
+    498
+   ],
+   "belt_shape": "straight"
+  },
+  {
+   "unit": 510,
+   "name": "turbo-underground-belt",
+   "type": "underground-belt",
+   "position": {
+    "x": 471.5,
+    "y": 2.5
+   },
+   "direction": 4,
+   "inputs": [],
+   "outputs": [
+    513
+   ],
+   "belt_to_ground_type": "output",
+   "underground_neighbour": 480
+  },
+  {
+   "unit": 513,
+   "name": "turbo-underground-belt",
+   "type": "underground-belt",
+   "position": {
+    "x": 472.5,
+    "y": 2.5
+   },
+   "direction": 4,
+   "inputs": [
+    510
+   ],
+   "outputs": [],
+   "belt_to_ground_type": "input",
+   "underground_neighbour": 525
+  },
+  {
+   "unit": 522,
+   "name": "turbo-underground-belt",
+   "type": "underground-belt",
+   "position": {
+    "x": 475.5,
+    "y": 0.5
+   },
+   "direction": 4,
+   "inputs": [],
+   "outputs": [
+    523
+   ],
+   "belt_to_ground_type": "output",
+   "underground_neighbour": 497
+  },
+  {
+   "unit": 523,
+   "name": "turbo-transport-belt",
+   "type": "transport-belt",
+   "position": {
+    "x": 476.5,
+    "y": 0.5
+   },
+   "direction": 8,
+   "inputs": [
+    522
+   ],
+   "outputs": [
+    524
+   ],
+   "belt_shape": "right"
+  },
+  {
+   "unit": 524,
+   "name": "turbo-transport-belt",
+   "type": "transport-belt",
+   "position": {
+    "x": 476.5,
+    "y": 1.5
+   },
+   "direction": 4,
+   "inputs": [
+    523
+   ],
+   "outputs": [
+    528
+   ],
+   "belt_shape": "left"
+  },
+  {
+   "unit": 525,
+   "name": "turbo-underground-belt",
+   "type": "underground-belt",
+   "position": {
+    "x": 476.5,
+    "y": 2.5
+   },
+   "direction": 4,
+   "inputs": [],
+   "outputs": [
+    528
+   ],
+   "belt_to_ground_type": "output",
+   "underground_neighbour": 513
+  },
+  {
+   "unit": 526,
+   "name": "turbo-transport-belt",
+   "type": "transport-belt",
+   "position": {
+    "x": 477.5,
+    "y": -0.5
+   },
+   "direction": 8,
+   "inputs": [
+    531
+   ],
+   "outputs": [
+    527
+   ],
+   "belt_shape": "left"
+  },
+  {
+   "unit": 527,
+   "name": "turbo-underground-belt",
+   "type": "underground-belt",
+   "position": {
+    "x": 477.5,
+    "y": 0.5
+   },
+   "direction": 8,
+   "inputs": [
+    526
+   ],
+   "outputs": [],
+   "belt_to_ground_type": "input",
+   "underground_neighbour": 529
+  },
+  {
+   "unit": 528,
+   "name": "turbo-splitter",
+   "type": "splitter",
+   "position": {
+    "x": 477.5,
+    "y": 2
+   },
+   "direction": 4,
+   "inputs": [
+    524,
+    525
+   ],
+   "outputs": [
+    533,
+    534
+   ],
+   "splitter_input_priority": "right",
+   "splitter_output_priority": "right"
+  },
+  {
+   "unit": 529,
+   "name": "turbo-underground-belt",
+   "type": "underground-belt",
+   "position": {
+    "x": 477.5,
+    "y": 3.5
+   },
+   "direction": 8,
+   "inputs": [],
+   "outputs": [
+    530
+   ],
+   "belt_to_ground_type": "output",
+   "underground_neighbour": 527
+  },
+  {
+   "unit": 530,
+   "name": "turbo-transport-belt",
+   "type": "transport-belt",
+   "position": {
+    "x": 477.5,
+    "y": 4.5
+   },
+   "direction": 4,
+   "inputs": [
+    529
+   ],
+   "outputs": [
+    536
+   ],
+   "belt_shape": "left"
+  },
+  {
+   "unit": 531,
+   "name": "turbo-transport-belt",
+   "type": "transport-belt",
+   "position": {
+    "x": 478.5,
+    "y": -0.5
+   },
+   "direction": 12,
+   "inputs": [
+    532
+   ],
+   "outputs": [
+    526
+   ],
+   "belt_shape": "left"
+  },
+  {
+   "unit": 532,
+   "name": "turbo-transport-belt",
+   "type": "transport-belt",
+   "position": {
+    "x": 478.5,
+    "y": 0.5
+   },
+   "direction": 0,
+   "inputs": [
+    533
+   ],
+   "outputs": [
+    531
+   ],
+   "belt_shape": "straight"
+  },
+  {
+   "unit": 533,
+   "name": "turbo-transport-belt",
+   "type": "transport-belt",
+   "position": {
+    "x": 478.5,
+    "y": 1.5
+   },
+   "direction": 0,
+   "inputs": [
+    528
+   ],
+   "outputs": [
+    532
+   ],
+   "belt_shape": "left"
+  },
+  {
+   "unit": 534,
+   "name": "turbo-transport-belt",
+   "type": "transport-belt",
+   "position": {
+    "x": 478.5,
+    "y": 2.5
+   },
+   "direction": 4,
+   "inputs": [
+    535,
+    528
+   ],
+   "outputs": [
+    537
+   ],
+   "belt_shape": "straight"
+  },
+  {
+   "unit": 535,
+   "name": "turbo-transport-belt",
+   "type": "transport-belt",
+   "position": {
+    "x": 478.5,
+    "y": 3.5
+   },
+   "direction": 0,
+   "inputs": [
+    536
+   ],
+   "outputs": [
+    534
+   ],
+   "belt_shape": "straight"
+  },
+  {
+   "unit": 536,
+   "name": "turbo-transport-belt",
+   "type": "transport-belt",
+   "position": {
+    "x": 478.5,
+    "y": 4.5
+   },
+   "direction": 0,
+   "inputs": [
+    530
+   ],
+   "outputs": [
+    535
+   ],
+   "belt_shape": "left"
+  },
+  {
+   "unit": 537,
+   "name": "turbo-transport-belt",
+   "type": "transport-belt",
+   "position": {
+    "x": 479.5,
+    "y": 2.5
+   },
+   "direction": 4,
+   "inputs": [
+    534
+   ],
+   "outputs": [
+    538
+   ],
+   "belt_shape": "straight"
+  },
+  {
+   "unit": 538,
+   "name": "turbo-loader",
+   "type": "loader",
+   "position": {
+    "x": 481,
+    "y": 2.5
+   },
+   "direction": 4,
+   "inputs": [
+    537
+   ],
+   "outputs": [],
+   "loader_type": "input",
+   "loader_container": {
+    "name": "infinity-chest",
+    "position": {
+     "x": 482.5,
+     "y": 2.5
+    }
+   }
+  }
+ ],
+ "inserters": [
+  {
+   "unit": 277,
+   "position": {
+    "x": 397.5,
+    "y": 2.5
+   },
+   "direction": 0,
+   "mirroring": false,
+   "drop_position": {
+    "x": 397.5,
+    "y": 3.69921875
+   },
+   "drop_unit": 278,
+   "lane_read": 2
+  },
+  {
+   "unit": 304,
+   "position": {
+    "x": 406.5,
+    "y": 2.5
+   },
+   "direction": 0,
+   "mirroring": false,
+   "drop_position": {
+    "x": 406.5,
+    "y": 3.69921875
+   },
+   "drop_unit": 305,
+   "lane_read": 2
+  },
+  {
+   "unit": 331,
+   "position": {
+    "x": 415.5,
+    "y": 2.5
+   },
+   "direction": 0,
+   "mirroring": false,
+   "drop_position": {
+    "x": 415.5,
+    "y": 3.69921875
+   },
+   "drop_unit": 332,
+   "lane_read": 2
+  },
+  {
+   "unit": 358,
+   "position": {
+    "x": 424.5,
+    "y": 2.5
+   },
+   "direction": 0,
+   "mirroring": false,
+   "drop_position": {
+    "x": 424.5,
+    "y": 3.69921875
+   },
+   "drop_unit": 359,
+   "lane_read": 2
+  },
+  {
+   "unit": 388,
+   "position": {
+    "x": 433.5,
+    "y": 2.5
+   },
+   "direction": 0,
+   "mirroring": false,
+   "drop_position": {
+    "x": 433.5,
+    "y": 3.69921875
+   },
+   "drop_unit": 389,
+   "lane_read": 2
+  },
+  {
+   "unit": 415,
+   "position": {
+    "x": 442.5,
+    "y": 2.5
+   },
+   "direction": 0,
+   "mirroring": false,
+   "drop_position": {
+    "x": 442.5,
+    "y": 3.69921875
+   },
+   "drop_unit": 416,
+   "lane_read": 2
+  },
+  {
+   "unit": 442,
+   "position": {
+    "x": 451.5,
+    "y": 2.5
+   },
+   "direction": 0,
+   "mirroring": false,
+   "drop_position": {
+    "x": 451.5,
+    "y": 3.69921875
+   },
+   "drop_unit": 443,
+   "lane_read": 2
+  },
+  {
+   "unit": 469,
+   "position": {
+    "x": 460.5,
+    "y": 2.5
+   },
+   "direction": 0,
+   "mirroring": false,
+   "drop_position": {
+    "x": 460.5,
+    "y": 3.69921875
+   },
+   "drop_unit": 470,
+   "lane_read": 2
+  },
+  {
+   "unit": 502,
+   "position": {
+    "x": 469.5,
+    "y": 2.5
+   },
+   "direction": 0,
+   "mirroring": true,
+   "drop_position": {
+    "x": 469.5,
+    "y": 3.69921875
+   },
+   "drop_unit": 503,
+   "lane_read": 1
+  }
+ ],
+ "landing": [
+  {
+   "unit": 284,
+   "line": 1,
+   "read": []
+  },
+  {
+   "unit": 284,
+   "line": 2,
+   "read": [
+    [
+     283,
+     2
+    ]
+   ]
+  },
+  {
+   "unit": 311,
+   "line": 1,
+   "read": []
+  },
+  {
+   "unit": 311,
+   "line": 2,
+   "read": [
+    [
+     310,
+     2
+    ]
+   ]
+  },
+  {
+   "unit": 338,
+   "line": 1,
+   "read": []
+  },
+  {
+   "unit": 338,
+   "line": 2,
+   "read": [
+    [
+     337,
+     2
+    ]
+   ]
+  },
+  {
+   "unit": 365,
+   "line": 1,
+   "read": []
+  },
+  {
+   "unit": 365,
+   "line": 2,
+   "read": [
+    [
+     364,
+     2
+    ]
+   ]
+  },
+  {
+   "unit": 422,
+   "line": 1,
+   "read": []
+  },
+  {
+   "unit": 422,
+   "line": 2,
+   "read": [
+    [
+     421,
+     2
+    ]
+   ]
+  },
+  {
+   "unit": 449,
+   "line": 1,
+   "read": []
+  },
+  {
+   "unit": 449,
+   "line": 2,
+   "read": [
+    [
+     448,
+     2
+    ]
+   ]
+  },
+  {
+   "unit": 476,
+   "line": 1,
+   "read": []
+  },
+  {
+   "unit": 476,
+   "line": 2,
+   "read": [
+    [
+     475,
+     2
+    ]
+   ]
+  },
+  {
+   "unit": 369,
+   "line": 1,
+   "read": []
+  },
+  {
+   "unit": 369,
+   "line": 2,
+   "read": [
+    [
+     370,
+     1
+    ]
+   ]
+  },
+  {
+   "unit": 535,
+   "line": 1,
+   "read": [
+    [
+     534,
+     2
+    ]
+   ]
+  },
+  {
+   "unit": 535,
+   "line": 2,
+   "read": [
+    [
+     534,
+     2
+    ]
+   ]
+  }
+ ]
+}
