@@ -1,0 +1,291 @@
+{
+ "game_version": "2.1.24",
+ "rows": {
+  "arithmetic-combinator": {
+   "type": "arithmetic-combinator",
+   "tile_width": 1,
+   "tile_height": 2,
+   "source": "prototype data of game 2.1.24 through draftsman (derived); not in data-filtered.json"
+  },
+  "assembling-machine-3": {
+   "type": "assembling-machine",
+   "tile_width": 3,
+   "tile_height": 3,
+   "source": "clock-generator/resources/data-filtered.json (tile size and type); draftsman's 2.1.24 data gives the same"
+  },
+  "beacon": {
+   "type": "beacon",
+   "tile_width": 3,
+   "tile_height": 3,
+   "source": "prototype data of game 2.1.24 through draftsman (derived); not in data-filtered.json"
+  },
+  "big-mining-drill": {
+   "type": "mining-drill",
+   "tile_width": 5,
+   "tile_height": 5,
+   "source": "clock-generator/resources/data-filtered.json (tile size and type); draftsman's 2.1.24 data gives the same"
+  },
+  "biochamber": {
+   "type": "assembling-machine",
+   "tile_width": 3,
+   "tile_height": 3,
+   "source": "clock-generator/resources/data-filtered.json (tile size and type); draftsman's 2.1.24 data gives the same"
+  },
+  "car": {
+   "type": "car",
+   "source": "prototype type of game 2.1.24 through draftsman (derived); a vehicle is off the grid, so it has no tile size"
+  },
+  "cargo-wagon": {
+   "type": "cargo-wagon",
+   "source": "prototype type of game 2.1.24 through draftsman (derived); a vehicle is off the grid, so it has no tile size"
+  },
+  "constant-combinator": {
+   "type": "constant-combinator",
+   "tile_width": 1,
+   "tile_height": 1,
+   "source": "prototype data of game 2.1.24 through draftsman (derived); not in data-filtered.json"
+  },
+  "cryogenic-plant": {
+   "type": "assembling-machine",
+   "tile_width": 5,
+   "tile_height": 5,
+   "source": "clock-generator/resources/data-filtered.json (tile size and type); draftsman's 2.1.24 data gives the same"
+  },
+  "decider-combinator": {
+   "type": "decider-combinator",
+   "tile_width": 1,
+   "tile_height": 2,
+   "source": "prototype data of game 2.1.24 through draftsman (derived); not in data-filtered.json"
+  },
+  "display-panel": {
+   "type": "display-panel",
+   "tile_width": 1,
+   "tile_height": 1,
+   "source": "prototype data of game 2.1.24 through draftsman (derived); not in data-filtered.json"
+  },
+  "electric-energy-interface": {
+   "type": "electric-energy-interface",
+   "tile_width": 2,
+   "tile_height": 2,
+   "source": "prototype data of game 2.1.24 through draftsman (derived); not in data-filtered.json"
+  },
+  "electric-furnace": {
+   "type": "furnace",
+   "tile_width": 3,
+   "tile_height": 3,
+   "source": "clock-generator/resources/data-filtered.json (tile size and type); draftsman's 2.1.24 data gives the same"
+  },
+  "electric-mining-drill": {
+   "type": "mining-drill",
+   "tile_width": 3,
+   "tile_height": 3,
+   "source": "clock-generator/resources/data-filtered.json (tile size and type); draftsman's 2.1.24 data gives the same"
+  },
+  "electromagnetic-plant": {
+   "type": "assembling-machine",
+   "tile_width": 4,
+   "tile_height": 4,
+   "source": "clock-generator/resources/data-filtered.json (tile size and type); draftsman's 2.1.24 data gives the same"
+  },
+  "express-splitter": {
+   "type": "splitter",
+   "tile_width": 2,
+   "tile_height": 1,
+   "source": "prototype data of game 2.1.24 through draftsman (derived); not in data-filtered.json"
+  },
+  "express-transport-belt": {
+   "type": "transport-belt",
+   "tile_width": 1,
+   "tile_height": 1,
+   "source": "prototype data of game 2.1.24 through draftsman (derived); not in data-filtered.json"
+  },
+  "express-underground-belt": {
+   "type": "underground-belt",
+   "tile_width": 1,
+   "tile_height": 1,
+   "source": "prototype data of game 2.1.24 through draftsman (derived); not in data-filtered.json",
+   "max_distance": 9,
+   "max_distance_source": "max_distance of the prototype, game 2.1.24 through draftsman (derived)"
+  },
+  "fast-inserter": {
+   "type": "inserter",
+   "tile_width": 1,
+   "tile_height": 1,
+   "source": "prototype data of game 2.1.24 through draftsman (derived); not in data-filtered.json"
+  },
+  "fast-splitter": {
+   "type": "splitter",
+   "tile_width": 2,
+   "tile_height": 1,
+   "source": "prototype data of game 2.1.24 through draftsman (derived); not in data-filtered.json"
+  },
+  "fast-transport-belt": {
+   "type": "transport-belt",
+   "tile_width": 1,
+   "tile_height": 1,
+   "source": "prototype data of game 2.1.24 through draftsman (derived); not in data-filtered.json"
+  },
+  "fast-underground-belt": {
+   "type": "underground-belt",
+   "tile_width": 1,
+   "tile_height": 1,
+   "source": "prototype data of game 2.1.24 through draftsman (derived); not in data-filtered.json",
+   "max_distance": 7,
+   "max_distance_source": "max_distance of the prototype, game 2.1.24 through draftsman (derived)"
+  },
+  "foundry": {
+   "type": "assembling-machine",
+   "tile_width": 5,
+   "tile_height": 5,
+   "source": "clock-generator/resources/data-filtered.json (tile size and type); draftsman's 2.1.24 data gives the same"
+  },
+  "infinity-chest": {
+   "type": "infinity-container",
+   "tile_width": 1,
+   "tile_height": 1,
+   "source": "prototype data of game 2.1.24 through draftsman (derived); not in data-filtered.json"
+  },
+  "infinity-pipe": {
+   "type": "infinity-pipe",
+   "tile_width": 1,
+   "tile_height": 1,
+   "source": "prototype data of game 2.1.24 through draftsman (derived); not in data-filtered.json"
+  },
+  "lab": {
+   "type": "lab",
+   "tile_width": 3,
+   "tile_height": 3,
+   "source": "prototype data of game 2.1.24 through draftsman (derived); not in data-filtered.json"
+  },
+  "linked-chest": {
+   "type": "linked-container",
+   "tile_width": 1,
+   "tile_height": 1,
+   "source": "prototype data of game 2.1.24 through draftsman (derived); not in data-filtered.json"
+  },
+  "loader": {
+   "type": "loader",
+   "tile_width": 1,
+   "tile_height": 2,
+   "source": "prototype data of game 2.1.24 through draftsman (derived); not in data-filtered.json"
+  },
+  "medium-electric-pole": {
+   "type": "electric-pole",
+   "tile_width": 1,
+   "tile_height": 1,
+   "source": "prototype data of game 2.1.24 through draftsman (derived); not in data-filtered.json"
+  },
+  "passive-provider-chest": {
+   "type": "logistic-container",
+   "tile_width": 1,
+   "tile_height": 1,
+   "source": "prototype data of game 2.1.24 through draftsman (derived); not in data-filtered.json"
+  },
+  "pipe": {
+   "type": "pipe",
+   "tile_width": 1,
+   "tile_height": 1,
+   "source": "prototype data of game 2.1.24 through draftsman (derived); not in data-filtered.json"
+  },
+  "pipe-to-ground": {
+   "type": "pipe-to-ground",
+   "tile_width": 1,
+   "tile_height": 1,
+   "source": "prototype data of game 2.1.24 through draftsman (derived); not in data-filtered.json"
+  },
+  "recycler": {
+   "type": "furnace",
+   "tile_width": 2,
+   "tile_height": 4,
+   "source": "clock-generator/resources/data-filtered.json (tile size and type); draftsman's 2.1.24 data gives the same"
+  },
+  "rocket-silo": {
+   "type": "rocket-silo",
+   "tile_width": 9,
+   "tile_height": 9,
+   "source": "prototype data of game 2.1.24 through draftsman (derived); not in data-filtered.json"
+  },
+  "small-lamp": {
+   "type": "lamp",
+   "tile_width": 1,
+   "tile_height": 1,
+   "source": "prototype data of game 2.1.24 through draftsman (derived); not in data-filtered.json"
+  },
+  "splitter": {
+   "type": "splitter",
+   "tile_width": 2,
+   "tile_height": 1,
+   "source": "prototype data of game 2.1.24 through draftsman (derived); not in data-filtered.json"
+  },
+  "stack-inserter": {
+   "type": "inserter",
+   "tile_width": 1,
+   "tile_height": 1,
+   "source": "prototype data of game 2.1.24 through draftsman (derived); not in data-filtered.json"
+  },
+  "steel-chest": {
+   "type": "container",
+   "tile_width": 1,
+   "tile_height": 1,
+   "source": "prototype data of game 2.1.24 through draftsman (derived); not in data-filtered.json"
+  },
+  "storage-tank": {
+   "type": "storage-tank",
+   "tile_width": 3,
+   "tile_height": 3,
+   "source": "prototype data of game 2.1.24 through draftsman (derived); not in data-filtered.json"
+  },
+  "straight-rail": {
+   "type": "straight-rail",
+   "tile_width": 2,
+   "tile_height": 2,
+   "source": "prototype data of game 2.1.24 through draftsman (derived); not in data-filtered.json"
+  },
+  "substation": {
+   "type": "electric-pole",
+   "tile_width": 2,
+   "tile_height": 2,
+   "source": "prototype data of game 2.1.24 through draftsman (derived); not in data-filtered.json"
+  },
+  "transport-belt": {
+   "type": "transport-belt",
+   "tile_width": 1,
+   "tile_height": 1,
+   "source": "prototype data of game 2.1.24 through draftsman (derived); not in data-filtered.json"
+  },
+  "turbo-loader": {
+   "type": "loader",
+   "tile_width": 1,
+   "tile_height": 2,
+   "source": "prototype data of game 2.1.24 through draftsman (derived); not in data-filtered.json"
+  },
+  "turbo-splitter": {
+   "type": "splitter",
+   "tile_width": 2,
+   "tile_height": 1,
+   "source": "prototype data of game 2.1.24 through draftsman (derived); not in data-filtered.json"
+  },
+  "turbo-transport-belt": {
+   "type": "transport-belt",
+   "tile_width": 1,
+   "tile_height": 1,
+   "source": "prototype data of game 2.1.24 through draftsman (derived); not in data-filtered.json"
+  },
+  "turbo-underground-belt": {
+   "type": "underground-belt",
+   "tile_width": 1,
+   "tile_height": 1,
+   "source": "prototype data of game 2.1.24 through draftsman (derived); not in data-filtered.json",
+   "max_distance": 11,
+   "max_distance_source": "max_distance of the prototype, game 2.1.24 through draftsman (derived)"
+  },
+  "underground-belt": {
+   "type": "underground-belt",
+   "tile_width": 1,
+   "tile_height": 1,
+   "source": "prototype data of game 2.1.24 through draftsman (derived); not in data-filtered.json",
+   "max_distance": 5,
+   "max_distance_source": "max_distance of the prototype, game 2.1.24 through draftsman (derived)"
+  }
+ }
+}
