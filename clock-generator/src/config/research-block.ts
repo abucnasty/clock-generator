@@ -54,7 +54,9 @@ const ResearchBaseSchema = z.object({
  * It is kept so that a saved build or a link shows the research that the values come from.
  */
 export const ResearchBlockSchema = z.object({
-    profile: z.string().min(1).max(PROFILE_NAME_MAX).describe("The name of the research profile, for labels only."),
+    // counted by code point, as the profile store cuts a name: a character outside the basic plane is two UTF-16 units
+    profile: z.string().min(1).refine((name) => [...name].length <= PROFILE_NAME_MAX, { message: `Use at most ${PROFILE_NAME_MAX} characters.` })
+        .describe("The name of the research profile, for labels only."),
     template: z.enum(["no-research", "all-finite-research"]).nullable().describe("The template that the profile was made from, or null."),
     bonuses: ResearchBonusesSchema.describe("The research numbers that the values of the build were made with."),
     base: ResearchBaseSchema.describe("The values of the build without research, by entity number."),
