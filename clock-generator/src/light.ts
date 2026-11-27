@@ -64,6 +64,8 @@ export type { Ratio } from "./entities/traits/ratio";
 export * as Option from "fp-ts/Option";
 
 export { COPIES_DECIMAL_ERROR, isShortDecimalCopies } from "./config/copies-value";
+export { CONFIG_FORMAT, configFormatProblem, withConfigFormat } from "./config/format";
+export type { ConfigFormatProblem } from "./config/format";
 export { fraction } from "./data-types/fraction";
 export { migrateBeltSupplyOverrides } from "./config/migrate-belt-supply";
 export { dropFractionalSwingsOverride } from "./config/migrate-fractional-swings";

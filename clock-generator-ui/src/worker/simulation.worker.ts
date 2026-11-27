@@ -19,6 +19,7 @@ import { installFactsOf } from './installFacts';
 import { createReadyGate } from './requestGate';
 import { NO_NAMES, hiddenRecipeIds, type GameNames } from '../utils/gameNames';
 import type { CheckedRepeatedUnitConversion, RepeatedUnitsRecovery, CheckedShiftRow, ClockAlternativeRunView, ClockAlternativeView, EngineAnswers, EngineQuery, FactorioLookups, FuelViewData, PastedEntities, ShiftOptionsView, ShiftRangeEdge, WorkerRequest, WorkerResponse } from './types';
+import { REFUSED_CONFIG_ERRORS } from './types';
 
 type ClockGenerator = typeof import('clock-generator/browser');
 
@@ -488,6 +489,12 @@ const hasPrototype = (machine: unknown): boolean => typeof machine === 'object' 
  * its recipe), and why it cannot be loaded, or null when it can
  */
 function savedConfig(config: unknown): EngineAnswers['saved-config'] {
+    const refused = clockGenerator.configFormatProblem(config);
+    if (refused !== null) return { problem: refused === 'old' ? 'made before this format' : 'made by a newer version of the site', form: config, refused };
+    // the format is of the saved text; the form state loaded has none
+    const { format: _format, ...unmarked } = config as Record<string, unknown>;
+    void _format;
+    config = unmarked;
     const form = clockGenerator.migrateMachineTypes(renameSetpointRecipeToItem(config));
     const before = typeof config === 'object' && config !== null && 'machines' in config && Array.isArray(config.machines) ? config.machines : [];
     const marked = typeof form === 'object' && form !== null && 'machines' in form && Array.isArray(form.machines)
@@ -498,8 +505,13 @@ function savedConfig(config: unknown): EngineAnswers['saved-config'] {
     return result.success ? { problem: null, form: withoutBeltSetting(canonicalRate(marked)) } : { problem: result.error.message, form: marked };
 }
 
-/** An imported config file, which can hold what the form exports, e.g. an inserter end left unset; a former type is read as the machine */
+/**
+ * An imported config file, which can hold what the form exports, e.g. an inserter end left unset; a former type is read as
+ * the machine. A file without this format's `format` key, or with a newer one, is refused before any check.
+ */
 function configFile(config: unknown): EngineAnswers['config-file'] {
+    const refused = clockGenerator.configFormatProblem(config);
+    if (refused !== null) throw new Error(REFUSED_CONFIG_ERRORS[refused]);
     const form = clockGenerator.migrateMachineTypes(renameSetpointRecipeToItem(config));
     const result = parseFormConfig(clockGenerator.ConfigSchema, form);
     if (!result.success) {

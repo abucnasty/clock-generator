@@ -59,7 +59,7 @@ describe('cars, tanks, cargo wagons and rocket silos in the form', () => {
         if (link.kind !== 'link') throw new Error('not a share link');
         const shared = await decodeShareLink(link);
         if (shared.kind !== 'build') throw new Error('not a build');
-        expect(shared.config).toEqual(config);
+        expect(shared.config).toEqual({ format: 1, ...config });
     });
 
     it.each([ChestType.CAR, ChestType.TANK, ChestType.CARGO_WAGON, ChestType.ROCKET_SILO])('adds a %s that the generator takes', type => {

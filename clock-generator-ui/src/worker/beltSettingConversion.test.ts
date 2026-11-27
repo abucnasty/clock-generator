@@ -2,7 +2,7 @@ import factorioData from '../../../clock-generator/resources/data-filtered.json?
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ConfigSchema, FactorioDataService, laneFactsOfConfig, type Config } from 'clock-generator/browser';
 import type { EngineAnswers, EngineQuery, WorkerRequest, WorkerResponse } from './types';
-import { readConfigFile, readSavedConfig, serializeConfig } from '../hooks/usePersistedConfigForm';
+import { readConfigFile, readSavedBuild, serializeConfig } from '../hooks/usePersistedConfigForm';
 import { configToFormData, formDataToConfig } from '../utils/configForm/configMapping';
 import type { ConfigFormData } from '../utils/configForm/formData';
 import { createDefaultConfig } from '../utils/configForm/formData';
@@ -77,7 +77,7 @@ describe('the conversion of the former belt setting', () => {
         const counts: Record<string, number> = {};
         const lines: string[] = [];
         for (const [name, original] of cases) {
-            const read = await ask({ kind: 'config-file', config: original });
+            const read = await ask({ kind: 'config-file', config: { format: 1, ...original } });
             expect(read.overrides?.backed_up_belts, name).toBeUndefined();
             const before = factsOf(ConfigSchema.parse(original) as Config), after = factsOf(read);
             before.forEach((lane, index) => {
@@ -123,15 +123,15 @@ describe('the conversion of the former belt setting', () => {
         expect(lanesOf(opened).map(lane => lane.lane_end?.kind)).toEqual(['dead_end', 'dead_end', undefined]);
         // a saved build of the released page, then saved and loaded again
         const savedText = serializeConfig({ ...configToFormData(automation), overrides: { backed_up_belts: true } } as ConfigFormData);
-        const loaded = await ask({ kind: 'saved-config', config: readSavedConfig(savedText) });
+        const loaded = await ask({ kind: 'saved-config', config: readSavedBuild(savedText) });
         expect(loaded.problem).toBeNull();
         const form = loaded.form as ConfigFormData;
         expect(form.overrides?.backed_up_belts).toBeUndefined();
-        const again = await ask({ kind: 'saved-config', config: readSavedConfig(serializeConfig(form)) });
+        const again = await ask({ kind: 'saved-config', config: readSavedBuild(serializeConfig(form)) });
         expect(formDataToConfig(again.form as ConfigFormData)).toEqual(formDataToConfig(form));
         expect(lanesOf(formDataToConfig(form)).map(lane => lane.lane_end?.kind)).toEqual(['dead_end', 'dead_end', undefined]);
         // a saved build of the released page answered Moving stated nothing, and stays so
-        const moving = await ask({ kind: 'saved-config', config: readSavedConfig(serializeConfig(configToFormData(automation))) });
+        const moving = await ask({ kind: 'saved-config', config: readSavedBuild(serializeConfig(configToFormData(automation))) });
         expect(lanesOf(moving.form as ConfigFormData).every(lane => lane.lane_end === undefined)).toBe(true);
     });
 
@@ -148,7 +148,7 @@ describe('the conversion of the former belt setting', () => {
             { id: 2, _uuid: 'i2', source: { type: 'belt', id: 2 }, sink: { type: 'machine', id: 2 } },
         ] as ConfigFormData['inserters'];
         const saved = serializeConfig({ ...form, overrides: { backed_up_belts: true } });
-        const loaded = await ask({ kind: 'saved-config', config: readSavedConfig(saved) });
+        const loaded = await ask({ kind: 'saved-config', config: readSavedBuild(saved) });
         expect(loaded.problem).toBeNull();
         const lanes = lanesOf(loaded.form as ConfigFormData);
         // the iron plate lane feeds a machine with a recipe: an input lane; the copper plate lane's inserter feeds the

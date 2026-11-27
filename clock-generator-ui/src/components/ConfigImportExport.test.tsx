@@ -2,11 +2,11 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { Option } from 'clock-generator/light';
+import { configFormatProblem, Option } from 'clock-generator/light';
 import { ConfigImportExport, type BuildEntryHandle } from './ConfigImportExport';
 import { createDefaultConfig } from '../utils/configForm/formData';
 import { inserterDetailLines } from '../utils/pasteText';
-import type { EngineQuery, PastedEntities } from '../worker/types';
+import { REFUSED_CONFIG_ERRORS, type EngineQuery, type PastedEntities } from '../worker/types';
 import factorioData from '../../../clock-generator/resources/data-filtered.json?raw';
 import ironScaffold from '../../../clock-generator/resources/config-samples/smelting/iron-plate/iron-plate-80-car-chest.scaffold?raw';
 import { encodeBlueprintFileBrowser, FactorioDataService, importBlueprint, type FactorioData } from 'clock-generator/browser';
@@ -417,8 +417,63 @@ describe('a pasted blueprint', () => {
     it('opens a build file as before', async () => {
         const { container } = render(<ConfigImportExport {...props} />);
         const input = container.querySelector<HTMLInputElement>('input[type="file"]')!;
-        fireEvent.change(input, { target: { files: [new File([JSON.stringify({ setpoint: { item: 'iron-plate', items_per_second: 1, copies: 1 }, machines: [] })], 'build.json')] } });
+        fireEvent.change(input, { target: { files: [new File([JSON.stringify({ format: 1, setpoint: { item: 'iron-plate', items_per_second: 1, copies: 1 }, machines: [] })], 'build.json')] } });
         await vi.waitFor(() => expect(asked('config-file').length).toBe(1));
         expect(asked('pasted-blueprint')).toEqual([]);
+    });
+});
+
+describe('a configuration of another format', () => {
+    const old = { setpoint: { item: 'iron-plate', items_per_second: 1, copies: 1 }, machines: [] };
+    // the worker refuses it at its door, before any check, with the message its answer carries
+    const refusing = (problem: 'old' | 'newer') => validate.mockImplementation(async (request: EngineQuery) => {
+        if (request.kind === 'config-file') throw new Error(REFUSED_CONFIG_ERRORS[problem]);
+        return incoming;
+    });
+
+    it.each(['old', 'newer'] as const)('opened as a file (%s), says so in place of the build, with Paste a blueprint', async problem => {
+        refusing(problem);
+        const { container } = render(<ConfigImportExport {...props} />);
+        const input = container.querySelector<HTMLInputElement>('input[type="file"]')!;
+        fireEvent.change(input, { target: { files: [new File([JSON.stringify(old)], 'build.json')] } });
+        const dialog = await screen.findByRole('dialog', { name: problem === 'old' ? 'This configuration is no longer supported' : 'This configuration was made by a newer version of the site' });
+        expect(within(dialog).getByRole('button', { name: 'Paste a blueprint' })).toBeDefined();
+        expect(props.onImport).not.toHaveBeenCalled();
+        expect(props.onBuildReplaced).not.toHaveBeenCalled();
+    });
+
+    it('pasted, is refused for its format without asking the engine', async () => {
+        Render();
+        await navigator.clipboard.writeText(JSON.stringify(old));
+        act(() => entry.current!.pasteFromFactorio());
+        expect(await screen.findByRole('dialog', { name: 'This configuration is no longer supported' })).toBeDefined();
+        expect(validate).not.toHaveBeenCalled();
+    });
+
+    it('is what Save configuration file writes: the format first, and the file opens again', async () => {
+        const blobs: Blob[] = [];
+        vi.stubGlobal('URL', Object.assign(Object.create(URL), { createObjectURL: (blob: Blob) => { blobs.push(blob); return 'blob:saved'; }, revokeObjectURL: vi.fn() }));
+        try {
+            const build = { setpoint: { item: 'iron-plate', items_per_second: 1, copies: 1 }, machines: [], inserters: [], belts: [], chests: [] };
+            props = { ...props, config: build as never };
+            const { user } = Render();
+            await user.click(screen.getByRole('button', { name: 'More options' }));
+            await user.click(screen.getByRole('menuitem', { name: 'Save configuration file' }));
+            expect(blobs).toHaveLength(1);
+            const saved = JSON.parse(await blobs[0].text()) as Record<string, unknown>;
+            expect(Object.keys(saved)[0]).toBe('format');
+            expect(saved.format).toBe(1);
+            expect(configFormatProblem(saved)).toBeNull();
+        } finally {
+            vi.unstubAllGlobals();
+        }
+    });
+
+    it('pasted with this format, is a build file to open, as before', async () => {
+        Render();
+        await navigator.clipboard.writeText(JSON.stringify({ format: 1, ...old }));
+        act(() => entry.current!.pasteFromFactorio());
+        expect(await screen.findByText(PASTE_PROMPTS['build-file'].text)).toBeDefined();
+        expect(screen.queryByRole('dialog', { name: 'This configuration is no longer supported' })).toBeNull();
     });
 });

@@ -1,8 +1,7 @@
-import path from "path";
 import { describe, expect, it } from "vitest";
 import "../data/factorio-data-file";
 import { machineForRecipe, machineForRule } from "../entities/machine/machine-rule";
-import { loadConfigFromFile, parseConfig } from "./loader";
+import { parseConfig } from "./loader";
 import { migrateMachineType, migrateMachineTypes } from "./migrate-machine-type";
 import { MachineConfigurationSchema } from "./schema";
 
@@ -53,13 +52,6 @@ describe("a machine's former type", () => {
         await expect(parseConfig(config("something"))).rejects.toThrow("expected one of \"machine\"|\"furnace\"|\"biochamber\"");
         // a recycler is a machine named by its prototype, as any other: no rule is called so
         await expect(parseConfig(config("recycler"))).rejects.toThrow("expected one of \"machine\"|\"furnace\"|\"biochamber\"");
-    });
-
-    it("is read from the legacy fixture: each rule's machine, none for a crafting machine none of which makes the recipe", async () => {
-        const config = await loadConfigFromFile(path.join(__dirname, "fixtures/legacy/machine-type.json"));
-        expect(config.machines.map(machine => [machine.id, machine.prototype])).toEqual([
-            [1, "electric-furnace"], [2, "assembling-machine-3"], [3, "biochamber"], [4, undefined], [5, "cryogenic-plant"]]);
-        expect(config.machines.some(machine => "type" in machine)).toBe(false);
     });
 });
 

@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Config } from 'clock-generator/browser';
 import { askEngine } from '../worker/engineClient';
+import { refusedConfigOf } from '../worker/types';
+import type { ConfigFormatProblem } from 'clock-generator/light';
 import { decodeShareLink, readShareHash, shareInvalidMessage, SHARE_PROBLEM_MESSAGES, type SharedBuild } from '../utils/shareLink';
 import { readConfigFile } from './usePersistedConfigForm';
 import { neverOverrideNoteOfConfig } from '../utils/neverOverrideNote';
@@ -30,7 +32,8 @@ function takeShareHash(): QueuedLink | null {
 /**
  * A share link the page was opened with, or that was put in the address bar since (`hashchange`): once the page is
  * `ready`, it is decoded and checked as a build file is, then `pending` until the player opens it (`accept`) or not
- * (`cancel`). A link that cannot be opened says why in a message, and nothing else happens. The hash is removed at
+ * (`cancel`). A link that cannot be opened says why in a message, and nothing else happens; one whose build is of another
+ * format is `refused`, for the page to say so in place of the build, until `closeRefused`. The hash is removed at
  * once, so a reload doesn't ask again and the address bar doesn't keep a build that may since have been edited.
  */
 export function useSharedBuildLink(ready: boolean) {
@@ -41,6 +44,8 @@ export function useSharedBuildLink(ready: boolean) {
         return read.kind === 'link' ? { version: read.version, data: read.data, id: ++nextLinkId } : null;
     });
     const [pending, setPending] = useState<SharedBuild | null>(null);
+    // a link whose build the site does not read for its format: the page shows the message in place of the build
+    const [refused, setRefused] = useState<ConfigFormatProblem | null>(null);
     const pendingRef = useRef(pending);
     useEffect(() => {
         pendingRef.current = pending;
@@ -68,9 +73,14 @@ export function useSharedBuildLink(ready: boolean) {
             }
             let config: Config;
             try {
-                // migrated and checked as an opened build file is
+                // checked as an opened build file is
                 config = await askEngine({ kind: 'config-file', config: readConfigFile(JSON.stringify(decoded.config)) });
             } catch (error) {
+                const refusal = refusedConfigOf(error);
+                if (refusal !== null) {
+                    if (alive) setRefused(refusal);
+                    return;
+                }
                 if (alive) notify({ severity: 'error', text: shareInvalidMessage(error instanceof Error ? error.message : String(error)) });
                 return;
             }
@@ -90,6 +100,7 @@ export function useSharedBuildLink(ready: boolean) {
         return build;
     }, []);
     const cancel = useCallback(() => setPending(null), []);
+    const closeRefused = useCallback(() => setRefused(null), []);
 
-    return { pending, accept, cancel };
+    return { pending, accept, cancel, refused, closeRefused };
 }

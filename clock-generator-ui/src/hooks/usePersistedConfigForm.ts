@@ -1,4 +1,4 @@
-import { canonicalRate, isRatePair } from 'clock-generator/light';
+import { canonicalRate, configFormatProblem, isRatePair, withConfigFormat, type ConfigFormatProblem } from 'clock-generator/light';
 import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import { ChestType, dropFractionalSwingsOverride, migrateBeltSupplyOverrides, migrateMiningProductivityLevel, readNeverOverridesInConfig, renameClockedPeriodInConfig, renameLoopSeedItemsToKickStart, renameSetpointRecipeToItem, renameTargetOutputToSetpoint } from 'clock-generator/light';
 import { askEngine } from '../worker/engineClient';
@@ -12,6 +12,8 @@ import {
     nextConflict,
     NO_CONFLICT,
     openLibrary,
+    refusedOpenNotice,
+    refusedStartNotice,
     otherTabProblemMessage,
     readIndex,
     removeBuild,
@@ -105,6 +107,20 @@ export function readConfigFile(content: string): unknown {
     return parsed;
 }
 
+/**
+ * Why a saved build is not read for its format (made before this format, or by a newer version of the site), before
+ * any other test of it; null when it is of this format, or is not a JSON object at all (then it is not a build)
+ */
+export function savedFormatProblem(stored: string): ConfigFormatProblem | null {
+    let parsed: unknown;
+    try {
+        parsed = JSON.parse(stored);
+    } catch {
+        return null;
+    }
+    return typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed) ? configFormatProblem(parsed) : null;
+}
+
 /** The saved form state with the legacy fields migrated; null if it is not JSON or lacks the required fields */
 export function readSavedConfig(stored: string): ConfigFormData | null {
     try {
@@ -136,6 +152,8 @@ export function readSavedConfig(stored: string): ConfigFormData | null {
             }
             // forms saved before ids were renumbered on delete carry a UI-only `next_ids`; it is no longer used
             delete parsed.next_ids;
+            // the format is of the saved text, tested at the door (`readSavedBuild`, the worker's check); the form has none
+            delete parsed.format;
             if (typeof parsed.setpoint.items_per_second !== 'number' && !isRatePair(parsed.setpoint.items_per_second)) return null;
             return canonicalRate(parsed) as ConfigFormData;
         }
@@ -148,8 +166,34 @@ export function readSavedConfig(stored: string): ConfigFormData | null {
 interface StoredConfig {
     /** As saved */
     text: string;
-    /** Null when it cannot be read as the form state */
+    /** Null when it cannot be read as the form state, or is refused */
     config: ConfigFormData | null;
+    /** Not read for its format: kept as it is, listed, and never loaded or saved over */
+    refused: ConfigFormatProblem | null;
+}
+
+/** `form`, read from the saved `text`, as the worker's 'saved-config' check takes it: with the `format` the text holds */
+function withSavedFormat(text: string, form: ConfigFormData): unknown {
+    let format: unknown;
+    try {
+        format = (JSON.parse(text) as { format?: unknown }).format;
+    } catch {
+        format = undefined;
+    }
+    return format === undefined ? form : { format, ...form };
+}
+
+/** A saved build's text as the worker's 'saved-config' check takes it; null if it is not a build (`readSavedConfig`) */
+export function readSavedBuild(stored: string): unknown {
+    const form = readSavedConfig(stored);
+    return form === null ? null : withSavedFormat(stored, form);
+}
+
+/** A saved build that is not read for its format, as Your configurations lists it */
+export interface RefusedBuild {
+    problem: ConfigFormatProblem;
+    /** As saved, for Download */
+    text: string;
 }
 
 /** The page's localStorage, reached only inside the calls: in some browsers merely reading `localStorage` throws */
@@ -180,7 +224,9 @@ function readItem(key: string): string | null {
 /** The build saved under `key`; null if there is none */
 function readConfigFromStorage(key: string): StoredConfig | null {
     const text = readItem(key);
-    return text ? { text, config: readSavedConfig(text) } : null;
+    if (!text) return null;
+    const refused = savedFormatProblem(text);
+    return { text, config: refused === null ? readSavedConfig(text) : null, refused };
 }
 
 /**
@@ -200,10 +246,10 @@ export function backUpSavedConfig(storage: Pick<Storage, 'setItem'>, text: strin
         + 'the browser console says what is wrong with it.';
 }
 
-/** The form state as saved in localStorage */
+/** The form state as saved in localStorage, its `format` first */
 export function serializeConfig(config: ConfigFormData): string {
     // Strip internal _uuid fields — they are UI-only and shouldn't be in the exported config.
-    return JSON.stringify(canonicalRate(config), (key, value) =>
+    return JSON.stringify(withConfigFormat(canonicalRate(config)), (key, value) =>
         key === '_uuid' ? undefined : value
     );
 }
@@ -274,6 +320,10 @@ export interface BuildLibrary {
     addBuild: (form: ConfigFormData, name: string | null, options?: { replaceId?: string }) => { id: string; previous: BuildMeta };
     /** For an Undo: removes `removeId`, puts `meta` back with `form`, and opens it, with no check (the form was open before) */
     restore: (args: { meta: BuildMeta; form: ConfigFormData; removeId?: string }) => void;
+    /** The listed builds that are not read for their format, by id: never opened, offered for Download and Remove */
+    refused: ReadonlyMap<string, RefusedBuild>;
+    /** Removes a listed build that is not read; it is not the open one */
+    removeRefused: (id: string) => void;
     /** Another tab saving this build */
     conflict: ConflictState;
     /** Loads the other tab's version, calling `beforeApply` just before (for Undo); false when it could not */
@@ -297,22 +347,25 @@ export function usePersistedConfigForm() {
     const notify = useNotify();
     const [opened] = useState(() => openLibrary(pageLocal, pageSession, Date.now()));
     const writable = opened.writable;
-    const [index, setIndex] = useState(opened.index);
     const [stored] = useState(() => readConfigFromStorage(buildKey(opened.activeId)));
     const [defaultConfig] = useState(createDefaultConfig);
-    const [current, setCurrent] = useState<OpenBuild>(() => ({ id: opened.activeId, form: defaultConfig }));
+    // the build the page would open first is not read: a new untitled build opens, and the refused one stays listed
+    const [startMeta] = useState(() => (stored?.refused ? newBuildMeta(crypto.randomUUID(), defaultConfig, null, Date.now()) : null));
+    const [index, setIndex] = useState(() => (startMeta === null ? opened.index : upsertBuild(opened.index, startMeta)));
+    const [current, setCurrent] = useState<OpenBuild>(() => ({ id: startMeta?.id ?? opened.activeId, form: defaultConfig }));
     const [isLoaded, setIsLoaded] = useState(stored?.config == null);
     // why the saved config could not be checked, e.g. the engine's worker did not start
     const [loadError, setLoadError] = useState<string | null>(null);
     // one that cannot be read at all is backed up at once, before the first save (doing it twice does no harm)
     const [loadNotice, setLoadNotice] = useState(() => {
+        if (stored?.refused) return refusedStartNotice(stored.refused);
         if (stored?.config !== null) return null;
         console.warn('Saved config in localStorage is not the form state, using defaults');
         return backUpSavedConfig(pageLocal, stored.text, backupKey(opened.activeId));
     });
     const [conflict, setConflictState] = useState<ConflictState>(NO_CONFLICT);
     // a saved build that held the Never on override, which is removed: its entities load with Auto, and the user is told once
-    const [neverNote] = useState(() => (stored ? neverOverrideNoteOfText(stored.text) : null));
+    const [neverNote] = useState(() => (stored && stored.refused === null ? neverOverrideNoteOfText(stored.text) : null));
     const neverNoteShownRef = useRef(false);
     useEffect(() => {
         if (neverNote === null || neverNoteShownRef.current) return;
@@ -321,7 +374,7 @@ export function usePersistedConfigForm() {
     }, [neverNote, notify]);
 
     // read by the handlers and the storage listener, which may run after an await; the id is set with the state
-    const idRef = useRef(opened.activeId);
+    const idRef = useRef(startMeta?.id ?? opened.activeId);
     const formRef = useRef(current.form);
     const revisionRef = useRef(0);
     const loadIntentRef = useRef(0);
@@ -332,7 +385,7 @@ export function usePersistedConfigForm() {
     const indexRef = useRef(index);
     const conflictRef = useRef(conflict);
     // the text this tab last wrote or loaded for its build, which another tab's save is told from
-    const lastTextRef = useRef<string | null>(stored?.text ?? null);
+    const lastTextRef = useRef<string | null>(startMeta ? null : stored?.text ?? null);
     // this tab's build was deleted in another tab: it stays open here, and the next save lists it again
     const deletedElsewhereRef = useRef(false);
     // a save failed: the warning shows once, until a save works again
@@ -438,7 +491,7 @@ export function usePersistedConfigForm() {
             if (load.intent !== loadIntentRef.current && pendingLoadRef.current !== null) initialCompletionRef.current = finish;
             else finish();
         };
-        askEngine({ kind: 'saved-config', config: savedConfig }).then(
+        askEngine({ kind: 'saved-config', config: withSavedFormat(stored.text, savedConfig) }).then(
             ({ problem, form }) => complete(() => {
                 if (problem === null) {
                     // unless the config was replaced (imported or reset) in the meantime; with its machines' former types read
@@ -459,6 +512,16 @@ export function usePersistedConfigForm() {
             initialCompletionRef.current = null;
         };
     }, [stored, defaultConfig, opened.activeId, beginLoad, matchesBuildMutation, commitBuildReplacement]);
+
+    // the new build opened in place of a refused one is listed at once, as New build lists one (the list shown has it)
+    useEffect(() => {
+        if (startMeta === null || !writable) return;
+        try {
+            pageLocal.setItem(LIBRARY_KEY, JSON.stringify(upsertBuild(storedIndex() ?? opened.index, startMeta)));
+        } catch (e) {
+            console.warn('Failed to save the list of builds:', e);
+        }
+    }, [startMeta, writable, opened.index]);
 
     // the tab remembers its build, so a reload stays on it
     useEffect(() => {
@@ -557,11 +620,21 @@ export function usePersistedConfigForm() {
             // listed but never saved: a new build is saved on its first change
             return { form: createDefaultConfig(), text: null };
         }
+        // not read for its format: kept as it is, never backed up or saved over
+        const format = savedFormatProblem(text);
+        if (format !== null) {
+            if (current()) setLoadNotice(refusedOpenNotice(format));
+            return null;
+        }
         let form = readSavedConfig(text);
         let problem: string | null = form === null ? 'not the form state' : null;
         if (form !== null) {
             try {
-                const checked = await askEngine({ kind: 'saved-config', config: form });
+                const checked = await askEngine({ kind: 'saved-config', config: withSavedFormat(text, form) });
+                if (checked.refused !== undefined) {
+                    if (current()) setLoadNotice(refusedOpenNotice(checked.refused));
+                    return null;
+                }
                 problem = checked.problem;
                 form = checked.form as ConfigFormData;
             } catch (e) {
@@ -685,7 +758,7 @@ export function usePersistedConfigForm() {
         let problem: string | null = form === null ? 'It is not a build.' : null;
         if (form !== null) {
             try {
-                const checked = await askEngine({ kind: 'saved-config', config: form });
+                const checked = await askEngine({ kind: 'saved-config', config: withSavedFormat(episode.text, form) });
                 problem = checked.problem;
                 form = checked.form as ConfigFormData;
             } catch (e) {
@@ -707,6 +780,28 @@ export function usePersistedConfigForm() {
 
     const closeConflict = useCallback(() => setConflict((state) => nextConflict(state, { kind: 'closed' })), [setConflict]);
 
+    // the listed builds whose saved text is not read for its format; read again whenever the list changes
+    const refused = useMemo(() => {
+        const found = new Map<string, RefusedBuild>();
+        for (const build of index.builds) {
+            if (build.id === current.id) continue;
+            const text = readItem(buildKey(build.id));
+            const problem = text === null ? null : savedFormatProblem(text);
+            if (text !== null && problem !== null) found.set(build.id, { problem, text });
+        }
+        return found;
+    }, [index.builds, current.id]);
+
+    const removeRefused = useCallback((id: string) => {
+        if (id === idRef.current) return;
+        try {
+            pageLocal.removeItem(buildKey(id));
+        } catch (e) {
+            console.warn('Failed to remove a build from localStorage:', e);
+        }
+        commitIndex((saved) => removeBuild(saved, id));
+    }, [commitIndex]);
+
     const currentMeta = useMemo(
         () => index.builds.find((build) => build.id === current.id) ?? newBuildMeta(current.id, current.form, null, 0),
         [index.builds, current.id, current.form],
@@ -723,10 +818,12 @@ export function usePersistedConfigForm() {
         deleteBuild,
         addBuild,
         restore,
+        refused,
+        removeRefused,
         conflict,
         loadOtherTabVersion,
         closeConflict,
-    }), [index.builds, writable, current.id, currentMeta, openBuild, newBuild, duplicateBuild, renameBuild, deleteBuild, addBuild, restore, conflict, loadOtherTabVersion, closeConflict]);
+    }), [index.builds, writable, current.id, currentMeta, openBuild, newBuild, duplicateBuild, renameBuild, deleteBuild, addBuild, restore, refused, removeRefused, conflict, loadOtherTabVersion, closeConflict]);
 
     return { config: current.form, setConfig, resetConfig, captureBuildMutation, commitBuildReplacement,
         isLoaded, loadError, unchecked, loadNotice, dismissLoadNotice, library };

@@ -1,7 +1,7 @@
 import type { InternalError } from '../utils/internalError';
 import type { ValidationDiagnostic } from '../utils/buildValidation';
 import type { z } from 'zod';
-import type { SetpointOutput } from 'clock-generator/light';
+import type { ConfigFormatProblem, SetpointOutput } from 'clock-generator/light';
 import type {
     CoordinatedSourcesInput,
     RegionLayerInput,
@@ -601,9 +601,10 @@ export interface EngineAnswers {
     /** Why the saved config cannot be used; null when it can */
     /**
      * The saved form state with each machine's former type read as its machine, to load in its place, and why it cannot
-     * be loaded, or null when it can
+     * be loaded, or null when it can; `refused` when its format is not read, and then nothing else is checked
      */
-    'saved-config': { problem: string | null; form: unknown };
+    'saved-config': { problem: string | null; form: unknown; refused?: ConfigFormatProblem };
+    /** The checked build of a file or share link; one whose format is not read fails with `REFUSED_CONFIG_ERRORS`' message */
     'config-file': Config;
     'pasted-entities': PastedEntities;
     'pasted-blueprint': { kind: 'problem'; problem: ImportProblem } | ({ kind: 'build' } & PastedBlueprint);
@@ -616,4 +617,16 @@ export interface QueryRequest {
     type: 'query';
     requestId: number;
     query: EngineQuery;
+}
+
+/** The message a `config-file` query fails with when the file's format is not read: the worker's errors carry a message only */
+export const REFUSED_CONFIG_ERRORS: Readonly<Record<ConfigFormatProblem, string>> = {
+    old: 'The configuration has no format key: it was made before this format.',
+    newer: 'The configuration has a format newer than this site reads.',
+};
+
+/** Why a failed `config-file` query was refused for the file's format; null when it failed for another reason */
+export function refusedConfigOf(error: unknown): ConfigFormatProblem | null {
+    const message = error instanceof Error ? error.message : null;
+    return (Object.keys(REFUSED_CONFIG_ERRORS) as ConfigFormatProblem[]).find(problem => REFUSED_CONFIG_ERRORS[problem] === message) ?? null;
 }

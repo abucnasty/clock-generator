@@ -4,7 +4,7 @@ import { LATEST_SIDECAR_VERSION, type Config } from 'clock-generator/browser';
 import { Option } from 'clock-generator/light';
 import { ConfigPaths } from '../../../clock-generator/dist/config/config-paths.js';
 import type { EngineAnswers, EngineQuery, WorkerRequest, WorkerResponse } from './types';
-import { readConfigFile, readSavedConfig, serializeConfig } from '../hooks/usePersistedConfigForm';
+import { readConfigFile, readSavedBuild, serializeConfig } from '../hooks/usePersistedConfigForm';
 import { configToFormData, formDataToConfig } from '../utils/configForm/configMapping';
 import { createDefaultConfig, type ConfigFormData } from '../utils/configForm/formData';
 import { formLaneFactsOf } from '../utils/laneFacts';
@@ -101,7 +101,7 @@ const PATHS: Record<string, (text: string) => Promise<Config>> = {
         return formDataToConfig(await opened(JSON.stringify(decoded.config)));
     },
     'a saved build reopened': async text => {
-        const saved = readSavedConfig(serializeConfig(await opened(text)));
+        const saved = readSavedBuild(serializeConfig(await opened(text)));
         const checked = await ask({ kind: 'saved-config', config: saved });
         if (checked.problem !== null) throw new Error(checked.problem);
         return formDataToConfig(checked.form as ConfigFormData);

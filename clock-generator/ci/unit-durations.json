@@ -10,6 +10,7 @@
  "src/config/copies-validator.test.ts": 0.1,
  "src/config/current-samples.test.ts": 0.1,
  "src/config/drop-spacing.test.ts": 8.2,
+ "src/config/format.test.ts": 0.1,
  "src/config/import-pipeline.test.ts": 0.1,
  "src/config/inserter-coverage-validator.test.ts": 0.4,
  "src/config/inserter-scope.test.ts": 0.1,

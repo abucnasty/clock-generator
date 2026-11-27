@@ -101,7 +101,10 @@ describe('share links: round trips', () => {
     ])('carries %s', async (_, name, config) => {
         const link = await encodeShareLink({ name, config }, BASE);
         expect(link.startsWith(`${BASE}#build=1.`)).toBe(true);
-        expect(await decodeShareLink(partsOf(link))).toEqual({ kind: 'build', name, config });
+        // the link carries the format, first
+        const decoded = await decodeShareLink(partsOf(link));
+        expect(decoded).toEqual({ kind: 'build', name, config: { format: 1, ...config } });
+        expect(Object.keys((decoded as { config: object }).config)[0]).toBe('format');
     });
 
     it('writes base64url without padding, at every length', async () => {

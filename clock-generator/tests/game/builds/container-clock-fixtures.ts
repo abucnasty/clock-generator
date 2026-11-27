@@ -73,7 +73,7 @@ export function containerClockConfig(variant: ContainerClockCase): Config {
         item_filter: [{item_name: item, request_count: 200}]}));
     return ConfigSchema.parse({
         setpoint: {item: variant.recipe, items_per_second: CONTAINER_TARGET, copies: 1},
-        machines: [{id: 1, type: "machine", recipe: variant.recipe, crafting_speed: CONTAINER_CRAFTING_SPEED, productivity: 0}],
+        machines: [{id: 1, prototype: variant.recipe === "iron-gear-wheel" ? "assembling-machine-3" : "electromagnetic-plant", recipe: variant.recipe, crafting_speed: CONTAINER_CRAFTING_SPEED, productivity: 0}],
         inserters: [
             ...inputs.map((item, index) => ({id: 1 + index, source: {type: "chest", id: 10 + index}, sink: {type: "chest", id: 1},
                 stack_size: 16, filters: [item]})),

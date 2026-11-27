@@ -57,6 +57,8 @@ export {
 } from './config/sidecar-version';
 export type { SidecarFeature } from './config/sidecar-version';
 export { suggestedTargetOf } from './config/suggested-target';
+export { CONFIG_FORMAT, configFormatProblem, withConfigFormat } from './config/format';
+export type { ConfigFormatProblem } from './config/format';
 export { readRecipeSetpointAsItem } from './config/migrate-recipe-setpoint';
 export { refusalOfPick, refusalOfSetpoint } from './config/setpoint-check';
 export { setpointOutputOf } from './data/setpoint-output';

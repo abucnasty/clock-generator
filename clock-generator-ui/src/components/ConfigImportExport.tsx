@@ -1,4 +1,4 @@
-import { canonicalRate } from 'clock-generator/light';
+import { canonicalRate, configFormatProblem, withConfigFormat } from 'clock-generator/light';
 import { pickupCaptureWarningMessage, sideLoadedDropMessage } from "../utils/sidecarExport";
 import { Check, Download, Upload, ContentPaste, MoreVert, RestartAlt, Science, MenuBook, Link, DarkModeOutlined, LightModeOutlined, BrightnessAutoOutlined, Tune } from '@mui/icons-material';
 import { Box, Button, Alert, Tooltip, FormControlLabel, Checkbox, Typography, IconButton, Menu, MenuItem, ListItemIcon, ListItemText, Divider, TextField, useMediaQuery, useTheme } from '@mui/material';
@@ -13,7 +13,7 @@ import type { DisplayScheme } from '../utils/displayPreferences';
 import { neverOverrideNoteOfText, withNeverOverrideNote } from '../utils/neverOverrideNote';
 import { countOf, describePaste, exampleUndoMessage, UNDO_IMPORT_MESSAGE, UNDO_RESET_MESSAGE } from '../utils/undoSnapshot';
 import { BUTTON_NAMES } from '../utils/a11yLabels';
-import { looksLikeSidecarExport, readSidecarExport } from '../utils/sidecarExport';
+import { isBuildFile, looksLikeSidecarExport, readSidecarExport } from '../utils/sidecarExport';
 import { INTRO_BUTTONS, invalidExportPrompt, openFileProblem, PASTE_PROMPTS, type PastePrompt } from '../utils/sidecarGuide';
 import { maximumTargetNote, NO_TARGET_NOTE, replacesTargetNote, targetRowCaption, targetRowLabel, targetToFill, type TargetValues } from '../utils/pasteTarget';
 import type { ExampleBuild } from '../utils/exampleBuilds';
@@ -38,8 +38,9 @@ import {
     shareLongMessage,
 } from '../utils/shareLink';
 import { askEngine } from '../worker/engineClient';
-import type { PastedEntities } from '../worker/types';
+import { refusedConfigOf, type PastedEntities } from '../worker/types';
 import { AppDialog } from './AppDialog';
+import { RefusedConfigDialog, type RefusedKind } from './RefusedConfigDialog';
 import { PasteFromFactorioDialog } from './PasteFromFactorioDialog';
 import { ExamplesDialog } from './ExamplesDialog';
 import { ImportSimplification } from './ImportSimplification';
@@ -272,7 +273,7 @@ export function ConfigImportExport({
 
     const handleExport = useCallback(() => {
         if (!config) return;
-        const jsonString = JSON.stringify(canonicalRate(config), null, 2);
+        const jsonString = JSON.stringify(withConfigFormat(canonicalRate(config)), null, 2);
         const blob = new Blob([jsonString], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -340,10 +341,22 @@ export function ConfigImportExport({
         fileInputRef.current?.click();
     }, []);
 
-    /** Replaces the build with the one a build file holds; throws when the text is not one */
+    // a file, paste or example whose configuration the site does not read: the message, with Paste a blueprint
+    const [refused, setRefused] = useState<RefusedKind | null>(null);
+    const closeRefused = useCallback(() => setRefused(null), []);
+
+    /** Replaces the build with the one a build file holds; throws when the text is not one; refuses one of another format */
     const importConfigText = useCallback(async (text: string, undoMessage: string, prototypeSource?: 'sample') => {
         // values out of bounds are kept, for the form to show; only a broken file is rejected
-        const parsedConfig = await askEngine({ kind: 'config-file', config: readConfigFile(text) });
+        let parsedConfig: Config;
+        try {
+            parsedConfig = await askEngine({ kind: 'config-file', config: readConfigFile(text) });
+        } catch (error) {
+            const refusal = refusedConfigOf(error);
+            if (refusal === null) throw error;
+            setRefused(refusal);
+            return;
+        }
         // its Undo message says what replaced the build, and which entities its Never on override (removed) now leaves on Auto
         onUndoable(withNeverOverrideNote(undoMessage, neverOverrideNoteOfText(text)));
         onImport(parsedConfig, prototypeSource);
@@ -455,6 +468,18 @@ export function ConfigImportExport({
         if (request !== pasteRequestRef.current) return null;
         if (text.trim() === '') return PASTE_PROMPTS.empty;
         if (!isJsonText(text)) return startBlueprintPaste(text.trim(), request);
+        // a build file of another format is refused here as when it is opened; one of this format is opened with Open
+        let value: unknown;
+        try {
+            value = JSON.parse(text);
+        } catch {
+            value = undefined;
+        }
+        const format = isBuildFile(value) ? configFormatProblem(value) : null;
+        if (format !== null) {
+            setRefused(format);
+            return null;
+        }
         const read = readSidecarExport(text);
         if (read.kind === 'problem') {
             return PASTE_PROMPTS[read.problem];
@@ -1003,6 +1028,7 @@ export function ConfigImportExport({
                 />
             )}
             {examplesOpen && <ExamplesDialog onPick={handlePickExample} onClose={handleCloseExamples} />}
+            <RefusedConfigDialog kind={refused} onPaste={handlePasteFromFactorio} onClose={closeRefused} />
 
             {/* the browser did not let the page copy: the link to copy by hand */}
             <AppDialog open={fallbackLink !== null} onClose={() => setFallbackLink(null)} title="Share link" describedBy="share-link-fallback-text" cancel="Close">

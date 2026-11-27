@@ -76,6 +76,7 @@ describe("the light entry", () => {
             "common/enable-control-types.ts",
             "common/entity-types.ts",
             "config/copies-value.ts",
+            "config/format.ts",
             "config/migrate-belt-supply.ts",
             "config/migrate-blocked-slots.ts",
             "config/migrate-fractional-swings.ts",

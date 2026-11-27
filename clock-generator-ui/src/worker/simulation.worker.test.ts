@@ -1,6 +1,5 @@
 import { applyRepeatedUnitConversion } from '../utils/configForm/repeatedUnitConversion';
 import factorioData from '../../../clock-generator/resources/data-filtered.json?raw';
-import formerSetpoint from '../../../clock-generator/src/config/fixtures/legacy/recipe-setpoint.json?raw';
 import grenadeSample from '../../../clock-generator/resources/config-samples/intermediates/grenade/grenade-240-fills-belt-exactly.json?raw';
 import militarySample from '../../../clock-generator/resources/config-samples/science/military/military-240.json?raw';
 import ironScaffold from '../../../clock-generator/resources/config-samples/smelting/iron-plate/iron-plate-80-car-chest.scaffold?raw';
@@ -8,11 +7,12 @@ import chestChainScaffold from '../../../clock-generator/resources/config-sample
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { applyResearch, BeltConfigSchema, decodeBlueprintFileBrowser, encodeBlueprintFileBrowser, ChestConfigSchema, ConfigSchema, importBlueprint, InserterConfigSchema, LATEST_SIDECAR_VERSION, MachineConfigurationSchema, MiningDrillConfigSchema, researchDifferences,
     type Config, type DebugSteps, type FactorioData, type ImportInputs } from 'clock-generator/browser';
-import type { EngineAnswers, EngineQuery, LiveCoverage, PastedEntities, PrimaryCompletedResponse, ValidationFailedResponse, WorkerRequest, WorkerResponse } from './types';
-import { readConfigFile, readSavedConfig, serializeConfig } from '../hooks/usePersistedConfigForm';
+import { REFUSED_CONFIG_ERRORS, refusedConfigOf, type EngineAnswers, type EngineQuery, type LiveCoverage, type PastedEntities, type PrimaryCompletedResponse, type ValidationFailedResponse, type WorkerRequest, type WorkerResponse } from './types';
+import { readConfigFile, readSavedBuild, readSavedConfig, serializeConfig } from '../hooks/usePersistedConfigForm';
 import { configToFormData, formDataToConfig } from '../utils/configForm/configMapping';
 import { createDefaultConfig } from '../utils/configForm/formData';
 import { applyPaste } from '../utils/pastePreview';
+import { decodeShareLink, encodeShareLink, readShareHash } from '../utils/shareLink';
 import { buildValidationIssues, refusedInserterIdsOf, type ValidationDiagnostic } from '../utils/buildValidation';
 import { timelineRequestFor } from '../utils/timelineRequest';
 import { Option } from 'clock-generator/light';
@@ -327,7 +327,7 @@ describe('a captured inserter kind, quality and filter mode', () => {
         const pasted = await ask(query);
         expect(pasted.guidance).toMatchObject({ _tag: 'None' });
         const saved = formDataToConfig(pastedAndSaved(pasted));
-        expect((await ask({ kind: 'saved-config', config: saved })).problem).toBeNull();
+        expect((await ask({ kind: 'saved-config', config: { format: 1, ...saved } })).problem).toBeNull();
         return { ...formDataToConfig(configToFormData(saved)), setpoint: { item: 'iron-gear-wheel', items_per_second: 1, copies: 1 } } as Config;
     };
     // read as a whitelist, the blacklist would leave the gears without an output inserter and offer a new belt for them
@@ -597,10 +597,10 @@ it('loads an imported build file that carries the former Fractional swings overr
         machines: [{ id: 1, recipe: 'iron-plate', crafting_speed: 2, productivity: 0, prototype: 'electric-furnace' }],
         inserters: [], belts: [],
     };
-    const loaded = await ask({ kind: 'config-file', config: { ...config, overrides: { use_fractional_swings: true, lcm: 2 } } });
+    const loaded = await ask({ kind: 'config-file', config: { format: 1, ...config, overrides: { use_fractional_swings: true, lcm: 2 } } });
     expect(loaded.overrides).toEqual({ lcm: 2 });
-    expect(await ask({ kind: 'config-file', config: { ...config, overrides: { use_fractional_swings: true } } }))
-        .toEqual(await ask({ kind: 'config-file', config: { ...config, overrides: {} } }));
+    expect(await ask({ kind: 'config-file', config: { format: 1, ...config, overrides: { use_fractional_swings: true } } }))
+        .toEqual(await ask({ kind: 'config-file', config: { format: 1, ...config, overrides: {} } }));
 });
 
 it("gives the crafting machines, fills a prototype's rule on import and paste, and warns live of a machine that cannot make its recipe", async () => {
@@ -615,8 +615,8 @@ it("gives the crafting machines, fills a prototype's rule on import and paste, a
     };
     // a former type is read as the machine, in a build file, a saved build and a paste from an older Sidecar
     const typed = { id: 1, recipe: 'iron-plate', crafting_speed: 2, productivity: 0, type: 'furnace' };
-    expect((await ask({ kind: 'config-file', config: { ...config, machines: [typed] } })).machines[0]).toEqual(furnace);
-    const saved = await ask({ kind: 'saved-config', config: { ...config, machines: [{ ...typed, _uuid: 'm' }, { ...furnace, id: 2, type: 'machine' }] } });
+    expect((await ask({ kind: 'config-file', config: { format: 1, ...config, machines: [typed] } })).machines[0]).toEqual(furnace);
+    const saved = await ask({ kind: 'saved-config', config: { format: 1, ...config, machines: [{ ...typed, _uuid: 'm' }, { ...furnace, id: 2, type: 'machine' }] } });
     expect(saved.problem).toBeNull();
     expect((saved.form as { machines: unknown[] }).machines).toEqual([{ ...furnace, _uuid: 'm', _prototype_source: 'recipe' }, { ...furnace, id: 2 }]);
     const pasted = await ask({ kind: 'pasted-entities', machines: [typed, { ...furnace, id: 2 }], drills: [], inserters: [], belts: [], chests: [] } as Extract<EngineQuery, { kind: 'pasted-entities' }>);
@@ -868,7 +868,7 @@ describe('a setpoint named by a recipe, as the picker stores it', () => {
     it('is answered as the item in the queries, and kept as the recipe in an imported file', async () => {
         const named = jellynut('jellynut-processing');
         expect(await ask({ kind: 'target-rate-max', config: named })).toEqual(await ask({ kind: 'target-rate-max', config: jellynut('jelly') }));
-        expect((await ask({ kind: 'config-file', config: named })).setpoint.item).toBe('jellynut-processing');
+        expect((await ask({ kind: 'config-file', config: { format: 1, ...named } })).setpoint.item).toBe('jellynut-processing');
     });
 
     const seedReason = { code: 'not-counted-yet', item: 'jellynut-seed', choice: 'jelly' };
@@ -896,7 +896,7 @@ describe('a setpoint named by a recipe, as the picker stores it', () => {
     });
 
     it('a saved form and an imported file that hold such a setpoint open as they are, for Check to refuse', async () => {
-        const form = { ...jellynut('jellynut-seed'), chests: [] };
+        const form = { format: 1, ...jellynut('jellynut-seed'), chests: [] };
         expect((await ask({ kind: 'saved-config', config: form })).problem).toBeNull();
         expect((await ask({ kind: 'config-file', config: form })).setpoint.item).toBe('jellynut-seed');
     });
@@ -907,34 +907,6 @@ describe('a setpoint named by a recipe, as the picker stores it', () => {
         expect(recipes.get('iron-bacteria')?.output).toEqual({ kind: 'output', item: 'spoilage', choices: ['iron-bacteria', 'spoilage'] });
         expect(recipes.get('kovarex-enrichment-process')?.output).toEqual({ kind: 'output', item: 'uranium-235', choices: [] });
         expect(recipes.get('sulfuric-acid')?.output).toEqual({ kind: 'none' });
-    });
-});
-
-// A file, a share link or a saved build from before the setpoint named its item holds `recipe`: the engine's fixture of it, with the form's chests.
-describe('a setpoint that holds `recipe`', () => {
-    const former = { ...JSON.parse(formerSetpoint), chests: [] };
-    const heldBy = (form: unknown) => (form as { setpoint: Record<string, unknown> }).setpoint;
-
-    it('opens from a file with `item` set to the name it held, not resolved', async () => {
-        const read = heldBy(await ask({ kind: 'config-file', config: former }));
-        expect(read).toMatchObject({ item: 'jellynut-processing', items_per_second: 1, copies: 1 });
-        expect(read).not.toHaveProperty('recipe');
-        // as the page hands it: its former names read first
-        expect(heldBy(await ask({ kind: 'config-file', config: readConfigFile(JSON.stringify(former)) }))).toMatchObject({ item: 'jellynut-processing' });
-    });
-
-    it('opens from a saved form with `item` set to the name it held, not resolved', async () => {
-        const answer = await ask({ kind: 'saved-config', config: former });
-        expect(heldBy(answer.form)).toMatchObject({ item: 'jellynut-processing', items_per_second: 1, copies: 1 });
-        expect(heldBy(answer.form)).not.toHaveProperty('recipe');
-        expect(answer.problem).toBeNull();
-        expect(heldBy((await ask({ kind: 'saved-config', config: readSavedConfig(JSON.stringify(former)) })).form)).toMatchObject({ item: 'jellynut-processing' });
-    });
-
-    it('keeps the name it held where the rate is out of bounds, as the form shows it to be fixed', async () => {
-        const zero = { ...former, setpoint: { ...former.setpoint, items_per_second: 0 } };
-        expect(heldBy(await ask({ kind: 'config-file', config: zero }))).toMatchObject({ item: 'jellynut-processing', items_per_second: 0 });
-        expect(heldBy((await ask({ kind: 'saved-config', config: zero })).form)).toMatchObject({ item: 'jellynut-processing' });
     });
 });
 
@@ -967,7 +939,7 @@ it('checks and plans the exact entered rate after a structured-clone handoff', a
     expect(await send({ type: 'validate', requestId: 323, config })).toMatchObject({ type: 'validated' });
     const { primary } = await primaryOf(config);
     expect(primary?.alternatives.length).toBeGreaterThan(0);
-    const received = await ask({ kind: 'config-file', config });
+    const received = await ask({ kind: 'config-file', config: { format: 1, ...config } });
     expect(JSON.stringify(received.setpoint.items_per_second)).toBe('{"numerator":16,"denominator":7}');
 });
 
@@ -1043,5 +1015,44 @@ describe('a pasted blueprint', () => {
         expect(differences).toEqual(researchDifferences(edited, data));
         expect(differences.recorded && differences.edited.map(edit => edit.kind)).toEqual(['machine']);
         expect(await ask({ kind: 'research-differences', build })).toEqual({ recorded: false });
+    });
+});
+
+describe("the format key at the site's doors", () => {
+    const build = { setpoint: { item: 'iron-gear-wheel', items_per_second: 1, copies: 1 },
+        machines: [{ id: 1, recipe: 'iron-gear-wheel', crafting_speed: 1, productivity: 0 }], inserters: [], belts: [], chests: [] };
+    const failed = async (query: EngineQuery) => {
+        const response = await send({ type: 'query', requestId: 91, query });
+        expect(response.type).toBe('query-failed');
+        return refusedConfigOf(new Error((response as { message: string }).message));
+    };
+
+    it('opens a build file of this format, and refuses one without the key or of a newer format before any check', async () => {
+        expect((await ask({ kind: 'config-file', config: { format: 1, ...build } })).setpoint.item).toBe('iron-gear-wheel');
+        expect(await failed({ kind: 'config-file', config: build })).toBe('old');
+        expect(await failed({ kind: 'config-file', config: { format: 2, ...build } })).toBe('newer');
+        // an old file the schema would refuse anyway is still refused for its format
+        expect(await failed({ kind: 'config-file', config: { target_output: { recipe: 'iron-gear-wheel' } } })).toBe('old');
+        expect(REFUSED_CONFIG_ERRORS.old).not.toBe(REFUSED_CONFIG_ERRORS.newer);
+    });
+
+    it('loads a saved build of this format, and refuses one without the key or of a newer format', async () => {
+        expect(await ask({ kind: 'saved-config', config: { format: 1, ...build } })).toMatchObject({ problem: null });
+        expect(await ask({ kind: 'saved-config', config: build })).toMatchObject({ refused: 'old', form: build });
+        expect(await ask({ kind: 'saved-config', config: { format: 2, ...build } })).toMatchObject({ refused: 'newer' });
+    });
+
+    it('opens what the save, the file export and the share link write: their round trips', async () => {
+        const form = { ...createDefaultConfig(), setpoint: { item: 'iron-gear-wheel', items_per_second: 1, copies: 1 } };
+        const reloaded = readSavedBuild(serializeConfig(form));
+        expect(await ask({ kind: 'saved-config', config: reloaded })).toMatchObject({ problem: null });
+        const exported = JSON.stringify({ format: 1, ...formDataToConfig(form) }, null, 2);
+        expect((await ask({ kind: 'config-file', config: readConfigFile(exported) })).setpoint.item).toBe('iron-gear-wheel');
+        const link = await encodeShareLink({ name: 'Gears', config: formDataToConfig(form) }, 'https://example.test/');
+        const decoded = await decodeShareLink(readShareHash(link.slice(link.indexOf('#'))) as { version: string; data: string });
+        expect(decoded.kind).toBe('build');
+        const shared = (decoded as { config: unknown }).config;
+        expect(Object.keys(shared as object)[0]).toBe('format');
+        expect((await ask({ kind: 'config-file', config: readConfigFile(JSON.stringify(shared)) })).setpoint.item).toBe('iron-gear-wheel');
     });
 });

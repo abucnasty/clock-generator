@@ -1,6 +1,7 @@
 import { ParsedConfig, ConfigSchema } from "./schema";
 import { ConfigValidationError } from "./errors";
 import { migrateChestType } from "./migrate-chest-type";
+import { ConfigFormatError, configFormatProblem } from "./format";
 import { didParseJsonConfiguration } from "./json-configuration";
 import * as fs from "fs";
 import * as path from "path";
@@ -83,6 +84,7 @@ export async function parseConfigSafe(jsonString: string): Promise<ConfigParseRe
  * 
  * @param filePath - Absolute or relative path to the JSON file
  * @returns The validated Config object
+ * @throws {ConfigFormatError} If the file holds JSON without this format's `format` key, or with a newer one
  * @throws {ConfigValidationError} If the configuration is invalid
  * @throws {Error} If file reading or JSON parsing fails
  * 
@@ -97,7 +99,17 @@ export async function loadConfigFromFile(filePath: string): Promise<ParsedConfig
         : path.resolve(process.cwd(), filePath);
 
     const content = await fs.promises.readFile(absolutePath, "utf-8");
-
+    // the door's format test runs on parsed JSON only: text that is not JSON gets parseConfig's message, never "old"
+    let parsed: unknown;
+    try {
+        parsed = JSON.parse(content);
+    } catch {
+        return parseConfig(content);
+    }
+    const problem = configFormatProblem(parsed);
+    if (problem !== null) {
+        throw new ConfigFormatError(problem, filePath);
+    }
     return parseConfig(content);
 }
 
