@@ -10,14 +10,11 @@
 --    reaches 11/256 of a tile into it; 12/256 is the game's reach). Each trial
 --    is exported before the first tick and at the end, with what the game did: the drill's drop_target, the target's ore.
 local entities, surface = ...
-local extraction = require("__clock-generator-sidecar__.scripts.extraction")
-local export = require("__clock-generator-sidecar__.scripts.export")
+local extraction = require("__clock-generator-recorder__.scripts.describe.extraction")
+local export = require("__clock-generator-recorder__.scripts.describe.export")
 
 local force = game.forces.player
-local filters = {}
-for name in pairs(prototypes.item["clock-generator-sidecar"].get_entity_type_filters(defines.selection_mode.select)) do
-    table.insert(filters, name)
-end
+local filters = {"assembling-machine", "furnace", "mining-drill", "lab", "inserter", "transport-belt", "underground-belt", "splitter", "linked-belt", "loader", "loader-1x1", "container", "logistic-container", "infinity-container", "linked-container", "car", "cargo-wagon", "rocket-silo"}
 
 ---What the selection tool hands the sidecar for a box, and the export of it, with the export's reference of each of
 ---targets (false for one not exported)

@@ -174,6 +174,34 @@ export interface CraftingMachinePrototype extends Pick<Game.AssemblingMachinePro
 /** A transport belt prototype: its speed in tiles per tick (the turbo belt's 0.125 is 60 items a second on its lanes) */
 export type TransportBeltPrototype = Game.TransportBeltPrototype
 
+/**
+ * What a pasted blueprint names besides the machines, belts and inserters above (resources/filter-raw.js keeps these
+ * with the manifest's fields of each class, where the prototype sets them; an absent one is at the game's default).
+ * A beacon: its effectivity and the quality's bonus to it, its supply area, its slots and the `profile` of what each
+ * further beacon in range adds. A module: its own `effect`, and how quality scales each effect.
+ */
+export type BeaconPrototype = Game.BeaconPrototype
+export type ModulePrototype = Game.ModulePrototype
+/** An underground belt: its belt speed and how far its entrance reaches its exit (`max_distance`) */
+export type UndergroundBeltPrototype = Game.UndergroundBeltPrototype
+export type SplitterPrototype = Game.SplitterPrototype
+/** A loader (the 2x1 `loader` types and `loader-1x1`; the section holds both) */
+export type LoaderPrototype = Game.LoaderPrototype
+/** A chest of the game: a plain, logistic, infinity or linked one; the type field tells which */
+export type ChestPrototype = Game.ContainerPrototype | Game.LogisticContainerPrototype | Game.InfinityContainerPrototype | Game.LinkedContainerPrototype
+
+/** A collision box as the dump gives it: the left-top and the right-bottom corner, in tiles from the entity's centre */
+export type CollisionBox = [[number, number], [number, number]]
+
+/**
+ * The place an entity takes on the map (resources/filter-raw.js derives it for every prototype of the types a blueprint
+ * names): its prototype type, its collision box (the game's empty box where the prototype sets none) and its tiles
+ */
+export interface EntityFootprint extends TileSize {
+  type: string
+  collision_box: CollisionBox
+}
+
 export interface FactorioData {
   "recipe": Record<RecipeName, Recipe>
   "item": Record<ItemName, Item>
@@ -188,6 +216,13 @@ export interface FactorioData {
   "rocket_silo": Record<string, RocketSiloPrototype>
   "crafting_machine": Record<string, CraftingMachinePrototype>
   "transport_belt": Record<string, TransportBeltPrototype>
+  "beacon": Record<string, BeaconPrototype>
+  "module": Record<string, ModulePrototype>
+  "underground_belt": Record<string, UndergroundBeltPrototype>
+  "splitter": Record<string, SplitterPrototype>
+  "loader": Record<string, LoaderPrototype>
+  "chest": Record<string, ChestPrototype>
+  "entity_footprint": Record<string, EntityFootprint>
   /** Every item's weight as the running game holds it (in 1/65536 parts; resources/dump-item-weights.js) */
   "item_weight": Record<ItemName, number>
   /**

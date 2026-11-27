@@ -47,8 +47,6 @@ rm -rf "$TEMP_DIR"
 echo ""
 echo "✅ Built: $OUTPUT_FILE"
 echo ""
-echo "The recorder depends on clock-generator-sidecar: install the sidecar of this repository too (its build.sh)."
-echo ""
 
 if [[ "$1" != "--install" ]]; then
     echo "To install:"

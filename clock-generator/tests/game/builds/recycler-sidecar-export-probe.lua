@@ -1,11 +1,8 @@
 local entities, surface, area = ...
-local extraction = require("__clock-generator-sidecar__.scripts.extraction")
-local export = require("__clock-generator-sidecar__.scripts.export")
-local sidecar_helpers = require("__clock-generator-sidecar__.scripts.helpers")
-local filters = {}
-for name in pairs(prototypes.item["clock-generator-sidecar"].get_entity_type_filters(defines.selection_mode.select)) do
-    table.insert(filters, name)
-end
+local extraction = require("__clock-generator-recorder__.scripts.describe.extraction")
+local export = require("__clock-generator-recorder__.scripts.describe.export")
+local sidecar_helpers = require("__clock-generator-recorder__.scripts.describe.helpers")
+local filters = {"assembling-machine", "furnace", "mining-drill", "lab", "inserter", "transport-belt", "underground-belt", "splitter", "linked-belt", "loader", "loader-1x1", "container", "logistic-container", "infinity-container", "linked-container", "car", "cargo-wagon", "rocket-silo"}
 local selected = surface.find_entities_filtered({area = area, type = filters, force = game.forces.player})
 local selected_units = {}
 for _, entity in ipairs(selected) do selected_units[entity.unit_number] = true end

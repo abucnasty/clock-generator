@@ -23,7 +23,7 @@ function write(relative: string, text: string): string {
     return file;
 }
 
-/** A game that is a script which fails when started, with data, a save, a mod, a transforming mod and two source files */
+/** A game that is a script which fails when started, with data, a save, a mod with a folder of the Lua that describes a build, and two source files */
 function environment(): CacheEnvironment {
     const executable = write("game/bin/x64/factorio", "#!/bin/sh\nexit 3\n");
     fs.chmodSync(executable, 0o755);
@@ -32,7 +32,7 @@ function environment(): CacheEnvironment {
     write("save.zip", "save bytes");
     write("mods/recorder/control.lua", "recorder");
     write("mods/recorder/scripts/events.lua", "events");
-    write("mods/sidecar/control.lua", "sidecar");
+    write("mods/recorder/scripts/describe/export.lua", "export");
     write("src/harness.ts", "harness");
     write("src/rcon.ts", "rcon");
     return {
@@ -41,7 +41,7 @@ function environment(): CacheEnvironment {
         data_dir: path.join(root, "game/data"),
         save: path.join(root, "save.zip"),
         mods: { recorder: path.join(root, "mods/recorder") },
-        transforms: { sidecar: path.join(root, "mods/sidecar") },
+        transforms: { describe: path.join(root, "mods/recorder/scripts/describe") },
         host_sources: [path.join(root, "src/harness.ts"), path.join(root, "src/rcon.ts")],
     };
 }
@@ -153,11 +153,11 @@ describe("the key of a recording", () => {
         }
     });
 
-    it("takes no file of a transforming mod: only the description of the build moves the key", async () => {
+    it("takes no file of the folder that describes the build: only the description of the build moves the key", async () => {
         const game = environment();
         const base = (await recordingCacheKey(BASE, game)).key;
-        write("mods/sidecar/control.lua", "sidecar, changed");
-        write("mods/sidecar/new.lua", "new");
+        write("mods/recorder/scripts/describe/export.lua", "export, changed");
+        write("mods/recorder/scripts/describe/new.lua", "new");
         expect((await recordingCacheKey(BASE, game)).key).toBe(base);
         expect((await recordingCacheKey(BASE, game, [], "one")).key).not.toBe(base);
         expect((await recordingCacheKey(BASE, game, [], "one")).key).not.toBe((await recordingCacheKey(BASE, game, [], "two")).key);
@@ -184,7 +184,7 @@ describe("the key of a recording", () => {
     });
 });
 
-/** What the game says of a build: the facts that decide what is measured, and what the Sidecar only offers or says of itself */
+/** What the game says of a build: the facts that decide what is measured, and what a person is offered or reads of it */
 const DESCRIPTION: Record<string, unknown> = {
     config: {
         sidecar_version: "0.15.0",
@@ -198,7 +198,6 @@ const DESCRIPTION: Record<string, unknown> = {
     drills: [],
     left_out: [],
     left_out_drills: [],
-    sidecar: { config: { sidecar_version: "0.15.0", suggested_target: { items_per_second: 4 } }, left_out: [] },
     movers: { inserters: [{ unit_number: 40 }] },
 };
 
@@ -211,11 +210,11 @@ describe("a key made from the description of the build", () => {
         return { key: key.key, asked };
     }
 
-    it("keeps the key when the files of the transforming mod change and the description comes out the same", async () => {
+    it("keeps the key when files of the folder that describes the build change and the description comes out the same", async () => {
         const game = environment();
         const first = await keyed(game, DESCRIPTION);
         expect(first.asked).toBe(1);
-        write("mods/sidecar/control.lua", "sidecar, fixed");
+        write("mods/recorder/scripts/describe/export.lua", "export, fixed");
         const config = DESCRIPTION.config as { inserters: { source: { pickup_capture: object } }[] };
         const newer = JSON.parse(JSON.stringify({ ...DESCRIPTION, config: { ...config, sidecar_version: "0.15.1" } }).replace(/0\.15\.0/g, "0.15.1"));
         const again = await keyed(game, newer);
@@ -226,7 +225,7 @@ describe("a key made from the description of the build", () => {
     it("moves the key when the description changes, in a fact that decides what is measured", async () => {
         const game = environment();
         const first = await keyed(game, DESCRIPTION);
-        write("mods/sidecar/control.lua", "sidecar, fixed");
+        write("mods/recorder/scripts/describe/export.lua", "export, fixed");
         const config = DESCRIPTION.config as { belts: unknown[] };
         const changes: Record<string, Record<string, unknown>> = {
             "a belt lane's item": { config: { ...config, belts: [{ id: 1, lanes: [{ ingredient: "copper-plate" }] }] } },
@@ -237,19 +236,18 @@ describe("a key made from the description of the build", () => {
         for (const [what, change] of Object.entries(changes)) {
             const key = await keyed(game, { ...DESCRIPTION, ...change });
             expect(key.key, what).not.toBe(first.key);
-            write("mods/sidecar/control.lua", `sidecar, fixed for ${what}`);
+            write("mods/recorder/scripts/describe/export.lua", `export, fixed for ${what}`);
         }
     });
 
-    it("leaves out what the Sidecar suggests and says of itself, and what is not its own: a new suggested target keeps the key", async () => {
+    it("leaves out what is suggested and what is stamped, and what is not the description's own: a new suggested target keeps the key", async () => {
         const game = environment();
         const first = await keyed(game, DESCRIPTION);
-        write("mods/sidecar/control.lua", "sidecar, suggests more");
+        write("mods/recorder/scripts/describe/export.lua", "export, suggests more");
         const config = DESCRIPTION.config as object;
         const suggested = await keyed(game, {
             ...DESCRIPTION,
             config: { ...config, suggested_target: { items_per_second: 12, copies: 3, copy_offset: { x: 0, y: 9 } } },
-            sidecar: { config: { suggested_target: { items_per_second: 12 } }, left_out: [{ unit_number: 1 }] },
             movers: { inserters: [] },
         });
         expect(suggested.key).toBe(first.key);
@@ -265,6 +263,30 @@ describe("a key made from the description of the build", () => {
         const recorder = await keyed(game, DESCRIPTION);
         expect(recorder.key).not.toBe(first.key);
         expect((await keyed(game, DESCRIPTION, { ...BASE, ticks: 601 })).key).not.toBe(recorder.key);
+    });
+
+    it("moves the key with a change to a file of the recorder outside the folder that describes the build, though the description is the same", async () => {
+        const game = environment();
+        const first = await keyed(game, DESCRIPTION);
+        for (const [file, text] of [["mods/recorder/control.lua", "recorder, changed"], ["mods/recorder/scripts/events.lua", "events, changed"],
+            ["mods/recorder/scripts/new.lua", "new"]]) {
+            write(file, text);
+            const changed = await keyed(game, DESCRIPTION);
+            expect(changed.key, file).not.toBe(first.key);
+        }
+    });
+
+    it("asks the game again for the description when a file of the folder that describes the build changes, and when a recorder file outside it changes", async () => {
+        const game = environment();
+        expect((await keyed(game, DESCRIPTION)).asked).toBe(1);
+        expect((await keyed(game, DESCRIPTION)).asked).toBe(0);
+        write("mods/recorder/scripts/describe/export.lua", "export, changed");
+        expect((await keyed(game, DESCRIPTION)).asked).toBe(1);
+        write("mods/recorder/scripts/describe/new.lua", "new");
+        expect((await keyed(game, DESCRIPTION)).asked).toBe(1);
+        expect((await keyed(game, DESCRIPTION)).asked).toBe(0);
+        write("mods/recorder/scripts/events.lua", "events, changed");
+        expect((await keyed(game, DESCRIPTION)).asked).toBe(1);
     });
 
     it("asks the game once for the same files, game, save and options, and again for any of them changed, or when asked to refresh", async () => {

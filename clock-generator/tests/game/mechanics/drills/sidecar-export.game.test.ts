@@ -22,8 +22,8 @@ const MODULES = ["types", "helpers", "pickup-supply", "drop-merge", "suggested-t
 const sidecarModules = `local capture_modules, require = {}, nil
 require = function(name) return assert(capture_modules[name], name) end
 ` + MODULES.map(name => {
-    const source = fs.readFileSync(path.join(REPOSITORY_ROOT, `clock-generator-sidecar/scripts/${name}.lua`), "utf8");
-    return `capture_modules["__clock-generator-sidecar__.scripts.${name}"] = (function()\n${source}\nend)() or true\n`;
+    const source = fs.readFileSync(path.join(REPOSITORY_ROOT, `clock-generator-recorder/scripts/describe/${name}.lua`), "utf8");
+    return `capture_modules["__clock-generator-recorder__.scripts.describe.${name}"] = (function()\n${source}\nend)() or true\n`;
 }).join("");
 
 const TICKS = 300;
