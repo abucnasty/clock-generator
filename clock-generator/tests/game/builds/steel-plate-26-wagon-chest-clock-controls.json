@@ -237,10 +237,10 @@
     },
     "steel-wagon-selected-staged": {
       "recorded": {
-        "pr": 856,
-        "commit": "8e0cd17e",
-        "frozen_head": "8e0cd17e",
-        "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start), in Factorio 2.1.24",
+        "pr": 0,
+        "commit": "b27a5340",
+        "frozen_head": "b27a5340",
+        "note": "recorded again after the backpressure start began to hold the mining drill until the opening, in Factorio 2.1.24; pr is set when the PR is opened",
         "clock_sha256": "394630eae08f05d03550efdc63ac2122ebf46c722595b6283be45d3d9485899c",
         "clock_basis": "capture"
       },
@@ -264,8 +264,8 @@
             "ticks": 11520,
             "items": 4992,
             "expected": 4992,
-            "stock_start": 28,
-            "stock_end": 28,
+            "stock_start": 22,
+            "stock_end": 22,
             "net": 4992
           }
         },
@@ -273,32 +273,32 @@
           {
             "kind": "stop drill",
             "start": 26640,
-            "drop": 26830,
-            "release": 26830,
-            "recovered": 31411
+            "drop": 26901,
+            "release": 26901,
+            "recovered": 32646
           },
           {
             "kind": "block output",
-            "start": 31411,
-            "drop": 32046,
-            "release": 32046,
-            "recovered": 32097
+            "start": 32646,
+            "drop": 34399,
+            "release": 34399,
+            "recovered": 38163
           },
           {
             "kind": "stop drill",
-            "start": 32097,
-            "drop": 32265,
-            "release": 32265,
-            "recovered": 36728
+            "start": 38163,
+            "drop": 38473,
+            "release": 38473,
+            "recovered": 43280
           }
         ],
         "stock": {
           "lowest": 0,
-          "end": 8,
+          "end": 20,
           "holds": true
         },
         "result": "holds",
-        "ended": 36728
+        "ended": 43280
       },
       "generation": {
         "period": 11520,
@@ -315,10 +315,10 @@
     },
     "steel-wagon-iron-ore-out-of-period-selected-staged": {
       "recorded": {
-        "pr": 856,
-        "commit": "8e0cd17e",
-        "frozen_head": "8e0cd17e",
-        "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start), in Factorio 2.1.24",
+        "pr": 0,
+        "commit": "b27a5340",
+        "frozen_head": "b27a5340",
+        "note": "recorded again after the backpressure start began to hold the mining drill until the opening, in Factorio 2.1.24; pr is set when the PR is opened",
         "clock_sha256": "507cc5705a29aa86c084513ba18319eb6b2db058270f231cba9cd366c0217b18",
         "clock_basis": "capture"
       },
@@ -332,51 +332,51 @@
         "steady": 7440,
         "baseline": {
           "ticks": 3840,
-          "total": 1692,
+          "total": 1684,
           "expected": 1664,
-          "min": 1581,
-          "max": 1588,
+          "min": 1576,
+          "max": 1587,
           "held": true,
           "meets": true,
           "measured": {
             "ticks": 3840,
-            "items": 1692,
+            "items": 1684,
             "expected": 1664,
-            "stock_start": 33,
-            "stock_end": 45,
-            "net": 1680
+            "stock_start": 11,
+            "stock_end": 12,
+            "net": 1683
           }
         },
         "disturbances": [
           {
             "kind": "stop drill",
             "start": 11280,
-            "drop": 11815,
-            "release": 11815,
-            "recovered": 15774
+            "drop": 11877,
+            "release": 11877,
+            "recovered": 15818
           },
           {
             "kind": "block output",
-            "start": 15774,
-            "drop": 15775,
-            "release": 15775,
-            "recovered": 15776
+            "start": 15818,
+            "drop": 15819,
+            "release": 15819,
+            "recovered": 15820
           },
           {
             "kind": "stop drill",
-            "start": 15776,
-            "drop": 15777,
-            "release": 15777,
-            "recovered": 15778
+            "start": 15820,
+            "drop": 15821,
+            "release": 15821,
+            "recovered": 15822
           }
         ],
         "stock": {
           "lowest": 0,
-          "end": 21,
+          "end": 29,
           "holds": true
         },
         "result": "holds",
-        "ended": 15778
+        "ended": 15822
       },
       "generation": {
         "period": 3840,
@@ -393,10 +393,10 @@
     },
     "steel-hub-selected-staged": {
       "recorded": {
-        "pr": 856,
-        "commit": "8e0cd17e",
-        "frozen_head": "8e0cd17e",
-        "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start), in Factorio 2.1.24",
+        "pr": 0,
+        "commit": "b27a5340",
+        "frozen_head": "b27a5340",
+        "note": "recorded again after the backpressure start began to hold the mining drill until the opening, in Factorio 2.1.24; pr is set when the PR is opened",
         "clock_sha256": "394630eae08f05d03550efdc63ac2122ebf46c722595b6283be45d3d9485899c",
         "clock_basis": "capture"
       },
@@ -420,8 +420,8 @@
             "ticks": 11520,
             "items": 4992,
             "expected": 4992,
-            "stock_start": 28,
-            "stock_end": 28,
+            "stock_start": 22,
+            "stock_end": 22,
             "net": 4992
           }
         },
@@ -429,32 +429,32 @@
           {
             "kind": "stop drill",
             "start": 26640,
-            "drop": 26830,
-            "release": 26830,
-            "recovered": 31411
+            "drop": 26901,
+            "release": 26901,
+            "recovered": 32646
           },
           {
             "kind": "block output",
-            "start": 31411,
-            "drop": 32046,
-            "release": 32046,
-            "recovered": 32097
+            "start": 32646,
+            "drop": 34399,
+            "release": 34399,
+            "recovered": 38163
           },
           {
             "kind": "stop drill",
-            "start": 32097,
-            "drop": 32265,
-            "release": 32265,
-            "recovered": 36728
+            "start": 38163,
+            "drop": 38473,
+            "release": 38473,
+            "recovered": 43280
           }
         ],
         "stock": {
           "lowest": 0,
-          "end": 8,
+          "end": 20,
           "holds": true
         },
         "result": "holds",
-        "ended": 36728
+        "ended": 43280
       },
       "generation": {
         "period": 11520,
