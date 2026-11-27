@@ -61,7 +61,7 @@ export function pastePreview(current: ConfigFormData, incoming: PastedEntities, 
 }
 
 /** What a pasted blueprint adds to a paste: the research its values were made with, and the step from one copy to the next */
-export interface BlueprintPaste {
+interface BlueprintPaste {
     research: ResearchBlock;
     copy_offset: { x: number; y: number } | null;
 }
