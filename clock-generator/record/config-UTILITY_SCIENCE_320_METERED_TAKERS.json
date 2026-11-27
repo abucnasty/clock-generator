@@ -3,7 +3,7 @@
   "job": "config-UTILITY_SCIENCE_320_METERED_TAKERS",
   "group": "config",
   "name": "UTILITY_SCIENCE_320_METERED_TAKERS",
-  "config_sha256": "ed9c3defe5cc8f4634c092849424701e06c540253f8411a7eeb6901764bb944f",
+  "config_sha256": "9b365b1c5c06b0edd80761891a63978bfcbfe7bfd456bb681fa7470fc7e1e0c2",
   "job_results_sha256": "da0de8c73100eaac5b22cc60d11aba766d4e9aa0c69e776ea8b024e202fbf30c",
   "selected": "coordinated_sources_region",
   "selected_windows": {
