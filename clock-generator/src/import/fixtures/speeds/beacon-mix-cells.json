@@ -1,0 +1,7333 @@
+{
+ "note": "The cells of a recording of beacon mixes and qualities in the game. Each cell is one machine with the beacons around it; `read` is the crafting speed the game gave, `expected_unread` the marks the unread table gives the cell, worked out apart from the step.",
+ "cells": [
+  {
+   "id": "T01",
+   "group": "T",
+   "note": "tie, even 4th digit: normal speed-module+speed-module-2 x2",
+   "machine": {
+    "name": "assembling-machine-3",
+    "quality": "normal",
+    "recipe": "iron-gear-wheel",
+    "modules": [],
+    "center": [
+     25.5,
+     25.5
+    ]
+   },
+   "beacons": [
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module",
+       "normal"
+      ],
+      [
+       "speed-module-2",
+       "normal"
+      ]
+     ],
+     "center": [
+      20.5,
+      20.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module",
+       "normal"
+      ],
+      [
+       "speed-module-2",
+       "normal"
+      ]
+     ],
+     "center": [
+      20.5,
+      23.5
+     ]
+    }
+   ],
+   "read": 2.575875,
+   "beacons_count": 2,
+   "value_compared": true,
+   "expected_unread": [
+    "beacon-mix",
+    "rounding-tie"
+   ]
+  },
+  {
+   "id": "T02",
+   "group": "T",
+   "note": "control, no tie: normal speed-module+speed-module-2 x3 (beside speed-module+speed-module-2 x2)",
+   "machine": {
+    "name": "assembling-machine-3",
+    "quality": "normal",
+    "recipe": "iron-gear-wheel",
+    "modules": [],
+    "center": [
+     65.5,
+     25.5
+    ]
+   },
+   "beacons": [
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module",
+       "normal"
+      ],
+      [
+       "speed-module-2",
+       "normal"
+      ]
+     ],
+     "center": [
+      60.5,
+      20.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module",
+       "normal"
+      ],
+      [
+       "speed-module-2",
+       "normal"
+      ]
+     ],
+     "center": [
+      60.5,
+      23.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module",
+       "normal"
+      ],
+      [
+       "speed-module-2",
+       "normal"
+      ]
+     ],
+     "center": [
+      60.5,
+      26.5
+     ]
+    }
+   ],
+   "read": 2.8736249999999997,
+   "beacons_count": 3,
+   "value_compared": true,
+   "expected_unread": [
+    "beacon-mix"
+   ]
+  },
+  {
+   "id": "T03",
+   "group": "T",
+   "note": "control, odd-digit tie: normal speed-module-3+speed-module-3 x7 (beside speed-module+speed-module-2 x2)",
+   "machine": {
+    "name": "assembling-machine-3",
+    "quality": "normal",
+    "recipe": "iron-gear-wheel",
+    "modules": [],
+    "center": [
+     105.5,
+     25.5
+    ]
+   },
+   "beacons": [
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      100.5,
+      20.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      100.5,
+      23.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      100.5,
+      26.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      100.5,
+      29.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      103.5,
+      20.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      103.5,
+      28.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      106.5,
+      20.5
+     ]
+    }
+   ],
+   "read": 6.21,
+   "beacons_count": 7,
+   "value_compared": true,
+   "expected_unread": []
+  },
+  {
+   "id": "T04",
+   "group": "T",
+   "note": "tie, even 4th digit: normal speed-module-2+speed-module-2 x11",
+   "machine": {
+    "name": "assembling-machine-3",
+    "quality": "normal",
+    "recipe": "iron-gear-wheel",
+    "modules": [],
+    "center": [
+     145.5,
+     25.5
+    ]
+   },
+   "beacons": [
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-2",
+       "normal"
+      ],
+      [
+       "speed-module-2",
+       "normal"
+      ]
+     ],
+     "center": [
+      140.5,
+      20.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-2",
+       "normal"
+      ],
+      [
+       "speed-module-2",
+       "normal"
+      ]
+     ],
+     "center": [
+      140.5,
+      23.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-2",
+       "normal"
+      ],
+      [
+       "speed-module-2",
+       "normal"
+      ]
+     ],
+     "center": [
+      140.5,
+      26.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-2",
+       "normal"
+      ],
+      [
+       "speed-module-2",
+       "normal"
+      ]
+     ],
+     "center": [
+      140.5,
+      29.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-2",
+       "normal"
+      ],
+      [
+       "speed-module-2",
+       "normal"
+      ]
+     ],
+     "center": [
+      143.5,
+      20.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-2",
+       "normal"
+      ],
+      [
+       "speed-module-2",
+       "normal"
+      ]
+     ],
+     "center": [
+      143.5,
+      28.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-2",
+       "normal"
+      ],
+      [
+       "speed-module-2",
+       "normal"
+      ]
+     ],
+     "center": [
+      146.5,
+      20.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-2",
+       "normal"
+      ],
+      [
+       "speed-module-2",
+       "normal"
+      ]
+     ],
+     "center": [
+      146.5,
+      28.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-2",
+       "normal"
+      ],
+      [
+       "speed-module-2",
+       "normal"
+      ]
+     ],
+     "center": [
+      148.5,
+      23.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-2",
+       "normal"
+      ],
+      [
+       "speed-module-2",
+       "normal"
+      ]
+     ],
+     "center": [
+      149.5,
+      20.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-2",
+       "normal"
+      ],
+      [
+       "speed-module-2",
+       "normal"
+      ]
+     ],
+     "center": [
+      149.5,
+      26.5
+     ]
+    }
+   ],
+   "read": 4.9811250000000005,
+   "beacons_count": 11,
+   "value_compared": true,
+   "expected_unread": [
+    "rounding-tie"
+   ]
+  },
+  {
+   "id": "T05",
+   "group": "T",
+   "note": "control, no tie: normal speed-module-2+speed-module-2 x12 (beside speed-module-2+speed-module-2 x11)",
+   "machine": {
+    "name": "assembling-machine-3",
+    "quality": "normal",
+    "recipe": "iron-gear-wheel",
+    "modules": [],
+    "center": [
+     185.5,
+     25.5
+    ]
+   },
+   "beacons": [
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-2",
+       "normal"
+      ],
+      [
+       "speed-module-2",
+       "normal"
+      ]
+     ],
+     "center": [
+      180.5,
+      20.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-2",
+       "normal"
+      ],
+      [
+       "speed-module-2",
+       "normal"
+      ]
+     ],
+     "center": [
+      180.5,
+      23.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-2",
+       "normal"
+      ],
+      [
+       "speed-module-2",
+       "normal"
+      ]
+     ],
+     "center": [
+      180.5,
+      26.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-2",
+       "normal"
+      ],
+      [
+       "speed-module-2",
+       "normal"
+      ]
+     ],
+     "center": [
+      180.5,
+      29.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-2",
+       "normal"
+      ],
+      [
+       "speed-module-2",
+       "normal"
+      ]
+     ],
+     "center": [
+      183.5,
+      20.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-2",
+       "normal"
+      ],
+      [
+       "speed-module-2",
+       "normal"
+      ]
+     ],
+     "center": [
+      183.5,
+      28.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-2",
+       "normal"
+      ],
+      [
+       "speed-module-2",
+       "normal"
+      ]
+     ],
+     "center": [
+      186.5,
+      20.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-2",
+       "normal"
+      ],
+      [
+       "speed-module-2",
+       "normal"
+      ]
+     ],
+     "center": [
+      186.5,
+      28.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-2",
+       "normal"
+      ],
+      [
+       "speed-module-2",
+       "normal"
+      ]
+     ],
+     "center": [
+      188.5,
+      23.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-2",
+       "normal"
+      ],
+      [
+       "speed-module-2",
+       "normal"
+      ]
+     ],
+     "center": [
+      189.5,
+      20.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-2",
+       "normal"
+      ],
+      [
+       "speed-module-2",
+       "normal"
+      ]
+     ],
+     "center": [
+      189.5,
+      26.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-2",
+       "normal"
+      ],
+      [
+       "speed-module-2",
+       "normal"
+      ]
+     ],
+     "center": [
+      189.5,
+      29.5
+     ]
+    }
+   ],
+   "read": 5.146125,
+   "beacons_count": 12,
+   "value_compared": true,
+   "expected_unread": []
+  },
+  {
+   "id": "T06",
+   "group": "T",
+   "note": "control, odd-digit tie: normal speed-module-3+speed-module-3 x11 (beside speed-module-2+speed-module-2 x11)",
+   "machine": {
+    "name": "assembling-machine-3",
+    "quality": "normal",
+    "recipe": "iron-gear-wheel",
+    "modules": [],
+    "center": [
+     225.5,
+     25.5
+    ]
+   },
+   "beacons": [
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      220.5,
+      20.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      220.5,
+      23.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      220.5,
+      26.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      220.5,
+      29.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      223.5,
+      20.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      223.5,
+      28.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      226.5,
+      20.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      226.5,
+      28.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      228.5,
+      23.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      229.5,
+      20.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      229.5,
+      26.5
+     ]
+    }
+   ],
+   "read": 7.468500000000001,
+   "beacons_count": 11,
+   "value_compared": true,
+   "expected_unread": []
+  },
+  {
+   "id": "T07",
+   "group": "T",
+   "note": "tie, even 4th digit: normal speed-module-3+speed-module-3 x3",
+   "machine": {
+    "name": "assembling-machine-3",
+    "quality": "normal",
+    "recipe": "iron-gear-wheel",
+    "modules": [],
+    "center": [
+     265.5,
+     25.5
+    ]
+   },
+   "beacons": [
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      260.5,
+      20.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      260.5,
+      23.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      260.5,
+      26.5
+     ]
+    }
+   ],
+   "read": 4.497375,
+   "beacons_count": 3,
+   "value_compared": true,
+   "expected_unread": [
+    "rounding-tie"
+   ]
+  },
+  {
+   "id": "T08",
+   "group": "T",
+   "note": "control, no tie: normal speed-module-3+speed-module-3 x4 (beside speed-module-3+speed-module-3 x3)",
+   "machine": {
+    "name": "assembling-machine-3",
+    "quality": "normal",
+    "recipe": "iron-gear-wheel",
+    "modules": [],
+    "center": [
+     305.5,
+     25.5
+    ]
+   },
+   "beacons": [
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      300.5,
+      20.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      300.5,
+      23.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      300.5,
+      26.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      300.5,
+      29.5
+     ]
+    }
+   ],
+   "read": 5.0,
+   "beacons_count": 4,
+   "value_compared": true,
+   "expected_unread": []
+  },
+  {
+   "id": "T09",
+   "group": "T",
+   "note": "tie, even 4th digit: legendary speed-module+speed-module x7",
+   "machine": {
+    "name": "assembling-machine-3",
+    "quality": "normal",
+    "recipe": "iron-gear-wheel",
+    "modules": [],
+    "center": [
+     345.5,
+     25.5
+    ]
+   },
+   "beacons": [
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module",
+       "legendary"
+      ]
+     ],
+     "center": [
+      340.5,
+      20.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module",
+       "legendary"
+      ]
+     ],
+     "center": [
+      340.5,
+      23.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module",
+       "legendary"
+      ]
+     ],
+     "center": [
+      340.5,
+      26.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module",
+       "legendary"
+      ]
+     ],
+     "center": [
+      340.5,
+      29.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module",
+       "legendary"
+      ]
+     ],
+     "center": [
+      343.5,
+      20.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module",
+       "legendary"
+      ]
+     ],
+     "center": [
+      343.5,
+      28.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module",
+       "legendary"
+      ]
+     ],
+     "center": [
+      346.5,
+      20.5
+     ]
+    }
+   ],
+   "read": 9.516625,
+   "beacons_count": 7,
+   "value_compared": true,
+   "expected_unread": [
+    "rounding-tie"
+   ]
+  },
+  {
+   "id": "T10",
+   "group": "T",
+   "note": "control, no tie: legendary speed-module+speed-module x8 (beside speed-module+speed-module x7)",
+   "machine": {
+    "name": "assembling-machine-3",
+    "quality": "normal",
+    "recipe": "iron-gear-wheel",
+    "modules": [],
+    "center": [
+     385.5,
+     25.5
+    ]
+   },
+   "beacons": [
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module",
+       "legendary"
+      ]
+     ],
+     "center": [
+      380.5,
+      20.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module",
+       "legendary"
+      ]
+     ],
+     "center": [
+      380.5,
+      23.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module",
+       "legendary"
+      ]
+     ],
+     "center": [
+      380.5,
+      26.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module",
+       "legendary"
+      ]
+     ],
+     "center": [
+      380.5,
+      29.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module",
+       "legendary"
+      ]
+     ],
+     "center": [
+      383.5,
+      20.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module",
+       "legendary"
+      ]
+     ],
+     "center": [
+      383.5,
+      28.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module",
+       "legendary"
+      ]
+     ],
+     "center": [
+      386.5,
+      20.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module",
+       "legendary"
+      ]
+     ],
+     "center": [
+      386.5,
+      28.5
+     ]
+    }
+   ],
+   "read": 10.0875,
+   "beacons_count": 8,
+   "value_compared": true,
+   "expected_unread": []
+  },
+  {
+   "id": "T11",
+   "group": "T",
+   "note": "control, odd-digit tie: legendary speed-module+speed-module-2 x6 (beside speed-module+speed-module x7)",
+   "machine": {
+    "name": "assembling-machine-3",
+    "quality": "normal",
+    "recipe": "iron-gear-wheel",
+    "modules": [],
+    "center": [
+     25.5,
+     65.5
+    ]
+   },
+   "beacons": [
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module-2",
+       "legendary"
+      ]
+     ],
+     "center": [
+      20.5,
+      60.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module-2",
+       "legendary"
+      ]
+     ],
+     "center": [
+      20.5,
+      63.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module-2",
+       "legendary"
+      ]
+     ],
+     "center": [
+      20.5,
+      66.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module-2",
+       "legendary"
+      ]
+     ],
+     "center": [
+      20.5,
+      69.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module-2",
+       "legendary"
+      ]
+     ],
+     "center": [
+      23.5,
+      60.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module-2",
+       "legendary"
+      ]
+     ],
+     "center": [
+      23.5,
+      68.5
+     ]
+    }
+   ],
+   "read": 10.817250000000001,
+   "beacons_count": 6,
+   "value_compared": true,
+   "expected_unread": [
+    "beacon-mix"
+   ]
+  },
+  {
+   "id": "T12",
+   "group": "T",
+   "note": "tie, even 4th digit: legendary speed-module+speed-module x9",
+   "machine": {
+    "name": "assembling-machine-3",
+    "quality": "normal",
+    "recipe": "iron-gear-wheel",
+    "modules": [],
+    "center": [
+     65.5,
+     65.5
+    ]
+   },
+   "beacons": [
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module",
+       "legendary"
+      ]
+     ],
+     "center": [
+      60.5,
+      60.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module",
+       "legendary"
+      ]
+     ],
+     "center": [
+      60.5,
+      63.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module",
+       "legendary"
+      ]
+     ],
+     "center": [
+      60.5,
+      66.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module",
+       "legendary"
+      ]
+     ],
+     "center": [
+      60.5,
+      69.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module",
+       "legendary"
+      ]
+     ],
+     "center": [
+      63.5,
+      60.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module",
+       "legendary"
+      ]
+     ],
+     "center": [
+      63.5,
+      68.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module",
+       "legendary"
+      ]
+     ],
+     "center": [
+      66.5,
+      60.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module",
+       "legendary"
+      ]
+     ],
+     "center": [
+      66.5,
+      68.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module",
+       "legendary"
+      ]
+     ],
+     "center": [
+      68.5,
+      63.5
+     ]
+    }
+   ],
+   "read": 10.624125,
+   "beacons_count": 9,
+   "value_compared": true,
+   "expected_unread": [
+    "rounding-tie"
+   ]
+  },
+  {
+   "id": "T13",
+   "group": "T",
+   "note": "control, no tie: legendary speed-module+speed-module x10 (beside speed-module+speed-module x9)",
+   "machine": {
+    "name": "assembling-machine-3",
+    "quality": "normal",
+    "recipe": "iron-gear-wheel",
+    "modules": [],
+    "center": [
+     105.5,
+     65.5
+    ]
+   },
+   "beacons": [
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module",
+       "legendary"
+      ]
+     ],
+     "center": [
+      100.5,
+      60.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module",
+       "legendary"
+      ]
+     ],
+     "center": [
+      100.5,
+      63.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module",
+       "legendary"
+      ]
+     ],
+     "center": [
+      100.5,
+      66.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module",
+       "legendary"
+      ]
+     ],
+     "center": [
+      100.5,
+      69.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module",
+       "legendary"
+      ]
+     ],
+     "center": [
+      103.5,
+      60.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module",
+       "legendary"
+      ]
+     ],
+     "center": [
+      103.5,
+      68.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module",
+       "legendary"
+      ]
+     ],
+     "center": [
+      106.5,
+      60.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module",
+       "legendary"
+      ]
+     ],
+     "center": [
+      106.5,
+      68.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module",
+       "legendary"
+      ]
+     ],
+     "center": [
+      108.5,
+      63.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module",
+       "legendary"
+      ]
+     ],
+     "center": [
+      109.5,
+      60.5
+     ]
+    }
+   ],
+   "read": 11.131250000000001,
+   "beacons_count": 10,
+   "value_compared": true,
+   "expected_unread": []
+  },
+  {
+   "id": "T14",
+   "group": "T",
+   "note": "control, odd-digit tie: legendary speed-module+speed-module-3 x10 (beside speed-module+speed-module x9)",
+   "machine": {
+    "name": "assembling-machine-3",
+    "quality": "normal",
+    "recipe": "iron-gear-wheel",
+    "modules": [],
+    "center": [
+     145.5,
+     65.5
+    ]
+   },
+   "beacons": [
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module-3",
+       "legendary"
+      ]
+     ],
+     "center": [
+      140.5,
+      60.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module-3",
+       "legendary"
+      ]
+     ],
+     "center": [
+      140.5,
+      63.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module-3",
+       "legendary"
+      ]
+     ],
+     "center": [
+      140.5,
+      66.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module-3",
+       "legendary"
+      ]
+     ],
+     "center": [
+      140.5,
+      69.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module-3",
+       "legendary"
+      ]
+     ],
+     "center": [
+      143.5,
+      60.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module-3",
+       "legendary"
+      ]
+     ],
+     "center": [
+      143.5,
+      68.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module-3",
+       "legendary"
+      ]
+     ],
+     "center": [
+      146.5,
+      60.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module-3",
+       "legendary"
+      ]
+     ],
+     "center": [
+      146.5,
+      68.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module-3",
+       "legendary"
+      ]
+     ],
+     "center": [
+      148.5,
+      63.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module-3",
+       "legendary"
+      ]
+     ],
+     "center": [
+      149.5,
+      60.5
+     ]
+    }
+   ],
+   "read": 18.54225,
+   "beacons_count": 10,
+   "value_compared": true,
+   "expected_unread": [
+    "beacon-mix"
+   ]
+  },
+  {
+   "id": "T15",
+   "group": "T",
+   "note": "tie, even 4th digit: legendary speed-module+speed-module x11",
+   "machine": {
+    "name": "assembling-machine-3",
+    "quality": "normal",
+    "recipe": "iron-gear-wheel",
+    "modules": [],
+    "center": [
+     185.5,
+     65.5
+    ]
+   },
+   "beacons": [
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module",
+       "legendary"
+      ]
+     ],
+     "center": [
+      180.5,
+      60.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module",
+       "legendary"
+      ]
+     ],
+     "center": [
+      180.5,
+      63.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module",
+       "legendary"
+      ]
+     ],
+     "center": [
+      180.5,
+      66.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module",
+       "legendary"
+      ]
+     ],
+     "center": [
+      180.5,
+      69.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module",
+       "legendary"
+      ]
+     ],
+     "center": [
+      183.5,
+      60.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module",
+       "legendary"
+      ]
+     ],
+     "center": [
+      183.5,
+      68.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module",
+       "legendary"
+      ]
+     ],
+     "center": [
+      186.5,
+      60.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module",
+       "legendary"
+      ]
+     ],
+     "center": [
+      186.5,
+      68.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module",
+       "legendary"
+      ]
+     ],
+     "center": [
+      188.5,
+      63.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module",
+       "legendary"
+      ]
+     ],
+     "center": [
+      189.5,
+      60.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module",
+       "legendary"
+      ]
+     ],
+     "center": [
+      189.5,
+      66.5
+     ]
+    }
+   ],
+   "read": 11.614125,
+   "beacons_count": 11,
+   "value_compared": true,
+   "expected_unread": [
+    "rounding-tie"
+   ]
+  },
+  {
+   "id": "T16",
+   "group": "T",
+   "note": "control, no tie: legendary speed-module+speed-module x12 (beside speed-module+speed-module x11)",
+   "machine": {
+    "name": "assembling-machine-3",
+    "quality": "normal",
+    "recipe": "iron-gear-wheel",
+    "modules": [],
+    "center": [
+     225.5,
+     65.5
+    ]
+   },
+   "beacons": [
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module",
+       "legendary"
+      ]
+     ],
+     "center": [
+      220.5,
+      60.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module",
+       "legendary"
+      ]
+     ],
+     "center": [
+      220.5,
+      63.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module",
+       "legendary"
+      ]
+     ],
+     "center": [
+      220.5,
+      66.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module",
+       "legendary"
+      ]
+     ],
+     "center": [
+      220.5,
+      69.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module",
+       "legendary"
+      ]
+     ],
+     "center": [
+      223.5,
+      60.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module",
+       "legendary"
+      ]
+     ],
+     "center": [
+      223.5,
+      68.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module",
+       "legendary"
+      ]
+     ],
+     "center": [
+      226.5,
+      60.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module",
+       "legendary"
+      ]
+     ],
+     "center": [
+      226.5,
+      68.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module",
+       "legendary"
+      ]
+     ],
+     "center": [
+      228.5,
+      63.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module",
+       "legendary"
+      ]
+     ],
+     "center": [
+      229.5,
+      60.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module",
+       "legendary"
+      ]
+     ],
+     "center": [
+      229.5,
+      66.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module",
+       "legendary"
+      ]
+     ],
+     "center": [
+      229.5,
+      69.5
+     ]
+    }
+   ],
+   "read": 12.0725,
+   "beacons_count": 12,
+   "value_compared": true,
+   "expected_unread": []
+  },
+  {
+   "id": "T17",
+   "group": "T",
+   "note": "tie, even 4th digit: legendary speed-module+speed-module-2 x10",
+   "machine": {
+    "name": "assembling-machine-3",
+    "quality": "normal",
+    "recipe": "iron-gear-wheel",
+    "modules": [],
+    "center": [
+     265.5,
+     65.5
+    ]
+   },
+   "beacons": [
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module-2",
+       "legendary"
+      ]
+     ],
+     "center": [
+      260.5,
+      60.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module-2",
+       "legendary"
+      ]
+     ],
+     "center": [
+      260.5,
+      63.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module-2",
+       "legendary"
+      ]
+     ],
+     "center": [
+      260.5,
+      66.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module-2",
+       "legendary"
+      ]
+     ],
+     "center": [
+      260.5,
+      69.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module-2",
+       "legendary"
+      ]
+     ],
+     "center": [
+      263.5,
+      60.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module-2",
+       "legendary"
+      ]
+     ],
+     "center": [
+      263.5,
+      68.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module-2",
+       "legendary"
+      ]
+     ],
+     "center": [
+      266.5,
+      60.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module-2",
+       "legendary"
+      ]
+     ],
+     "center": [
+      266.5,
+      68.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module-2",
+       "legendary"
+      ]
+     ],
+     "center": [
+      268.5,
+      63.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module-2",
+       "legendary"
+      ]
+     ],
+     "center": [
+      269.5,
+      60.5
+     ]
+    }
+   ],
+   "read": 13.601624999999999,
+   "beacons_count": 10,
+   "value_compared": true,
+   "expected_unread": [
+    "beacon-mix",
+    "rounding-tie"
+   ]
+  },
+  {
+   "id": "T18",
+   "group": "T",
+   "note": "control, no tie: legendary speed-module+speed-module-2 x11 (beside speed-module+speed-module-2 x10)",
+   "machine": {
+    "name": "assembling-machine-3",
+    "quality": "normal",
+    "recipe": "iron-gear-wheel",
+    "modules": [],
+    "center": [
+     305.5,
+     65.5
+    ]
+   },
+   "beacons": [
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module-2",
+       "legendary"
+      ]
+     ],
+     "center": [
+      300.5,
+      60.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module-2",
+       "legendary"
+      ]
+     ],
+     "center": [
+      300.5,
+      63.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module-2",
+       "legendary"
+      ]
+     ],
+     "center": [
+      300.5,
+      66.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module-2",
+       "legendary"
+      ]
+     ],
+     "center": [
+      300.5,
+      69.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module-2",
+       "legendary"
+      ]
+     ],
+     "center": [
+      303.5,
+      60.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module-2",
+       "legendary"
+      ]
+     ],
+     "center": [
+      303.5,
+      68.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module-2",
+       "legendary"
+      ]
+     ],
+     "center": [
+      306.5,
+      60.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module-2",
+       "legendary"
+      ]
+     ],
+     "center": [
+      306.5,
+      68.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module-2",
+       "legendary"
+      ]
+     ],
+     "center": [
+      308.5,
+      63.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module-2",
+       "legendary"
+      ]
+     ],
+     "center": [
+      309.5,
+      60.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module-2",
+       "legendary"
+      ]
+     ],
+     "center": [
+      309.5,
+      66.5
+     ]
+    }
+   ],
+   "read": 14.205125,
+   "beacons_count": 11,
+   "value_compared": true,
+   "expected_unread": [
+    "beacon-mix"
+   ]
+  },
+  {
+   "id": "T19",
+   "group": "T",
+   "note": "tie, even 4th digit: legendary speed-module+speed-module-3 x6",
+   "machine": {
+    "name": "assembling-machine-3",
+    "quality": "normal",
+    "recipe": "iron-gear-wheel",
+    "modules": [],
+    "center": [
+     345.5,
+     65.5
+    ]
+   },
+   "beacons": [
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module-3",
+       "legendary"
+      ]
+     ],
+     "center": [
+      340.5,
+      60.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module-3",
+       "legendary"
+      ]
+     ],
+     "center": [
+      340.5,
+      63.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module-3",
+       "legendary"
+      ]
+     ],
+     "center": [
+      340.5,
+      66.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module-3",
+       "legendary"
+      ]
+     ],
+     "center": [
+      340.5,
+      69.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module-3",
+       "legendary"
+      ]
+     ],
+     "center": [
+      343.5,
+      60.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module-3",
+       "legendary"
+      ]
+     ],
+     "center": [
+      343.5,
+      68.5
+     ]
+    }
+   ],
+   "read": 14.644124999999999,
+   "beacons_count": 6,
+   "value_compared": true,
+   "expected_unread": [
+    "beacon-mix",
+    "rounding-tie"
+   ]
+  },
+  {
+   "id": "T20",
+   "group": "T",
+   "note": "control, no tie: legendary speed-module+speed-module-3 x7 (beside speed-module+speed-module-3 x6)",
+   "machine": {
+    "name": "assembling-machine-3",
+    "quality": "normal",
+    "recipe": "iron-gear-wheel",
+    "modules": [],
+    "center": [
+     385.5,
+     65.5
+    ]
+   },
+   "beacons": [
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module-3",
+       "legendary"
+      ]
+     ],
+     "center": [
+      380.5,
+      60.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module-3",
+       "legendary"
+      ]
+     ],
+     "center": [
+      380.5,
+      63.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module-3",
+       "legendary"
+      ]
+     ],
+     "center": [
+      380.5,
+      66.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module-3",
+       "legendary"
+      ]
+     ],
+     "center": [
+      380.5,
+      69.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module-3",
+       "legendary"
+      ]
+     ],
+     "center": [
+      383.5,
+      60.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module-3",
+       "legendary"
+      ]
+     ],
+     "center": [
+      383.5,
+      68.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module-3",
+       "legendary"
+      ]
+     ],
+     "center": [
+      386.5,
+      60.5
+     ]
+    }
+   ],
+   "read": 15.7165,
+   "beacons_count": 7,
+   "value_compared": true,
+   "expected_unread": [
+    "beacon-mix"
+   ]
+  },
+  {
+   "id": "T21",
+   "group": "T",
+   "note": "tie, even 4th digit: legendary speed-module-2+speed-module-2 x2",
+   "machine": {
+    "name": "assembling-machine-3",
+    "quality": "normal",
+    "recipe": "iron-gear-wheel",
+    "modules": [],
+    "center": [
+     25.5,
+     105.5
+    ]
+   },
+   "beacons": [
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module-2",
+       "legendary"
+      ],
+      [
+       "speed-module-2",
+       "legendary"
+      ]
+     ],
+     "center": [
+      20.5,
+      100.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module-2",
+       "legendary"
+      ],
+      [
+       "speed-module-2",
+       "legendary"
+      ]
+     ],
+     "center": [
+      20.5,
+      103.5
+     ]
+    }
+   ],
+   "read": 7.8790000000000004,
+   "beacons_count": 2,
+   "value_compared": false,
+   "expected_unread": [
+    "rounding-tie"
+   ]
+  },
+  {
+   "id": "T22",
+   "group": "T",
+   "note": "control, no tie: legendary speed-module-2+speed-module-2 x3 (beside speed-module-2+speed-module-2 x2)",
+   "machine": {
+    "name": "assembling-machine-3",
+    "quality": "normal",
+    "recipe": "iron-gear-wheel",
+    "modules": [],
+    "center": [
+     65.5,
+     105.5
+    ]
+   },
+   "beacons": [
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module-2",
+       "legendary"
+      ],
+      [
+       "speed-module-2",
+       "legendary"
+      ]
+     ],
+     "center": [
+      60.5,
+      100.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module-2",
+       "legendary"
+      ],
+      [
+       "speed-module-2",
+       "legendary"
+      ]
+     ],
+     "center": [
+      60.5,
+      103.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module-2",
+       "legendary"
+      ],
+      [
+       "speed-module-2",
+       "legendary"
+      ]
+     ],
+     "center": [
+      60.5,
+      106.5
+     ]
+    }
+   ],
+   "read": 9.36825,
+   "beacons_count": 3,
+   "value_compared": true,
+   "expected_unread": []
+  },
+  {
+   "id": "T23",
+   "group": "T",
+   "note": "control, odd-digit tie: legendary speed-module-3+speed-module-3 x2 (beside speed-module-2+speed-module-2 x2)",
+   "machine": {
+    "name": "assembling-machine-3",
+    "quality": "normal",
+    "recipe": "iron-gear-wheel",
+    "modules": [],
+    "center": [
+     105.5,
+     105.5
+    ]
+   },
+   "beacons": [
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module-3",
+       "legendary"
+      ],
+      [
+       "speed-module-3",
+       "legendary"
+      ]
+     ],
+     "center": [
+      100.5,
+      100.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module-3",
+       "legendary"
+      ],
+      [
+       "speed-module-3",
+       "legendary"
+      ]
+     ],
+     "center": [
+      100.5,
+      103.5
+     ]
+    }
+   ],
+   "read": 12.2985,
+   "beacons_count": 2,
+   "value_compared": true,
+   "expected_unread": []
+  },
+  {
+   "id": "T24",
+   "group": "T",
+   "note": "odd-digit tie: normal speed-module-3+speed-module-3 x9",
+   "machine": {
+    "name": "assembling-machine-3",
+    "quality": "normal",
+    "recipe": "iron-gear-wheel",
+    "modules": [],
+    "center": [
+     145.5,
+     105.5
+    ]
+   },
+   "beacons": [
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      140.5,
+      100.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      140.5,
+      103.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      140.5,
+      106.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      140.5,
+      109.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      143.5,
+      100.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      143.5,
+      108.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      146.5,
+      100.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      146.5,
+      108.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      148.5,
+      103.5
+     ]
+    }
+   ],
+   "read": 6.8745,
+   "beacons_count": 9,
+   "value_compared": true,
+   "expected_unread": []
+  },
+  {
+   "id": "T25",
+   "group": "T",
+   "note": "odd-digit tie: legendary speed-module+speed-module x3",
+   "machine": {
+    "name": "assembling-machine-3",
+    "quality": "normal",
+    "recipe": "iron-gear-wheel",
+    "modules": [],
+    "center": [
+     185.5,
+     105.5
+    ]
+   },
+   "beacons": [
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module",
+       "legendary"
+      ]
+     ],
+     "center": [
+      180.5,
+      100.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module",
+       "legendary"
+      ]
+     ],
+     "center": [
+      180.5,
+      103.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module",
+       "legendary"
+      ],
+      [
+       "speed-module",
+       "legendary"
+      ]
+     ],
+     "center": [
+      180.5,
+      106.5
+     ]
+    }
+   ],
+   "read": 6.662249999999999,
+   "beacons_count": 3,
+   "value_compared": true,
+   "expected_unread": []
+  },
+  {
+   "id": "E01",
+   "group": "E",
+   "note": "1 speed beacons alone",
+   "machine": {
+    "name": "assembling-machine-3",
+    "quality": "normal",
+    "recipe": "iron-gear-wheel",
+    "modules": [],
+    "center": [
+     225.5,
+     105.5
+    ]
+   },
+   "beacons": [
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      220.5,
+      100.5
+     ]
+    }
+   ],
+   "read": 3.125,
+   "beacons_count": 1,
+   "value_compared": true,
+   "expected_unread": []
+  },
+  {
+   "id": "E02",
+   "group": "E",
+   "note": "2 speed beacons alone",
+   "machine": {
+    "name": "assembling-machine-3",
+    "quality": "normal",
+    "recipe": "iron-gear-wheel",
+    "modules": [],
+    "center": [
+     265.5,
+     105.5
+    ]
+   },
+   "beacons": [
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      260.5,
+      100.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      260.5,
+      103.5
+     ]
+    }
+   ],
+   "read": 3.901625,
+   "beacons_count": 2,
+   "value_compared": true,
+   "expected_unread": []
+  },
+  {
+   "id": "E03",
+   "group": "E",
+   "note": "4 speed beacons alone",
+   "machine": {
+    "name": "assembling-machine-3",
+    "quality": "normal",
+    "recipe": "iron-gear-wheel",
+    "modules": [],
+    "center": [
+     305.5,
+     105.5
+    ]
+   },
+   "beacons": [
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      300.5,
+      100.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      300.5,
+      103.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      300.5,
+      106.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      300.5,
+      109.5
+     ]
+    }
+   ],
+   "read": 5.0,
+   "beacons_count": 4,
+   "value_compared": true,
+   "expected_unread": []
+  },
+  {
+   "id": "E04",
+   "group": "E",
+   "note": "1 speed beacons with 1 efficiency beacons",
+   "machine": {
+    "name": "assembling-machine-3",
+    "quality": "normal",
+    "recipe": "iron-gear-wheel",
+    "modules": [],
+    "center": [
+     345.5,
+     105.5
+    ]
+   },
+   "beacons": [
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      340.5,
+      100.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "efficiency-module-3",
+       "normal"
+      ],
+      [
+       "efficiency-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      340.5,
+      103.5
+     ]
+    }
+   ],
+   "read": 2.575875,
+   "beacons_count": 2,
+   "value_compared": true,
+   "expected_unread": [
+    "rounding-tie"
+   ]
+  },
+  {
+   "id": "E05",
+   "group": "E",
+   "note": "2 speed beacons with 2 efficiency beacons",
+   "machine": {
+    "name": "assembling-machine-3",
+    "quality": "normal",
+    "recipe": "iron-gear-wheel",
+    "modules": [],
+    "center": [
+     385.5,
+     105.5
+    ]
+   },
+   "beacons": [
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      380.5,
+      100.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      380.5,
+      103.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "efficiency-module-3",
+       "normal"
+      ],
+      [
+       "efficiency-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      380.5,
+      106.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "efficiency-module-3",
+       "normal"
+      ],
+      [
+       "efficiency-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      380.5,
+      109.5
+     ]
+    }
+   ],
+   "read": 3.125,
+   "beacons_count": 4,
+   "value_compared": true,
+   "expected_unread": []
+  },
+  {
+   "id": "E06",
+   "group": "E",
+   "note": "4 speed beacons with 4 efficiency beacons",
+   "machine": {
+    "name": "assembling-machine-3",
+    "quality": "normal",
+    "recipe": "iron-gear-wheel",
+    "modules": [],
+    "center": [
+     25.5,
+     145.5
+    ]
+   },
+   "beacons": [
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      20.5,
+      140.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      20.5,
+      143.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      20.5,
+      146.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      20.5,
+      149.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "efficiency-module-3",
+       "normal"
+      ],
+      [
+       "efficiency-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      23.5,
+      140.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "efficiency-module-3",
+       "normal"
+      ],
+      [
+       "efficiency-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      23.5,
+      148.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "efficiency-module-3",
+       "normal"
+      ],
+      [
+       "efficiency-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      26.5,
+      140.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "efficiency-module-3",
+       "normal"
+      ],
+      [
+       "efficiency-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      26.5,
+      148.5
+     ]
+    }
+   ],
+   "read": 3.90125,
+   "beacons_count": 8,
+   "value_compared": true,
+   "expected_unread": []
+  },
+  {
+   "id": "E07",
+   "group": "E",
+   "note": "1 speed beacons with 1 empty beacons",
+   "machine": {
+    "name": "assembling-machine-3",
+    "quality": "normal",
+    "recipe": "iron-gear-wheel",
+    "modules": [],
+    "center": [
+     65.5,
+     145.5
+    ]
+   },
+   "beacons": [
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      60.5,
+      140.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [],
+     "center": [
+      60.5,
+      143.5
+     ]
+    }
+   ],
+   "read": 2.575875,
+   "beacons_count": 2,
+   "value_compared": true,
+   "expected_unread": [
+    "rounding-tie"
+   ]
+  },
+  {
+   "id": "E08",
+   "group": "E",
+   "note": "2 speed beacons with 2 empty beacons",
+   "machine": {
+    "name": "assembling-machine-3",
+    "quality": "normal",
+    "recipe": "iron-gear-wheel",
+    "modules": [],
+    "center": [
+     105.5,
+     145.5
+    ]
+   },
+   "beacons": [
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      100.5,
+      140.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      100.5,
+      143.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [],
+     "center": [
+      100.5,
+      146.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [],
+     "center": [
+      100.5,
+      149.5
+     ]
+    }
+   ],
+   "read": 3.125,
+   "beacons_count": 4,
+   "value_compared": true,
+   "expected_unread": []
+  },
+  {
+   "id": "E09",
+   "group": "E",
+   "note": "4 speed beacons with 4 empty beacons",
+   "machine": {
+    "name": "assembling-machine-3",
+    "quality": "normal",
+    "recipe": "iron-gear-wheel",
+    "modules": [],
+    "center": [
+     145.5,
+     145.5
+    ]
+   },
+   "beacons": [
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      140.5,
+      140.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      140.5,
+      143.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      140.5,
+      146.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      140.5,
+      149.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [],
+     "center": [
+      143.5,
+      140.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [],
+     "center": [
+      143.5,
+      148.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [],
+     "center": [
+      146.5,
+      140.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [],
+     "center": [
+      146.5,
+      148.5
+     ]
+    }
+   ],
+   "read": 3.90125,
+   "beacons_count": 8,
+   "value_compared": true,
+   "expected_unread": []
+  },
+  {
+   "id": "E10",
+   "group": "E",
+   "note": "1 speed beacons with 1 one-module beacons",
+   "machine": {
+    "name": "assembling-machine-3",
+    "quality": "normal",
+    "recipe": "iron-gear-wheel",
+    "modules": [],
+    "center": [
+     185.5,
+     145.5
+    ]
+   },
+   "beacons": [
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      180.5,
+      140.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      180.5,
+      143.5
+     ]
+    }
+   ],
+   "read": 3.2387500000000005,
+   "beacons_count": 2,
+   "value_compared": true,
+   "expected_unread": []
+  },
+  {
+   "id": "E11",
+   "group": "E",
+   "note": "2 speed beacons with 2 one-module beacons",
+   "machine": {
+    "name": "assembling-machine-3",
+    "quality": "normal",
+    "recipe": "iron-gear-wheel",
+    "modules": [],
+    "center": [
+     225.5,
+     145.5
+    ]
+   },
+   "beacons": [
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      220.5,
+      140.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      220.5,
+      143.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      220.5,
+      146.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      220.5,
+      149.5
+     ]
+    }
+   ],
+   "read": 4.0625,
+   "beacons_count": 4,
+   "value_compared": true,
+   "expected_unread": []
+  },
+  {
+   "id": "E12",
+   "group": "E",
+   "note": "4 speed beacons with 4 one-module beacons",
+   "machine": {
+    "name": "assembling-machine-3",
+    "quality": "normal",
+    "recipe": "iron-gear-wheel",
+    "modules": [],
+    "center": [
+     265.5,
+     145.5
+    ]
+   },
+   "beacons": [
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      260.5,
+      140.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      260.5,
+      143.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      260.5,
+      146.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      260.5,
+      149.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      263.5,
+      140.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      263.5,
+      148.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      266.5,
+      140.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      266.5,
+      148.5
+     ]
+    }
+   ],
+   "read": 5.226875,
+   "beacons_count": 8,
+   "value_compared": true,
+   "expected_unread": []
+  },
+  {
+   "id": "P01",
+   "group": "P",
+   "note": "mixed pair A, normal: 2 beacons of speed 3 + efficiency 3",
+   "machine": {
+    "name": "assembling-machine-3",
+    "quality": "normal",
+    "recipe": "iron-gear-wheel",
+    "modules": [],
+    "center": [
+     305.5,
+     145.5
+    ]
+   },
+   "beacons": [
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "efficiency-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      300.5,
+      140.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "efficiency-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      300.5,
+      143.5
+     ]
+    }
+   ],
+   "read": 2.575875,
+   "beacons_count": 2,
+   "value_compared": true,
+   "expected_unread": [
+    "beacon-mix",
+    "rounding-tie"
+   ]
+  },
+  {
+   "id": "P02",
+   "group": "P",
+   "note": "mixed pair B, normal: 1 of 2 speed 3, 1 of 2 efficiency 3",
+   "machine": {
+    "name": "assembling-machine-3",
+    "quality": "normal",
+    "recipe": "iron-gear-wheel",
+    "modules": [],
+    "center": [
+     345.5,
+     145.5
+    ]
+   },
+   "beacons": [
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      340.5,
+      140.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "efficiency-module-3",
+       "normal"
+      ],
+      [
+       "efficiency-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      340.5,
+      143.5
+     ]
+    }
+   ],
+   "read": 2.575875,
+   "beacons_count": 2,
+   "value_compared": true,
+   "expected_unread": [
+    "rounding-tie"
+   ]
+  },
+  {
+   "id": "P03",
+   "group": "P",
+   "note": "mixed pair A, normal: 6 beacons of speed 3 + efficiency 3",
+   "machine": {
+    "name": "assembling-machine-3",
+    "quality": "normal",
+    "recipe": "iron-gear-wheel",
+    "modules": [],
+    "center": [
+     385.5,
+     145.5
+    ]
+   },
+   "beacons": [
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "efficiency-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      380.5,
+      140.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "efficiency-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      380.5,
+      143.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "efficiency-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      380.5,
+      146.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "efficiency-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      380.5,
+      149.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "efficiency-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      383.5,
+      140.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "efficiency-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      383.5,
+      148.5
+     ]
+    }
+   ],
+   "read": 3.546125,
+   "beacons_count": 6,
+   "value_compared": true,
+   "expected_unread": [
+    "beacon-mix"
+   ]
+  },
+  {
+   "id": "P04",
+   "group": "P",
+   "note": "mixed pair B, normal: 3 of 2 speed 3, 3 of 2 efficiency 3",
+   "machine": {
+    "name": "assembling-machine-3",
+    "quality": "normal",
+    "recipe": "iron-gear-wheel",
+    "modules": [],
+    "center": [
+     25.5,
+     185.5
+    ]
+   },
+   "beacons": [
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      20.5,
+      180.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      20.5,
+      183.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      20.5,
+      186.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "efficiency-module-3",
+       "normal"
+      ],
+      [
+       "efficiency-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      20.5,
+      189.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "efficiency-module-3",
+       "normal"
+      ],
+      [
+       "efficiency-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      23.5,
+      180.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "efficiency-module-3",
+       "normal"
+      ],
+      [
+       "efficiency-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      23.5,
+      188.5
+     ]
+    }
+   ],
+   "read": 3.546125,
+   "beacons_count": 6,
+   "value_compared": true,
+   "expected_unread": []
+  },
+  {
+   "id": "P05",
+   "group": "P",
+   "note": "mixed pair A, legendary: 2 beacons of speed 3 + efficiency 3",
+   "machine": {
+    "name": "assembling-machine-3",
+    "quality": "normal",
+    "recipe": "iron-gear-wheel",
+    "modules": [],
+    "center": [
+     65.5,
+     185.5
+    ]
+   },
+   "beacons": [
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module-3",
+       "legendary"
+      ],
+      [
+       "efficiency-module-3",
+       "legendary"
+      ]
+     ],
+     "center": [
+      60.5,
+      180.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module-3",
+       "legendary"
+      ],
+      [
+       "efficiency-module-3",
+       "legendary"
+      ]
+     ],
+     "center": [
+      60.5,
+      183.5
+     ]
+    }
+   ],
+   "read": 6.77425,
+   "beacons_count": 2,
+   "value_compared": true,
+   "expected_unread": [
+    "beacon-mix"
+   ]
+  },
+  {
+   "id": "P06",
+   "group": "P",
+   "note": "mixed pair B, legendary: 1 of 2 speed 3, 1 of 2 efficiency 3",
+   "machine": {
+    "name": "assembling-machine-3",
+    "quality": "normal",
+    "recipe": "iron-gear-wheel",
+    "modules": [],
+    "center": [
+     105.5,
+     185.5
+    ]
+   },
+   "beacons": [
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module-3",
+       "legendary"
+      ],
+      [
+       "speed-module-3",
+       "legendary"
+      ]
+     ],
+     "center": [
+      100.5,
+      180.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "efficiency-module-3",
+       "legendary"
+      ],
+      [
+       "efficiency-module-3",
+       "legendary"
+      ]
+     ],
+     "center": [
+      100.5,
+      183.5
+     ]
+    }
+   ],
+   "read": 6.77425,
+   "beacons_count": 2,
+   "value_compared": true,
+   "expected_unread": []
+  },
+  {
+   "id": "P07",
+   "group": "P",
+   "note": "mixed pair A, legendary: 6 beacons of speed 3 + efficiency 3",
+   "machine": {
+    "name": "assembling-machine-3",
+    "quality": "normal",
+    "recipe": "iron-gear-wheel",
+    "modules": [],
+    "center": [
+     145.5,
+     185.5
+    ]
+   },
+   "beacons": [
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module-3",
+       "legendary"
+      ],
+      [
+       "efficiency-module-3",
+       "legendary"
+      ]
+     ],
+     "center": [
+      140.5,
+      180.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module-3",
+       "legendary"
+      ],
+      [
+       "efficiency-module-3",
+       "legendary"
+      ]
+     ],
+     "center": [
+      140.5,
+      183.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module-3",
+       "legendary"
+      ],
+      [
+       "efficiency-module-3",
+       "legendary"
+      ]
+     ],
+     "center": [
+      140.5,
+      186.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module-3",
+       "legendary"
+      ],
+      [
+       "efficiency-module-3",
+       "legendary"
+      ]
+     ],
+     "center": [
+      140.5,
+      189.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module-3",
+       "legendary"
+      ],
+      [
+       "efficiency-module-3",
+       "legendary"
+      ]
+     ],
+     "center": [
+      143.5,
+      180.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module-3",
+       "legendary"
+      ],
+      [
+       "efficiency-module-3",
+       "legendary"
+      ]
+     ],
+     "center": [
+      143.5,
+      188.5
+     ]
+    }
+   ],
+   "read": 10.817250000000001,
+   "beacons_count": 6,
+   "value_compared": true,
+   "expected_unread": [
+    "beacon-mix"
+   ]
+  },
+  {
+   "id": "P08",
+   "group": "P",
+   "note": "mixed pair B, legendary: 3 of 2 speed 3, 3 of 2 efficiency 3",
+   "machine": {
+    "name": "assembling-machine-3",
+    "quality": "normal",
+    "recipe": "iron-gear-wheel",
+    "modules": [],
+    "center": [
+     185.5,
+     185.5
+    ]
+   },
+   "beacons": [
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module-3",
+       "legendary"
+      ],
+      [
+       "speed-module-3",
+       "legendary"
+      ]
+     ],
+     "center": [
+      180.5,
+      180.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module-3",
+       "legendary"
+      ],
+      [
+       "speed-module-3",
+       "legendary"
+      ]
+     ],
+     "center": [
+      180.5,
+      183.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module-3",
+       "legendary"
+      ],
+      [
+       "speed-module-3",
+       "legendary"
+      ]
+     ],
+     "center": [
+      180.5,
+      186.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "efficiency-module-3",
+       "legendary"
+      ],
+      [
+       "efficiency-module-3",
+       "legendary"
+      ]
+     ],
+     "center": [
+      180.5,
+      189.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "efficiency-module-3",
+       "legendary"
+      ],
+      [
+       "efficiency-module-3",
+       "legendary"
+      ]
+     ],
+     "center": [
+      183.5,
+      180.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "efficiency-module-3",
+       "legendary"
+      ],
+      [
+       "efficiency-module-3",
+       "legendary"
+      ]
+     ],
+     "center": [
+      183.5,
+      188.5
+     ]
+    }
+   ],
+   "read": 10.817250000000001,
+   "beacons_count": 6,
+   "value_compared": true,
+   "expected_unread": []
+  },
+  {
+   "id": "Q01",
+   "group": "Q",
+   "note": "machine uncommon, others normal",
+   "machine": {
+    "name": "assembling-machine-3",
+    "quality": "uncommon",
+    "recipe": "iron-gear-wheel",
+    "modules": [
+     [
+      "speed-module-3",
+      "normal"
+     ],
+     [
+      "speed-module-3",
+      "normal"
+     ],
+     [
+      "productivity-module-3",
+      "normal"
+     ],
+     [
+      "productivity-module-3",
+      "normal"
+     ]
+    ],
+    "center": [
+     225.5,
+     185.5
+    ]
+   },
+   "beacons": [
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      220.5,
+      180.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      220.5,
+      183.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      220.5,
+      186.5
+     ]
+    }
+   ],
+   "read": 6.9840875,
+   "beacons_count": 3,
+   "value_compared": true,
+   "expected_unread": [
+    "rounding-tie"
+   ]
+  },
+  {
+   "id": "Q02",
+   "group": "Q",
+   "note": "machine rare, others normal",
+   "machine": {
+    "name": "assembling-machine-3",
+    "quality": "rare",
+    "recipe": "iron-gear-wheel",
+    "modules": [
+     [
+      "speed-module-3",
+      "normal"
+     ],
+     [
+      "speed-module-3",
+      "normal"
+     ],
+     [
+      "productivity-module-3",
+      "normal"
+     ],
+     [
+      "productivity-module-3",
+      "normal"
+     ]
+    ],
+    "center": [
+     265.5,
+     185.5
+    ]
+   },
+   "beacons": [
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      260.5,
+      180.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      260.5,
+      183.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      260.5,
+      186.5
+     ]
+    }
+   ],
+   "read": 8.5958,
+   "beacons_count": 3,
+   "value_compared": true,
+   "expected_unread": [
+    "rounding-tie"
+   ]
+  },
+  {
+   "id": "Q03",
+   "group": "Q",
+   "note": "machine epic, others normal",
+   "machine": {
+    "name": "assembling-machine-3",
+    "quality": "epic",
+    "recipe": "iron-gear-wheel",
+    "modules": [
+     [
+      "speed-module-3",
+      "normal"
+     ],
+     [
+      "speed-module-3",
+      "normal"
+     ],
+     [
+      "productivity-module-3",
+      "normal"
+     ],
+     [
+      "productivity-module-3",
+      "normal"
+     ]
+    ],
+    "center": [
+     305.5,
+     185.5
+    ]
+   },
+   "beacons": [
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      300.5,
+      180.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      300.5,
+      183.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      300.5,
+      186.5
+     ]
+    }
+   ],
+   "read": 10.2075125,
+   "beacons_count": 3,
+   "value_compared": true,
+   "expected_unread": [
+    "rounding-tie"
+   ]
+  },
+  {
+   "id": "Q04",
+   "group": "Q",
+   "note": "beacon uncommon, others normal",
+   "machine": {
+    "name": "assembling-machine-3",
+    "quality": "normal",
+    "recipe": "iron-gear-wheel",
+    "modules": [
+     [
+      "speed-module-3",
+      "normal"
+     ],
+     [
+      "speed-module-3",
+      "normal"
+     ],
+     [
+      "productivity-module-3",
+      "normal"
+     ],
+     [
+      "productivity-module-3",
+      "normal"
+     ]
+    ],
+    "center": [
+     345.5,
+     185.5
+    ]
+   },
+   "beacons": [
+    {
+     "quality": "uncommon",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      340.5,
+      180.5
+     ]
+    },
+    {
+     "quality": "uncommon",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      340.5,
+      183.5
+     ]
+    },
+    {
+     "quality": "uncommon",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      340.5,
+      186.5
+     ]
+    }
+   ],
+   "read": 5.805249999999999,
+   "beacons_count": 3,
+   "value_compared": true,
+   "expected_unread": []
+  },
+  {
+   "id": "Q05",
+   "group": "Q",
+   "note": "beacon rare, others normal",
+   "machine": {
+    "name": "assembling-machine-3",
+    "quality": "normal",
+    "recipe": "iron-gear-wheel",
+    "modules": [
+     [
+      "speed-module-3",
+      "normal"
+     ],
+     [
+      "speed-module-3",
+      "normal"
+     ],
+     [
+      "productivity-module-3",
+      "normal"
+     ],
+     [
+      "productivity-module-3",
+      "normal"
+     ]
+    ],
+    "center": [
+     385.5,
+     185.5
+    ]
+   },
+   "beacons": [
+    {
+     "quality": "rare",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      380.5,
+      180.5
+     ]
+    },
+    {
+     "quality": "rare",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      380.5,
+      183.5
+     ]
+    },
+    {
+     "quality": "rare",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      380.5,
+      186.5
+     ]
+    }
+   ],
+   "read": 6.238250000000001,
+   "beacons_count": 3,
+   "value_compared": true,
+   "expected_unread": []
+  },
+  {
+   "id": "Q06",
+   "group": "Q",
+   "note": "beacon epic, others normal",
+   "machine": {
+    "name": "assembling-machine-3",
+    "quality": "normal",
+    "recipe": "iron-gear-wheel",
+    "modules": [
+     [
+      "speed-module-3",
+      "normal"
+     ],
+     [
+      "speed-module-3",
+      "normal"
+     ],
+     [
+      "productivity-module-3",
+      "normal"
+     ],
+     [
+      "productivity-module-3",
+      "normal"
+     ]
+    ],
+    "center": [
+     25.5,
+     225.5
+    ]
+   },
+   "beacons": [
+    {
+     "quality": "epic",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      20.5,
+      220.5
+     ]
+    },
+    {
+     "quality": "epic",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      20.5,
+      223.5
+     ]
+    },
+    {
+     "quality": "epic",
+     "modules": [
+      [
+       "speed-module-3",
+       "normal"
+      ],
+      [
+       "speed-module-3",
+       "normal"
+      ]
+     ],
+     "center": [
+      20.5,
+      226.5
+     ]
+    }
+   ],
+   "read": 6.67125,
+   "beacons_count": 3,
+   "value_compared": true,
+   "expected_unread": []
+  },
+  {
+   "id": "Q07",
+   "group": "Q",
+   "note": "module uncommon, others normal",
+   "machine": {
+    "name": "assembling-machine-3",
+    "quality": "normal",
+    "recipe": "iron-gear-wheel",
+    "modules": [
+     [
+      "speed-module-3",
+      "uncommon"
+     ],
+     [
+      "speed-module-3",
+      "uncommon"
+     ],
+     [
+      "productivity-module-3",
+      "uncommon"
+     ],
+     [
+      "productivity-module-3",
+      "uncommon"
+     ]
+    ],
+    "center": [
+     65.5,
+     225.5
+    ]
+   },
+   "beacons": [
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "uncommon"
+      ],
+      [
+       "speed-module-3",
+       "uncommon"
+      ]
+     ],
+     "center": [
+      60.5,
+      220.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "uncommon"
+      ],
+      [
+       "speed-module-3",
+       "uncommon"
+      ]
+     ],
+     "center": [
+      60.5,
+      223.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "uncommon"
+      ],
+      [
+       "speed-module-3",
+       "uncommon"
+      ]
+     ],
+     "center": [
+      60.5,
+      226.5
+     ]
+    }
+   ],
+   "read": 6.721500000000001,
+   "beacons_count": 3,
+   "value_compared": true,
+   "expected_unread": []
+  },
+  {
+   "id": "Q08",
+   "group": "Q",
+   "note": "module rare, others normal",
+   "machine": {
+    "name": "assembling-machine-3",
+    "quality": "normal",
+    "recipe": "iron-gear-wheel",
+    "modules": [
+     [
+      "speed-module-3",
+      "rare"
+     ],
+     [
+      "speed-module-3",
+      "rare"
+     ],
+     [
+      "productivity-module-3",
+      "rare"
+     ],
+     [
+      "productivity-module-3",
+      "rare"
+     ]
+    ],
+    "center": [
+     105.5,
+     225.5
+    ]
+   },
+   "beacons": [
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "rare"
+      ],
+      [
+       "speed-module-3",
+       "rare"
+      ]
+     ],
+     "center": [
+      100.5,
+      220.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "rare"
+      ],
+      [
+       "speed-module-3",
+       "rare"
+      ]
+     ],
+     "center": [
+      100.5,
+      223.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "rare"
+      ],
+      [
+       "speed-module-3",
+       "rare"
+      ]
+     ],
+     "center": [
+      100.5,
+      226.5
+     ]
+    }
+   ],
+   "read": 8.07075,
+   "beacons_count": 3,
+   "value_compared": true,
+   "expected_unread": []
+  },
+  {
+   "id": "Q09",
+   "group": "Q",
+   "note": "module epic, others normal",
+   "machine": {
+    "name": "assembling-machine-3",
+    "quality": "normal",
+    "recipe": "iron-gear-wheel",
+    "modules": [
+     [
+      "speed-module-3",
+      "epic"
+     ],
+     [
+      "speed-module-3",
+      "epic"
+     ],
+     [
+      "productivity-module-3",
+      "epic"
+     ],
+     [
+      "productivity-module-3",
+      "epic"
+     ]
+    ],
+    "center": [
+     145.5,
+     225.5
+    ]
+   },
+   "beacons": [
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "epic"
+      ],
+      [
+       "speed-module-3",
+       "epic"
+      ]
+     ],
+     "center": [
+      140.5,
+      220.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "epic"
+      ],
+      [
+       "speed-module-3",
+       "epic"
+      ]
+     ],
+     "center": [
+      140.5,
+      223.5
+     ]
+    },
+    {
+     "quality": "normal",
+     "modules": [
+      [
+       "speed-module-3",
+       "epic"
+      ],
+      [
+       "speed-module-3",
+       "epic"
+      ]
+     ],
+     "center": [
+      140.5,
+      226.5
+     ]
+    }
+   ],
+   "read": 9.419875,
+   "beacons_count": 3,
+   "value_compared": true,
+   "expected_unread": []
+  },
+  {
+   "id": "Q10",
+   "group": "Q",
+   "note": "machine uncommon, others legendary",
+   "machine": {
+    "name": "assembling-machine-3",
+    "quality": "uncommon",
+    "recipe": "iron-gear-wheel",
+    "modules": [
+     [
+      "speed-module-3",
+      "legendary"
+     ],
+     [
+      "speed-module-3",
+      "legendary"
+     ],
+     [
+      "productivity-module-3",
+      "legendary"
+     ],
+     [
+      "productivity-module-3",
+      "legendary"
+     ]
+    ],
+    "center": [
+     185.5,
+     225.5
+    ]
+   },
+   "beacons": [
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module-3",
+       "legendary"
+      ],
+      [
+       "speed-module-3",
+       "legendary"
+      ]
+     ],
+     "center": [
+      180.5,
+      220.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module-3",
+       "legendary"
+      ],
+      [
+       "speed-module-3",
+       "legendary"
+      ]
+     ],
+     "center": [
+      180.5,
+      223.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module-3",
+       "legendary"
+      ],
+      [
+       "speed-module-3",
+       "legendary"
+      ]
+     ],
+     "center": [
+      180.5,
+      226.5
+     ]
+    }
+   ],
+   "read": 22.78965,
+   "beacons_count": 3,
+   "value_compared": true,
+   "expected_unread": []
+  },
+  {
+   "id": "Q11",
+   "group": "Q",
+   "note": "machine rare, others legendary",
+   "machine": {
+    "name": "assembling-machine-3",
+    "quality": "rare",
+    "recipe": "iron-gear-wheel",
+    "modules": [
+     [
+      "speed-module-3",
+      "legendary"
+     ],
+     [
+      "speed-module-3",
+      "legendary"
+     ],
+     [
+      "productivity-module-3",
+      "legendary"
+     ],
+     [
+      "productivity-module-3",
+      "legendary"
+     ]
+    ],
+    "center": [
+     225.5,
+     225.5
+    ]
+   },
+   "beacons": [
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module-3",
+       "legendary"
+      ],
+      [
+       "speed-module-3",
+       "legendary"
+      ]
+     ],
+     "center": [
+      220.5,
+      220.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module-3",
+       "legendary"
+      ],
+      [
+       "speed-module-3",
+       "legendary"
+      ]
+     ],
+     "center": [
+      220.5,
+      223.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module-3",
+       "legendary"
+      ],
+      [
+       "speed-module-3",
+       "legendary"
+      ]
+     ],
+     "center": [
+      220.5,
+      226.5
+     ]
+    }
+   ],
+   "read": 28.0488,
+   "beacons_count": 3,
+   "value_compared": true,
+   "expected_unread": []
+  },
+  {
+   "id": "Q12",
+   "group": "Q",
+   "note": "machine epic, others legendary",
+   "machine": {
+    "name": "assembling-machine-3",
+    "quality": "epic",
+    "recipe": "iron-gear-wheel",
+    "modules": [
+     [
+      "speed-module-3",
+      "legendary"
+     ],
+     [
+      "speed-module-3",
+      "legendary"
+     ],
+     [
+      "productivity-module-3",
+      "legendary"
+     ],
+     [
+      "productivity-module-3",
+      "legendary"
+     ]
+    ],
+    "center": [
+     265.5,
+     225.5
+    ]
+   },
+   "beacons": [
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module-3",
+       "legendary"
+      ],
+      [
+       "speed-module-3",
+       "legendary"
+      ]
+     ],
+     "center": [
+      260.5,
+      220.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module-3",
+       "legendary"
+      ],
+      [
+       "speed-module-3",
+       "legendary"
+      ]
+     ],
+     "center": [
+      260.5,
+      223.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module-3",
+       "legendary"
+      ],
+      [
+       "speed-module-3",
+       "legendary"
+      ]
+     ],
+     "center": [
+      260.5,
+      226.5
+     ]
+    }
+   ],
+   "read": 33.30795,
+   "beacons_count": 3,
+   "value_compared": true,
+   "expected_unread": []
+  },
+  {
+   "id": "Q13",
+   "group": "Q",
+   "note": "beacon uncommon, others legendary",
+   "machine": {
+    "name": "assembling-machine-3",
+    "quality": "legendary",
+    "recipe": "iron-gear-wheel",
+    "modules": [
+     [
+      "speed-module-3",
+      "legendary"
+     ],
+     [
+      "speed-module-3",
+      "legendary"
+     ],
+     [
+      "productivity-module-3",
+      "legendary"
+     ],
+     [
+      "productivity-module-3",
+      "legendary"
+     ]
+    ],
+    "center": [
+     305.5,
+     225.5
+    ]
+   },
+   "beacons": [
+    {
+     "quality": "uncommon",
+     "modules": [
+      [
+       "speed-module-3",
+       "legendary"
+      ],
+      [
+       "speed-module-3",
+       "legendary"
+      ]
+     ],
+     "center": [
+      300.5,
+      220.5
+     ]
+    },
+    {
+     "quality": "uncommon",
+     "modules": [
+      [
+       "speed-module-3",
+       "legendary"
+      ],
+      [
+       "speed-module-3",
+       "legendary"
+      ]
+     ],
+     "center": [
+      300.5,
+      223.5
+     ]
+    },
+    {
+     "quality": "uncommon",
+     "modules": [
+      [
+       "speed-module-3",
+       "legendary"
+      ],
+      [
+       "speed-module-3",
+       "legendary"
+      ]
+     ],
+     "center": [
+      300.5,
+      226.5
+     ]
+    }
+   ],
+   "read": 33.001875000000005,
+   "beacons_count": 3,
+   "value_compared": true,
+   "expected_unread": []
+  },
+  {
+   "id": "Q14",
+   "group": "Q",
+   "note": "beacon rare, others legendary",
+   "machine": {
+    "name": "assembling-machine-3",
+    "quality": "legendary",
+    "recipe": "iron-gear-wheel",
+    "modules": [
+     [
+      "speed-module-3",
+      "legendary"
+     ],
+     [
+      "speed-module-3",
+      "legendary"
+     ],
+     [
+      "productivity-module-3",
+      "legendary"
+     ],
+     [
+      "productivity-module-3",
+      "legendary"
+     ]
+    ],
+    "center": [
+     345.5,
+     225.5
+    ]
+   },
+   "beacons": [
+    {
+     "quality": "rare",
+     "modules": [
+      [
+       "speed-module-3",
+       "legendary"
+      ],
+      [
+       "speed-module-3",
+       "legendary"
+      ]
+     ],
+     "center": [
+      340.5,
+      220.5
+     ]
+    },
+    {
+     "quality": "rare",
+     "modules": [
+      [
+       "speed-module-3",
+       "legendary"
+      ],
+      [
+       "speed-module-3",
+       "legendary"
+      ]
+     ],
+     "center": [
+      340.5,
+      223.5
+     ]
+    },
+    {
+     "quality": "rare",
+     "modules": [
+      [
+       "speed-module-3",
+       "legendary"
+      ],
+      [
+       "speed-module-3",
+       "legendary"
+      ]
+     ],
+     "center": [
+      340.5,
+      226.5
+     ]
+    }
+   ],
+   "read": 35.7078125,
+   "beacons_count": 3,
+   "value_compared": true,
+   "expected_unread": []
+  },
+  {
+   "id": "Q15",
+   "group": "Q",
+   "note": "beacon epic, others legendary",
+   "machine": {
+    "name": "assembling-machine-3",
+    "quality": "legendary",
+    "recipe": "iron-gear-wheel",
+    "modules": [
+     [
+      "speed-module-3",
+      "legendary"
+     ],
+     [
+      "speed-module-3",
+      "legendary"
+     ],
+     [
+      "productivity-module-3",
+      "legendary"
+     ],
+     [
+      "productivity-module-3",
+      "legendary"
+     ]
+    ],
+    "center": [
+     385.5,
+     225.5
+    ]
+   },
+   "beacons": [
+    {
+     "quality": "epic",
+     "modules": [
+      [
+       "speed-module-3",
+       "legendary"
+      ],
+      [
+       "speed-module-3",
+       "legendary"
+      ]
+     ],
+     "center": [
+      380.5,
+      220.5
+     ]
+    },
+    {
+     "quality": "epic",
+     "modules": [
+      [
+       "speed-module-3",
+       "legendary"
+      ],
+      [
+       "speed-module-3",
+       "legendary"
+      ]
+     ],
+     "center": [
+      380.5,
+      223.5
+     ]
+    },
+    {
+     "quality": "epic",
+     "modules": [
+      [
+       "speed-module-3",
+       "legendary"
+      ],
+      [
+       "speed-module-3",
+       "legendary"
+      ]
+     ],
+     "center": [
+      380.5,
+      226.5
+     ]
+    }
+   ],
+   "read": 38.4134375,
+   "beacons_count": 3,
+   "value_compared": false,
+   "expected_unread": [
+    "quality"
+   ]
+  },
+  {
+   "id": "Q16",
+   "group": "Q",
+   "note": "module uncommon, others legendary",
+   "machine": {
+    "name": "assembling-machine-3",
+    "quality": "legendary",
+    "recipe": "iron-gear-wheel",
+    "modules": [
+     [
+      "speed-module-3",
+      "uncommon"
+     ],
+     [
+      "speed-module-3",
+      "uncommon"
+     ],
+     [
+      "productivity-module-3",
+      "uncommon"
+     ],
+     [
+      "productivity-module-3",
+      "uncommon"
+     ]
+    ],
+    "center": [
+     25.5,
+     265.5
+    ]
+   },
+   "beacons": [
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module-3",
+       "uncommon"
+      ],
+      [
+       "speed-module-3",
+       "uncommon"
+      ]
+     ],
+     "center": [
+      20.5,
+      260.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module-3",
+       "uncommon"
+      ],
+      [
+       "speed-module-3",
+       "uncommon"
+      ]
+     ],
+     "center": [
+      20.5,
+      263.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module-3",
+       "uncommon"
+      ],
+      [
+       "speed-module-3",
+       "uncommon"
+      ]
+     ],
+     "center": [
+      20.5,
+      266.5
+     ]
+    }
+   ],
+   "read": 23.8396875,
+   "beacons_count": 3,
+   "value_compared": true,
+   "expected_unread": []
+  },
+  {
+   "id": "Q17",
+   "group": "Q",
+   "note": "module rare, others legendary",
+   "machine": {
+    "name": "assembling-machine-3",
+    "quality": "legendary",
+    "recipe": "iron-gear-wheel",
+    "modules": [
+     [
+      "speed-module-3",
+      "rare"
+     ],
+     [
+      "speed-module-3",
+      "rare"
+     ],
+     [
+      "productivity-module-3",
+      "rare"
+     ],
+     [
+      "productivity-module-3",
+      "rare"
+     ]
+    ],
+    "center": [
+     65.5,
+     265.5
+    ]
+   },
+   "beacons": [
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module-3",
+       "rare"
+      ],
+      [
+       "speed-module-3",
+       "rare"
+      ]
+     ],
+     "center": [
+      60.5,
+      260.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module-3",
+       "rare"
+      ],
+      [
+       "speed-module-3",
+       "rare"
+      ]
+     ],
+     "center": [
+      60.5,
+      263.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module-3",
+       "rare"
+      ],
+      [
+       "speed-module-3",
+       "rare"
+      ]
+     ],
+     "center": [
+      60.5,
+      266.5
+     ]
+    }
+   ],
+   "read": 28.836250000000003,
+   "beacons_count": 3,
+   "value_compared": true,
+   "expected_unread": []
+  },
+  {
+   "id": "Q18",
+   "group": "Q",
+   "note": "module epic, others legendary",
+   "machine": {
+    "name": "assembling-machine-3",
+    "quality": "legendary",
+    "recipe": "iron-gear-wheel",
+    "modules": [
+     [
+      "speed-module-3",
+      "epic"
+     ],
+     [
+      "speed-module-3",
+      "epic"
+     ],
+     [
+      "productivity-module-3",
+      "epic"
+     ],
+     [
+      "productivity-module-3",
+      "epic"
+     ]
+    ],
+    "center": [
+     105.5,
+     265.5
+    ]
+   },
+   "beacons": [
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module-3",
+       "epic"
+      ],
+      [
+       "speed-module-3",
+       "epic"
+      ]
+     ],
+     "center": [
+      100.5,
+      260.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module-3",
+       "epic"
+      ],
+      [
+       "speed-module-3",
+       "epic"
+      ]
+     ],
+     "center": [
+      100.5,
+      263.5
+     ]
+    },
+    {
+     "quality": "legendary",
+     "modules": [
+      [
+       "speed-module-3",
+       "epic"
+      ],
+      [
+       "speed-module-3",
+       "epic"
+      ]
+     ],
+     "center": [
+      100.5,
+      266.5
+     ]
+    }
+   ],
+   "read": 33.832812499999996,
+   "beacons_count": 3,
+   "value_compared": true,
+   "expected_unread": []
+  },
+  {
+   "id": "M01",
+   "group": "M",
+   "note": "assembling-machine-3, 4 productivity module 3",
+   "machine": {
+    "name": "assembling-machine-3",
+    "quality": "normal",
+    "recipe": "iron-gear-wheel",
+    "modules": [
+     [
+      "productivity-module-3",
+      "normal"
+     ],
+     [
+      "productivity-module-3",
+      "normal"
+     ],
+     [
+      "productivity-module-3",
+      "normal"
+     ],
+     [
+      "productivity-module-3",
+      "normal"
+     ]
+    ],
+    "center": [
+     145.5,
+     265.5
+    ]
+   },
+   "beacons": [],
+   "read": 0.5,
+   "beacons_count": 0,
+   "value_compared": true,
+   "expected_unread": []
+  },
+  {
+   "id": "M02",
+   "group": "M",
+   "note": "assembling-machine-3, 4 speed module 3",
+   "machine": {
+    "name": "assembling-machine-3",
+    "quality": "normal",
+    "recipe": "iron-gear-wheel",
+    "modules": [
+     [
+      "speed-module-3",
+      "normal"
+     ],
+     [
+      "speed-module-3",
+      "normal"
+     ],
+     [
+      "speed-module-3",
+      "normal"
+     ],
+     [
+      "speed-module-3",
+      "normal"
+     ]
+    ],
+    "center": [
+     185.5,
+     265.5
+    ]
+   },
+   "beacons": [],
+   "read": 3.75,
+   "beacons_count": 0,
+   "value_compared": true,
+   "expected_unread": []
+  },
+  {
+   "id": "M03",
+   "group": "M",
+   "note": "foundry, 4 productivity module 3",
+   "machine": {
+    "name": "foundry",
+    "quality": "normal",
+    "recipe": "casting-iron",
+    "modules": [
+     [
+      "productivity-module-3",
+      "normal"
+     ],
+     [
+      "productivity-module-3",
+      "normal"
+     ],
+     [
+      "productivity-module-3",
+      "normal"
+     ],
+     [
+      "productivity-module-3",
+      "normal"
+     ]
+    ],
+    "center": [
+     226.5,
+     266.5
+    ]
+   },
+   "beacons": [],
+   "read": 1.6,
+   "beacons_count": 0,
+   "value_compared": true,
+   "expected_unread": []
+  },
+  {
+   "id": "M04",
+   "group": "M",
+   "note": "foundry, 4 speed module 3",
+   "machine": {
+    "name": "foundry",
+    "quality": "normal",
+    "recipe": "casting-iron",
+    "modules": [
+     [
+      "speed-module-3",
+      "normal"
+     ],
+     [
+      "speed-module-3",
+      "normal"
+     ],
+     [
+      "speed-module-3",
+      "normal"
+     ],
+     [
+      "speed-module-3",
+      "normal"
+     ]
+    ],
+    "center": [
+     266.5,
+     266.5
+    ]
+   },
+   "beacons": [],
+   "read": 12.0,
+   "beacons_count": 0,
+   "value_compared": true,
+   "expected_unread": []
+  },
+  {
+   "id": "M05",
+   "group": "M",
+   "note": "electromagnetic-plant, 5 productivity module 3",
+   "machine": {
+    "name": "electromagnetic-plant",
+    "quality": "normal",
+    "recipe": "superconductor",
+    "modules": [
+     [
+      "productivity-module-3",
+      "normal"
+     ],
+     [
+      "productivity-module-3",
+      "normal"
+     ],
+     [
+      "productivity-module-3",
+      "normal"
+     ],
+     [
+      "productivity-module-3",
+      "normal"
+     ],
+     [
+      "productivity-module-3",
+      "normal"
+     ]
+    ],
+    "center": [
+     306.0,
+     266.0
+    ]
+   },
+   "beacons": [],
+   "read": 0.5,
+   "beacons_count": 0,
+   "value_compared": true,
+   "expected_unread": []
+  },
+  {
+   "id": "M06",
+   "group": "M",
+   "note": "electromagnetic-plant, 5 speed module 3",
+   "machine": {
+    "name": "electromagnetic-plant",
+    "quality": "normal",
+    "recipe": "superconductor",
+    "modules": [
+     [
+      "speed-module-3",
+      "normal"
+     ],
+     [
+      "speed-module-3",
+      "normal"
+     ],
+     [
+      "speed-module-3",
+      "normal"
+     ],
+     [
+      "speed-module-3",
+      "normal"
+     ],
+     [
+      "speed-module-3",
+      "normal"
+     ]
+    ],
+    "center": [
+     346.0,
+     266.0
+    ]
+   },
+   "beacons": [],
+   "read": 7.0,
+   "beacons_count": 0,
+   "value_compared": true,
+   "expected_unread": []
+  },
+  {
+   "id": "M07",
+   "group": "M",
+   "note": "cryogenic-plant, 5 productivity module 3",
+   "machine": {
+    "name": "cryogenic-plant",
+    "quality": "normal",
+    "recipe": "carbon",
+    "modules": [
+     [
+      "productivity-module-3",
+      "normal"
+     ],
+     [
+      "productivity-module-3",
+      "normal"
+     ],
+     [
+      "productivity-module-3",
+      "normal"
+     ],
+     [
+      "productivity-module-3",
+      "normal"
+     ],
+     [
+      "productivity-module-3",
+      "normal"
+     ]
+    ],
+    "center": [
+     386.5,
+     266.5
+    ]
+   },
+   "beacons": [],
+   "read": 0.5,
+   "beacons_count": 0,
+   "value_compared": true,
+   "expected_unread": []
+  },
+  {
+   "id": "M08",
+   "group": "M",
+   "note": "cryogenic-plant, 8 speed module 3",
+   "machine": {
+    "name": "cryogenic-plant",
+    "quality": "normal",
+    "recipe": "carbon",
+    "modules": [
+     [
+      "speed-module-3",
+      "normal"
+     ],
+     [
+      "speed-module-3",
+      "normal"
+     ],
+     [
+      "speed-module-3",
+      "normal"
+     ],
+     [
+      "speed-module-3",
+      "normal"
+     ],
+     [
+      "speed-module-3",
+      "normal"
+     ],
+     [
+      "speed-module-3",
+      "normal"
+     ],
+     [
+      "speed-module-3",
+      "normal"
+     ],
+     [
+      "speed-module-3",
+      "normal"
+     ]
+    ],
+    "center": [
+     26.5,
+     306.5
+    ]
+   },
+   "beacons": [],
+   "read": 10.0,
+   "beacons_count": 0,
+   "value_compared": true,
+   "expected_unread": []
+  },
+  {
+   "id": "M09",
+   "group": "M",
+   "note": "recycler, 4 quality module 1",
+   "machine": {
+    "name": "recycler",
+    "quality": "normal",
+    "recipe": null,
+    "modules": [
+     [
+      "quality-module",
+      "normal"
+     ],
+     [
+      "quality-module",
+      "normal"
+     ],
+     [
+      "quality-module",
+      "normal"
+     ],
+     [
+      "quality-module",
+      "normal"
+     ]
+    ],
+    "center": [
+     65.0,
+     306.0
+    ]
+   },
+   "beacons": [],
+   "read": 0.4,
+   "beacons_count": 0,
+   "value_compared": true,
+   "expected_unread": []
+  },
+  {
+   "id": "M10",
+   "group": "M",
+   "note": "recycler, 4 speed module 3",
+   "machine": {
+    "name": "recycler",
+    "quality": "normal",
+    "recipe": null,
+    "modules": [
+     [
+      "speed-module-3",
+      "normal"
+     ],
+     [
+      "speed-module-3",
+      "normal"
+     ],
+     [
+      "speed-module-3",
+      "normal"
+     ],
+     [
+      "speed-module-3",
+      "normal"
+     ]
+    ],
+    "center": [
+     105.0,
+     306.0
+    ]
+   },
+   "beacons": [],
+   "read": 1.5,
+   "beacons_count": 0,
+   "value_compared": true,
+   "expected_unread": []
+  }
+ ]
+}
