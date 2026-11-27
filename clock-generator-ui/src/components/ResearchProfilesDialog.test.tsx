@@ -218,6 +218,26 @@ describe('the dialog', () => {
         expect(stored.profiles[0].bonuses.mining_drill_productivity_bonus).toBe(79990);
     });
 
+    it('steps a number with the steppers and the arrow keys', async () => {
+        const memory = memoryStorage();
+        const { user } = openDialog(memory.storage);
+        await makeProfile(user, 'Mine');
+        const stored = () => JSON.parse(memory.items.get(PROFILES_KEY)!).profiles[0].bonuses;
+        const row = field('Inserter capacity').closest('div')!.parentElement!;
+        await user.click(within(row).getByRole('button', { name: 'Increase' }));
+        expect(stored().inserter_stack_size_bonus).toBe(4);
+        expect(field('Inserter capacity').value).toBe('4');
+        expect(screen.getByText('gives an inserter 5')).toBeDefined();
+        await user.click(within(row).getByRole('button', { name: 'Decrease' }));
+        await user.click(within(row).getByRole('button', { name: 'Decrease' }));
+        expect(stored().inserter_stack_size_bonus).toBe(2);
+        await user.click(field('Belt stack size bonus'));
+        await user.keyboard('{ArrowUp}{ArrowUp}');
+        await user.tab();
+        expect(stored().belt_stack_size_bonus).toBe(5);
+        expect(field('Belt stack size bonus').value).toBe('5');
+    });
+
     it('does not keep a stack number that is not whole, and says so', async () => {
         const { user } = openDialog();
         await makeProfile(user, 'Mine');
