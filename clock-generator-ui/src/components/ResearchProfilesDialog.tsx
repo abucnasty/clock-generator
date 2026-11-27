@@ -220,7 +220,7 @@ function ProfilesPanel({ recipeOptions, storage, newId }: { recipeOptions: strin
             <Button onClick={() => start('revert')} disabled={readOnly || template === undefined || atTemplate}>Revert to template</Button>
         </Box>
 
-        <Box key={entry.id} sx={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: 1.5, alignItems: 'start' }}>
+        <Box key={entry.id} sx={{ display: 'grid', gridTemplateColumns: 'minmax(0, 18rem) auto', justifyContent: 'start', columnGap: 1.5, rowGap: 1.5, alignItems: 'start' }}>
             <ForceRow icon="electric-mining-drill" label={LABELS.mining} note={markYours.mining ? yours : null}>
                 <NumberField inputAriaLabel={LABELS.mining} value={bonuses.mining_drill_productivity_bonus} readOnly={readOnly} min={0} step={1} size="small" displayDecimals={4}
                     onValueCommitted={setNumber('mining_drill_productivity_bonus', LABELS.mining)} problem={problems.mining_drill_productivity_bonus} sx={{ width: 140 }} />
@@ -245,8 +245,8 @@ function ProfilesPanel({ recipeOptions, storage, newId }: { recipeOptions: strin
             <Typography id="research-profile-recipes" variant="subtitle2" component="h3">
                 Recipe productivity{markYours.recipes && yours}
             </Typography>
-            {recipes.map(recipe => <Box key={recipe} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: '1 1 0', minWidth: 0 }}>
+            {recipes.map(recipe => <Box key={recipe} sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: '0 1 18rem', width: '18rem', minWidth: 0 }}>
                     <FactorioIcon name={recipe} size={24} alt="" />
                     <Typography variant="body2" noWrap>{recipeLabel(recipe)}</Typography>
                 </Box>
