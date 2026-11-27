@@ -148,6 +148,52 @@ describe('a config that states its output belt', () => {
     });
 });
 
+describe('a config that states its research block', () => {
+    // the site has no editor for the block: it keeps it as it was stated, as it keeps the output belt
+    const research = {
+        profile: 'My game',
+        template: 'all-finite-research',
+        bonuses: {
+            mining_drill_productivity_bonus: 79990.00000001134,
+            inserter_stack_size_bonus: 3,
+            bulk_inserter_capacity_bonus: 11,
+            belt_stack_size_bonus: 3,
+            recipes: { 'electronic-circuit': { productivity_bonus: 10 } },
+        },
+        base: {
+            machines: [{ id: 1, recipe: 'copper-cable', productivity: 0 }, { id: 2, recipe: 'electronic-circuit', productivity: 50 }],
+            drills: [{ id: 1, productivity: 0 }],
+            silos: [],
+            inserters: [{ id: 5 }],
+            belts: [{ id: 1 }, { id: 2 }],
+        },
+    };
+    const config = importedWith({ research, machines: imported.machines.map(({ id, recipe, productivity, crafting_speed }) =>
+        ({ id, recipe, productivity, crafting_speed })) });
+
+    it('is checked by the engine as stated', () => {
+        const parsed = ConfigSchema.safeParse(config);
+        expect(parsed.error?.issues ?? []).toEqual([]);
+        expect(parsed.data!.research).toEqual(research);
+        expect(parseFormConfig(ConfigSchema, config).data!.research).toEqual(research);
+    });
+
+    it('keeps the block unchanged through the form, a saved build and a share link', async () => {
+        const form = configToFormData(config);
+        expect(form.research).toEqual(research);
+        expect(formDataToConfig(form).research).toEqual(research);
+        expect(formDataToConfig(readSavedConfig(JSON.stringify(form))!).research).toEqual(research);
+        const link = await encodeShareLink({ name: null, config: formDataToConfig(form) }, 'https://example.test/');
+        const shared = await decodeShareLink(readShareHash(link.slice(link.indexOf('#'))) as { version: string; data: string });
+        expect(shared.kind === 'build' && (shared.config as Config).research).toEqual(research);
+    });
+
+    it('leaves a config without it without it', () => {
+        expect('research' in configToFormData(imported)).toBe(false);
+        expect('research' in formDataToConfig(configToFormData(imported))).toBe(false);
+    });
+});
+
 describe('configToFormData', () => {
     it('gives every entity a uuid of its own', () => {
         const form = configToFormData(imported);
