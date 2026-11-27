@@ -4,12 +4,12 @@ import path from "path";
 import "./factorio-data-file";
 import { FactorioDataService } from "./factorio-data-service";
 
-/** The game data in resources/ is the 2.1.21 dump: what 2.1 renamed and reworked reads as the generator expects */
-describe("the game data of Factorio 2.1.21", () => {
+/** The game data in resources/ is the 2.1.24 dump: what 2.1 renamed and reworked reads as the generator expects */
+describe("the game data of Factorio 2.1.24", () => {
     it("names the game it came from", () => {
         const version = JSON.parse(fs.readFileSync(path.resolve(__dirname, "../../resources/data-version.json"), "utf-8"));
-        expect(version.factorio_version).toBe("2.1.21");
-        expect(version.build).toBe(87673);
+        expect(version.factorio_version).toBe("2.1.24");
+        expect(version.build).toBe(87808);
     });
 
     it("loads the ore melting recipes 2.1 renamed, whose only product is a fluid", () => {

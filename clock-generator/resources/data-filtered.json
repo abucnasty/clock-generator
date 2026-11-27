@@ -41889,10 +41889,7 @@
       "module_slots": 2,
       "energy_source": {
         "type": "electric",
-        "usage_priority": "secondary-input",
-        "emissions_per_minute": {
-          "pollution": 1
-        }
+        "usage_priority": "secondary-input"
       },
       "energy_usage": "540kW"
     },
