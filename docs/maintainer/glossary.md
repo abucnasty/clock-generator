@@ -118,7 +118,7 @@ A research profile that the page ships, with fixed numbers, that the user cannot
 mining productivity, inserter capacity 3, bulk inserter capacity 11, belt stack size bonus 3, and no recipe, because
 every recipe productivity technology has no last level). The user makes a profile from a template and uses **Revert** to
 set its numbers back to those of the template.
-_Avoid_: default, preset
+_Avoid_: default (for a template), preset
 
 ## Lanes
 
