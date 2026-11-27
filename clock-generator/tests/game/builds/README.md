@@ -982,14 +982,14 @@ net output is the target over whole clock cycles, the stock guard holds, and the
 
 **Steel wagon builds (three jobs).** The three staged cases that carry the selected clock (`steel-wagon-selected-staged`, `steel-wagon-iron-ore-out-of-period-selected-staged`, `steel-hub-selected-staged`)
 now say `staged: true, backpressure: true`, so the run starts from ruling 60's state (Factorio 2.1.24, `CLOCK_RECORDING_CACHE=off`). Each is repeated once and gives the same summary, tick for tick.
-They hold, and the controls carry the same values as the plain staged start gave. All five inserters and the drill have a window (the game's report of the clock's wires), so the lock holds everything back and
+They hold. All five inserters and the drill have a window (the game's report of the clock's wires), so the lock holds everything back and
 nothing fills before the clock: the lock opened 7,200 ticks after the build was placed (tick 55,525 to 55,528 in the game), both furnaces were empty, and no windowed inserter moved in the fill.
 
 | Job (case) | Clock (window cycle) | Steady state | Baseline (net, whole window cycle) | Losses recovered at |
 | --- | --- | --- | --- | --- |
-| `STEEL_PLATE_26_WAGON_CHEST` (`steel-wagon-selected-staged`) | Batched Swings, 1 output swing, subtick (11,520, `394630ea`) | 15,120 | 4,992 of 4,992 | 31,411 (drill), 32,097 (output block), 36,728 (drill) |
+| `STEEL_PLATE_26_WAGON_CHEST` (`steel-wagon-selected-staged`) | Batched Swings, 1 output swing, subtick (11,520, `394630ea`) | 15,120 | 4,992 of 4,992 | 32,646 (drill), 38,163 (output block), 43,280 (drill) |
 | `STEEL_HUB_26_CONTAINER_OUTPUT` (`steel-hub-selected-staged`) | the same clock (11,520, `394630ea`) | 15,120 | 4,992 of 4,992 | the same run |
-| `STEEL_PLATE_26_WAGON_CHEST_IRON_ORE_OUT_OF_PERIOD` (`steel-wagon-iron-ore-out-of-period-selected-staged`) | Batched Swings, 1 output swing, subtick (3,840, `507cc570`) | 7,440 | 1,680 of 1,664 | 15,774 (drill), 15,776 (output block), 15,778 (drill) |
+| `STEEL_PLATE_26_WAGON_CHEST_IRON_ORE_OUT_OF_PERIOD` (`steel-wagon-iron-ore-out-of-period-selected-staged`) | Batched Swings, 1 output swing, subtick (3,840, `507cc570`) | 7,440 | 1,683 of 1,664 | 15,818 (drill), 15,820 (output block), 15,822 (drill) |
 
 - The stock guard holds in all three. The second and third loss of the iron-ore case last one tick each: the drill had emptied the wagon already.
 
@@ -1061,7 +1061,7 @@ tick; the probe runs there). A case with a Lua file of its own (`prelude`) puts 
 | `ROCKET_FUEL_60` | Takt Batches Observed (`482a9448`) | ruling 60's | 28 / 28 | 7,193 | 22,726 |
 | `ROCKET_FUEL_60_JELLY_HANDS_15_BACKED_UP` (variant; `rocket-fuel-60-jelly-hands-15-backed-up` and `-nutrients`) | the variant's clock (`d978b5fd`) | ruling 60's | 56 / 56 each | 7,184 | 18,586 (all three in a row), 14,971 (nutrients cut alone) |
 | `AUTOMATION_SCIENCE_120_FOUNDRIES_FEED_BELT_TO_ASSEMBLER` | Takt Batches Observed (144, `782c7427`) | ruling 60's | 25 / 25 | 7,200 | 23,630 (cut copper plate 14,990, output block 19,310, cut gear wheels 23,630) |
-| `ELECTRIC_FURNACE_20` | Takt Batches Observed (864, `c7c3a86f`) | ruling 60's, `settle_ticks` | 4 / 4 | 7,078 | 23,494 (cut advanced circuits 14,374, output block 19,462, cut advanced circuits 23,494) |
+| `ELECTRIC_FURNACE_20` | Takt Batches Observed (864, `c7c3a86f`) | ruling 60's, `settle_ticks` | 4 / 4 | 7,074 | 23,798 (cut advanced circuits 14,946, output block 20,034, cut advanced circuits 23,798) |
 
 All hold: every copy of the build makes its share of the target in every whole window cycle checked, and the output stock guard holds.
 
