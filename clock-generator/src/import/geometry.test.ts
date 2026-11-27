@@ -613,6 +613,32 @@ describe("the lane ends and flow of the Sidecar's own lane-end game test, writte
     }
 });
 
+describe("the physical lines at a splitter and an underground pair", () => {
+    it("gives two belts into one splitter and a belt out of each output 5 lines: each belt, and the splitter alone", () => {
+        const s = new Sketch();
+        const upper = s.line(0, 0, E, 3);
+        const lower = s.line(0, 1, E, 3);
+        const splitter = s.put("turbo-splitter", 3.5, 1, E);
+        const outUpper = s.line(4, 0, E, 2);
+        const outLower = s.line(4, 1, E, 2);
+        const { world, geometry } = s.build();
+        // the world joins them: the splitter takes from both belts and gives to both
+        expect([...world.piece(splitter)!.inputs].sort((a, b) => a - b)).toEqual([upper[2], lower[2]]);
+        expect([...world.piece(splitter)!.outputs].sort((a, b) => a - b)).toEqual([outUpper[0], outLower[0]]);
+        expect(geometry.lines.map((l) => l.pieces)).toEqual([upper, lower, [splitter], outUpper, outLower]);
+    });
+
+    it("keeps an underground pair and the belts on either side one line", () => {
+        const s = new Sketch();
+        const before = s.line(0, 0, E, 2);
+        const entrance = s.put("turbo-underground-belt", 2.5, 0.5, E, { type: "input" });
+        const exit = s.put("turbo-underground-belt", 6.5, 0.5, E, { type: "output" });
+        const after = s.line(7, 0, E, 2);
+        const { geometry } = s.build();
+        expect(geometry.lines.map((l) => l.pieces)).toEqual([[...before, entrance, exit, ...after]]);
+    });
+});
+
 describe("a drop onto a splitter's near half, 77/256 tile off its centre line, in four facings (measured, game 2.1.24)", () => {
     for (let quarters = 0; quarters < 4; quarters += 1) {
         it(`facing ${4 * quarters}: line 2 from the left side, line 3 from the right side`, () => {

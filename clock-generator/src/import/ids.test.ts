@@ -260,15 +260,17 @@ describe("belts", () => {
         pieces.flatMap((p) => [onPiece(p, 1, [l1]), onPiece(p, 2, [l2])]),
     ];
 
-    it("gives two lines with the same items on the same lanes one id: the line whose smallest piece is smaller", () => {
+    it("gives two lines with the same items on the same lanes two ids, in the order of their first pieces", () => {
         const [la, pa] = both(1, [1, 2, 3], "iron-plate", "copper-plate");
         const [lb, pb] = both(11, [11, 12, 13], "iron-plate", "copper-plate");
         const result = idsFor(flowsWith({ lanes: [...lb, ...la], pieces: [...pb, ...pa] }));
-        expect(result.belts).toHaveLength(1);
-        expect(result.belts[0]).toMatchObject({ id: 1, first_line: 1, lines: [1, 11], signature: "copper-plate|iron-plate#iron-plate|copper-plate" });
+        expect(result.belts.map((b) => [b.id, b.first_line, b.lines, b.signature])).toEqual([
+            [1, 1, [1], "copper-plate|iron-plate#iron-plate|copper-plate"],
+            [2, 11, [11], "copper-plate|iron-plate#iron-plate|copper-plate"],
+        ]);
         expect(result.lines.map((l) => [l.line, l.belt])).toEqual([
             [1, 1],
-            [11, 1],
+            [11, 2],
             [31, null],
         ]);
     });

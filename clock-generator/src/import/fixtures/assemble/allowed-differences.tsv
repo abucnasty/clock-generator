@@ -1,5 +1,8 @@
 # The rows where a read holds a value and the import is expected to give another. Closed: written before the import.
 # entity_number is the blueprint's; read_belt the read's belt id. source names the reference row the row came from.
+# A row of class "joined by the Sidecar export" lets one read belt map to one import belt per physical line; its
+# entity_number lists the first piece of each of those lines.
 build	kind	entity_number	read_belt	line	lane	field	class	detail	source
 logistic-240	inserter	67				drop_capture.tiles	agreed under the export's selection	ins 67: derived 28, read none; the blueprint walk finds 28 tiles to a side load outside the read's entities; within them (the export's selection: merge.tiles walks selected pieces only and stops with nil at one not selected, since its first version, 4493f08e drop-merge.lua:36-48, Sidecar 0.13.0; this read is 0.15.0) it finds none	geometry-rows.tsv:463
 electromagnetic-240	inserter	61				drop_capture.tiles	agreed under the export's selection	ins 61: derived 7, read none; the blueprint walk finds 7 tiles to a side load outside the read's entities; within them (the export's selection: merge.tiles walks selected pieces only and stops with nil at one not selected, since its first version, 4493f08e drop-merge.lua:36-48, Sidecar 0.13.0; this read is 0.15.0) it finds none	geometry-rows.tsv:564
+utility-320	belt	6 20	3			id (through the match)	joined by the Sidecar export	read belt 3: two physical lines (first pieces 6 and 20) with the same item on the same lanes; the export numbers them one belt, the import gives each line a belt of its own	reads/utility-320.json belt 3
