@@ -86,6 +86,13 @@ function researchOfPaste(block: ResearchBlock, incoming: PastedEntities, replaci
     };
 }
 
+/** The setpoint with the step from one copy to the next that the blueprint gives; with none, the step of an earlier build does not stay */
+function withCopyOffset<Setpoint extends { copy_offset?: { x: number; y: number } }>(setpoint: Setpoint, offset: { x: number; y: number } | null): Setpoint {
+    const kept = { ...setpoint };
+    delete kept.copy_offset;
+    return offset ? { ...kept, copy_offset: { ...offset } } : kept;
+}
+
 /**
  * Apply the exact preview policy as one edit, leaving retained form rows and their UI identity untouched. A pasted
  * blueprint also writes its research block and the step between copies, and marks its machines as the blueprint's.
@@ -97,9 +104,12 @@ export function applyPaste(current: ConfigFormData, incoming: PastedEntities, se
     const setpoint = selections.target && target ? target : current.setpoint;
     const research = blueprint ? researchOfPaste(blueprint.research, incoming, replacing) : null;
     const sourceOf = (id: number) => blueprint ? 'blueprint' as const : incoming.picked_machines?.includes(id) ? 'recipe' as const : 'sidecar' as const;
+    // a block describes the rows a blueprint gave: rows from another source leave no block behind
+    const rest = { ...current };
+    if (!blueprint && categories.some(replacing)) delete rest.research;
     return {
-        ...current,
-        setpoint: blueprint?.copy_offset ? { ...setpoint, copy_offset: { ...blueprint.copy_offset } } : setpoint,
+        ...rest,
+        setpoint: blueprint ? withCopyOffset(setpoint, blueprint.copy_offset) : setpoint,
         ...(research !== null && { research }),
         machines: replacing('machines')
             ? incoming.machines.map(row => withUuid({ ...row, ...(row.prototype !== undefined && { _prototype_source: sourceOf(row.id) }) }))

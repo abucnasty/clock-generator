@@ -212,4 +212,27 @@ describe('a pasted blueprint', () => {
     it('writes no block for a paste of the Sidecar mod', () => {
         expect(applyPaste(current(), pasted(), all)).not.toHaveProperty('research');
     });
+
+    it('takes the block off a build made from a blueprint when the paste of the Sidecar mod replaces its rows', () => {
+        const form = { ...current(), research };
+        expect(applyPaste(form, pasted(), all)).not.toHaveProperty('research');
+        expect(applyPaste(form, pasted(), { ...none, inserters: true })).not.toHaveProperty('research');
+        // a paste that replaces none of the rows leaves the rows, and the block that describes them
+        expect(applyPaste(form, pasted(), { ...none, target: true }, { item: 'iron-gear-wheel', items_per_second: 2, copies: 1 }).research).toBe(research);
+        expect(applyPaste(form, empty(), all).research).toBe(research);
+    });
+
+    it('leaves no step between copies of the build it replaces when the blueprint has one copy', () => {
+        const form = current();
+        form.setpoint = { item: 'iron-gear-wheel', items_per_second: 2, copies: 3, copy_offset: { x: 0, y: 7 } };
+        // the setpoint is kept (not selected), and the blueprint gives no step
+        const single = applyPaste(form, pasted(), { ...all, target: false }, undefined, { research, copy_offset: null });
+        expect(single.setpoint).toEqual({ item: 'iron-gear-wheel', items_per_second: 2, copies: 3 });
+        expect(form.setpoint.copy_offset).toEqual({ x: 0, y: 7 });
+        // a blueprint with a step gives its own
+        const several = applyPaste(form, pasted(), { ...all, target: false }, undefined, { research, copy_offset: { x: 4, y: 0 } });
+        expect(several.setpoint.copy_offset).toEqual({ x: 4, y: 0 });
+        // the paste of the Sidecar mod keeps the setpoint as it is
+        expect(applyPaste(form, pasted(), { ...all, target: false }).setpoint).toBe(form.setpoint);
+    });
 });
