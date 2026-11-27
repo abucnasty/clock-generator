@@ -2,9 +2,9 @@
 -- Samples inserters and machines every tick, aligned to the generated clock combinator,
 -- and writes the raw samples to script-output so the simulation can be verified offline.
 
-require("__clock-generator-sidecar__.scripts.types")
-local extraction = require("__clock-generator-sidecar__.scripts.extraction")
-local export = require("__clock-generator-sidecar__.scripts.export")
+require("__clock-generator-recorder__.scripts.describe.types")
+local extraction = require("__clock-generator-recorder__.scripts.describe.extraction")
+local export = require("__clock-generator-recorder__.scripts.describe.export")
 
 local recorder = {}
 
@@ -567,9 +567,6 @@ function recorder.describe(force, entities)
         drills = infos(drills),
         left_out = left_out_inserters(result, RECORDING_EXPORT),
         left_out_drills = left_out_drills(result),
-        -- what the sidecar gives a player for the same selection: its JSON and the inserters it lists as left out, which
-        -- include the ones that drop onto an empty belt or into an empty chest
-        sidecar = { config = export.to_table(result), left_out = left_out_inserters(result) },
     }
 end
 

@@ -23,7 +23,6 @@ import {
 } from "./recording-cache";
 
 const RECORDER_MOD = "clock-generator-recorder";
-const SIDECAR_MOD = "clock-generator-sidecar";
 const REPOSITORY_ROOT = path.resolve(__dirname, "..", "..", "..");
 const RCON_READY = "Starting RCON interface";
 const POLL_INTERVAL_MS = 100;
@@ -567,13 +566,11 @@ async function prepareWorkDir(work_dir: string, executable: string, save: string
             mods.push(entry.name);
         }
     }
-    for (const mod of [RECORDER_MOD, SIDECAR_MOD]) {
-        await fs.cp(path.join(REPOSITORY_ROOT, mod), path.join(mods_dir, mod), {
-            recursive: true,
-            filter: source => !source.endsWith(".zip"),
-        });
-        mods.push(mod);
-    }
+    await fs.cp(path.join(REPOSITORY_ROOT, RECORDER_MOD), path.join(mods_dir, RECORDER_MOD), {
+        recursive: true,
+        filter: source => !source.endsWith(".zip"),
+    });
+    mods.push(RECORDER_MOD);
     await fs.writeFile(path.join(mods_dir, "mod-list.json"), JSON.stringify({ mods: mods.map(name => ({ name, enabled: true })) }, null, 2));
 
     const config = path.join(work_dir, "config.ini");
@@ -1850,9 +1847,9 @@ export async function cacheEnvironmentOf(factorio: string, save: string): Promis
         data_dir: factorioDataDir(executable),
         save: path.resolve(save),
         mods: { [RECORDER_MOD]: path.join(REPOSITORY_ROOT, RECORDER_MOD) },
-        // the Sidecar turns what the game holds into the description of a build: a recording is keyed on what it made of the
-        // build, not on its files (see describedRecordingKey)
-        transforms: { [SIDECAR_MOD]: path.join(REPOSITORY_ROOT, SIDECAR_MOD) },
+        // the Lua in the recorder's `scripts/describe/` turns what the game holds into the description of a build: a recording is
+        // keyed on what it made of the build, not on its files, which are left out of the recorder's own (see describedRecordingKey)
+        transforms: { describe: path.join(REPOSITORY_ROOT, RECORDER_MOD, "scripts", "describe") },
         host_sources: await hostSources(),
     };
 }
@@ -1880,8 +1877,8 @@ interface CachedRecording {
  * not through the store (cache: false, a watched run, CLOCK_RECORDING_CACHE=off, or anything that cannot be told for a key)
  * calls `run`, which starts the game; its result is kept unless the store is off. Errors of `run` are never kept.
  * `history` is the keys of the recordings made before this one in the same game; null when it cannot be told.
- * `describe` builds the build in a game of its own and describes it: the key holds what the Sidecar made of the build, asked
- * of the game only when the Sidecar's files, the game, the save or the options are not those a description was kept for.
+ * `describe` builds the build in a game of its own and describes it: the key holds what the Lua that describes it made of the build, asked
+ * of the game only when the files of `scripts/describe/`, the game, the save or the options are not those a description was kept for.
  */
 async function recordThroughCache(
     options: HarnessOptions, history: string[] | null, run: (log: (message: string) => void) => Promise<HarnessResult>,

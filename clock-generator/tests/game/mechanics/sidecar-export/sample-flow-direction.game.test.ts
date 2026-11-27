@@ -6,22 +6,22 @@ import path from "path";
 import { expect, test } from "vitest";
 import { recordInFactorio } from "../../../../src/harness/factorio-harness";
 
-// Factorio permits require only while parsing control.lua. Load the same Sidecar sources into test-local closures.
+// Factorio permits require only while parsing control.lua. Load the same sources of the recorder's describing Lua into test-local closures.
 const modules = ["types", "helpers", "pickup-supply", "drop-merge", "suggested-target", "extraction", "export"];
 const captureModules = `local capture_modules, require = {}, nil
 require = function(name) return assert(capture_modules[name], name) end
 ` + modules.map(name => {
-    const source = fs.readFileSync(path.join(REPOSITORY_ROOT, `clock-generator-sidecar/scripts/${name}.lua`), "utf8");
-    return `capture_modules["__clock-generator-sidecar__.scripts.${name}"] = (function()\n${source}\nend)() or true\n`;
+    const source = fs.readFileSync(path.join(REPOSITORY_ROOT, `clock-generator-recorder/scripts/describe/${name}.lua`), "utf8");
+    return `capture_modules["__clock-generator-recorder__.scripts.describe.${name}"] = (function()\n${source}\nend)() or true\n`;
 }).join("");
 
 // the scaffold's entities, kept to the types of the tool's filters, exported as the Sidecar exports them
 const EXPORT = `
 local entities, surface = ...
-local extraction = require("__clock-generator-sidecar__.scripts.extraction")
-local export = require("__clock-generator-sidecar__.scripts.export")
+local extraction = require("__clock-generator-recorder__.scripts.describe.extraction")
+local export = require("__clock-generator-recorder__.scripts.describe.export")
 local filters = {}
-for type in pairs(prototypes.item["clock-generator-sidecar"].get_entity_type_filters(defines.selection_mode.select)) do filters[type] = true end
+for _, type in ipairs({"assembling-machine", "furnace", "mining-drill", "lab", "inserter", "transport-belt", "underground-belt", "splitter", "linked-belt", "loader", "loader-1x1", "container", "logistic-container", "infinity-container", "linked-container", "car", "cargo-wagon", "rocket-silo"}) do filters[type] = true end
 local selected = {}
 for _, entity in pairs(entities) do if entity.valid and filters[entity.type] then table.insert(selected, entity) end end
 helpers.write_file("sample-flow.json", helpers.table_to_json(export.to_table(extraction.extract_all_entities(selected, game.forces.player))), false)

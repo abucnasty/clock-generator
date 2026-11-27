@@ -6,13 +6,13 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { BeltConfigSchema } from '../../src/config/schema';
 
-const SIDECAR = path.resolve(__dirname, '../../../clock-generator-sidecar');
+const DESCRIBE = path.resolve(__dirname, '../../../clock-generator-recorder/scripts/describe');
 
 /** The kinds of the lane ends the mod writes: each `{ kind = "..." }` of drop-merge.lua and export.lua */
 function exportedKinds(): string[] {
     const found = new Set<string>();
     for (const file of ['drop-merge.lua', 'export.lua']) {
-        const source = fs.readFileSync(path.join(SIDECAR, 'scripts', file), 'utf8');
+        const source = fs.readFileSync(path.join(DESCRIBE, file), 'utf8');
         for (const match of source.matchAll(/\{\s*kind\s*=\s*"([a-z_]+)"\s*\}/g)) found.add(match[1]);
     }
     return [...found].sort();

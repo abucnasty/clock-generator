@@ -1,0 +1,1175 @@
+-- Entity Extraction for Clock Generator Sidecar
+-- Functions for extracting data from Factorio entities (machines, drills,
+-- inserters, belts).
+-- The recorder mod loads this module too, so the sidecar requires its modules by their full path: a path without the
+-- mod name may be looked up in the mod that is running, and a module required under two names is loaded twice.
+
+require("__clock-generator-recorder__.scripts.describe.types")
+local helpers = require("__clock-generator-recorder__.scripts.describe.helpers")
+local pickup_supply = require("__clock-generator-recorder__.scripts.describe.pickup-supply")
+local drop_merge = require("__clock-generator-recorder__.scripts.describe.drop-merge")
+
+local debug = false
+
+local extraction = {}
+
+-- Individual Entity Extractors
+
+---The entity types a drill's drop can go into that the export has a type for: crafting machines and chests
+local DRILL_SINK_TYPES = {
+    "assembling-machine", "furnace", "rocket-silo",
+    "container", "logistic-container", "linked-container", "infinity-container", "car", "cargo-wagon",
+}
+
+---The one resource a drill can mine in its area, when the game has not told which it mines (`mining_target` is nil
+---until the drill first mines, and a drill built or fast-replaced next to a full container may not mine for a long
+---time); nil when its area holds none it can mine, or more than one kind
+---@param entity LuaEntity
+---@return string|nil
+local function resource_under(entity)
+    local prototype = entity.prototype
+    local radius = prototype.get_mining_drill_radius(entity.quality)
+    local categories = prototype.resource_categories or {}
+    local at = entity.position
+    local found = nil
+    for _, resource in pairs(entity.surface.find_entities_filtered({
+        area = { { at.x - radius, at.y - radius }, { at.x + radius, at.y + radius } },
+        type = "resource",
+    })) do
+        if categories[resource.prototype.resource_category] then
+            if found and found ~= resource.name then
+                return nil
+            end
+            found = resource.name
+        end
+    end
+    return found
+end
+
+---How far into the tile under a drill's drop position an entity's collision box has to reach for the drill to drop into
+---it: 12/256 of a tile, on every side of the tile (11/256 gets nothing), for a car and a tank, the drill facing each way
+---(Factorio 2.1.21)
+local DROP_TILE_REACH = 12 / 256
+
+---The machines and chests a drill or result-placing machine drops into by the game's rule when it has not told
+---(`drop_target` is nil until its first placement): the entities whose collision box reaches DROP_TILE_REACH into the
+---tile under its drop position. Measured for a chest, a car and a tank at three orientations, a cargo wagon, a rocket silo and a furnace
+---@param entity LuaEntity
+---@return LuaEntity[]
+local function drop_candidates(entity)
+    local drop = entity.drop_position
+    local x, y = math.floor(drop.x), math.floor(drop.y)
+    local reach = DROP_TILE_REACH
+    -- the search takes a box that touches the area's edge too: one that reaches exactly as far is found
+    return entity.surface.find_entities_filtered({
+        area = { { x + reach, y + reach }, { x + 1 - reach, y + 1 - reach } },
+        type = DRILL_SINK_TYPES,
+    })
+end
+
+---What an inserter drops into ("drop") or takes from ("pickup"): the game's drop_target or pickup_target when it has
+---one, else the one entity on the tile under its drop or pickup position that the export has a type for (a belt piece,
+---a machine, a chest); nil when that tile has none, or more than one
+---@param inserter LuaEntity
+---@param which "drop"|"pickup"
+---@return LuaEntity|nil
+function extraction.inserter_end(inserter, which)
+    local target = inserter[which .. "_target"]
+    if target and target.valid then
+        return target
+    end
+    local at = inserter[which .. "_position"]
+    local x, y = math.floor(at.x), math.floor(at.y)
+    local found = nil
+    for _, candidate in pairs(inserter.surface.find_entities_filtered({
+        area = { { x + 0.01, y + 0.01 }, { x + 0.99, y + 0.99 } },
+    })) do
+        if candidate ~= inserter and candidate.unit_number and helpers.get_target_type(candidate) then
+            if found then
+                return nil
+            end
+            found = candidate
+        end
+    end
+    return found
+end
+
+---Extract data from a mining drill
+---@param entity LuaEntity
+---@return DrillData|nil
+local function extract_mining_drill_data(entity)
+    if not entity or not entity.valid then
+        return nil
+    end
+
+    -- What the drill is mining; nil when the game has not told and its area does not (the export leaves it out)
+    local mining_target = entity.mining_target
+    local mined_item_name = mining_target and mining_target.name or resource_under(entity)
+
+    -- the force's mining productivity research and the drill's productivity modules together: what its bonus bar uses
+    local total_productivity = entity.productivity_bonus or 0
+
+    -- Speed bonus from modules/beacons (this is what clock-generator expects)
+    local speed_bonus = entity.speed_bonus or 0
+
+    -- What the drill drops into: the game's drop_target once it has dropped, else the one machine or chest under its
+    -- drop position (none, or more than one, leaves it unknown)
+    local drop_target = entity.drop_target
+    if not (drop_target and drop_target.valid) then
+        local candidates = drop_candidates(entity)
+        drop_target = #candidates == 1 and candidates[1] or nil
+    end
+    local drop_target_unit_number = nil
+    local drop_target_name = nil
+    if drop_target and drop_target.valid then
+        drop_target_unit_number = drop_target.unit_number
+        drop_target_name = drop_target.name
+    end
+
+    ---@type DrillData
+    local data = {
+        entity = entity,
+        drill_type = entity.name,
+        mined_item_name = mined_item_name,
+        speed_bonus = speed_bonus,
+        productivity = total_productivity * 100,
+        drop_target_unit_number = drop_target_unit_number,
+        drop_target_name = drop_target_name,
+        position = entity.position,
+    }
+
+    return data
+end
+
+---Check if an entity is a chest type we care about
+---@param entity LuaEntity
+---@return boolean
+local function is_chest_entity(entity)
+    if not entity or not entity.valid then
+        return false
+    end
+    local t = entity.type
+    return t == "container" or t == "logistic-container" or
+        t == "linked-container" or t == "infinity-container" or
+        t == "car" or t == "cargo-wagon" or t == "rocket-silo"
+end
+
+---The game's filters that block a slot: no item may go into it
+local BLOCKING_FILTERS = { ["no-item"] = true, ["deconstruction-planner"] = true }
+
+---The slots of an inventory: the filter of each filtered slot (blocked for the game's blocking filters) and the
+---contents of each slot that holds something
+---@param inventory LuaInventory
+---@return ({slot: number, item: string}|{slot: number, blocked: true})[] filters, {slot: number, item: string, count: number}[] contents
+local function slots_of(inventory)
+    local filters, contents = {}, {}
+    for slot = 1, #inventory do
+        local filter = inventory.supports_filters() and inventory.get_filter(slot) or nil
+        if filter then
+            local name = type(filter) == "table" and filter.name or filter
+            if BLOCKING_FILTERS[name] then
+                table.insert(filters, { slot = slot, blocked = true })
+            else
+                table.insert(filters, { slot = slot, item = name })
+            end
+        end
+        local stack = inventory[slot]
+        if stack.valid_for_read then
+            table.insert(contents, { slot = slot, item = stack.name, count = stack.count })
+        end
+    end
+    return filters, contents
+end
+
+---A car, a tank, a cargo wagon or a rocket silo, taken as a chest
+---@param entity LuaEntity
+---@return table
+local function extract_vehicle_or_silo_data(entity)
+    if entity.type == "rocket-silo" then
+        -- The silo's contents are not exported (decided 2026-10-21): they are a snapshot of a running build, and a silo that
+        -- starts full makes the inserters filling it take turns instead of inserting together; the build starts empty
+        local contents = {}
+        local recipe, recipe_quality = entity.get_recipe()
+        -- As for machines: modules and beacons, plus the force's research productivity for the recipe, capped at 300%
+        local productivity = entity.productivity_bonus or 0
+        local force_recipe = recipe and entity.force and entity.force.recipes[recipe.name]
+        if force_recipe then
+            productivity = productivity + (force_recipe.productivity_bonus or 0)
+        end
+        return {
+            chest_type = "rocket-silo",
+            unit_number = entity.unit_number,
+            position = { x = entity.position.x, y = entity.position.y },
+            recipe_quality = recipe_quality and recipe_quality.name or "normal",
+            crafting_speed = entity.crafting_speed,
+            productivity = math.min(productivity, 3.0) * 100,
+            contents = contents,
+        }
+    end
+    local index = entity.type == "car" and defines.inventory.car_trunk or defines.inventory.cargo_wagon
+    -- Its slot filters are part of the build; its contents are not exported (decided 2026-10-21), as a silo's: they are a
+    -- snapshot of a running build, so the build starts empty
+    local filters = slots_of(entity.get_inventory(index))
+    local contents = {}
+    return {
+        -- the car's and the tank's prototype names are their chest types
+        chest_type = entity.type == "car" and entity.name or "cargo-wagon",
+        unit_number = entity.unit_number,
+        position = { x = entity.position.x, y = entity.position.y },
+        quality = entity.quality and entity.quality.name or "normal",
+        slot_filters = filters,
+        contents = contents,
+    }
+end
+
+---Extract data from a chest (buffer chest or infinity chest)
+---@param entity LuaEntity
+---@param inferred_item string|nil The item of an empty buffer chest, worked out from the inserters around it (infer_empty_chest_items)
+---@return ChestData|nil
+local function extract_chest_data(entity, inferred_item)
+    if not entity or not entity.valid then
+        return nil
+    end
+
+    if not is_chest_entity(entity) then
+        return nil
+    end
+
+    if entity.type == "car" or entity.type == "cargo-wagon" or entity.type == "rocket-silo" then
+        return extract_vehicle_or_silo_data(entity)
+    end
+
+    -- Infinity settings exist even when the inventory is empty (a disposal chest usually is).
+    if entity.type == "infinity-container" then
+        local filters = {}
+        for _, filter in pairs(entity.infinity_container_filters or {}) do
+            table.insert(filters, {
+                item_name = filter.name,
+                request_count = filter.count or 0
+            })
+        end
+        table.sort(filters, function(a, b) return a.item_name < b.item_name end)
+        return {
+            chest_type = "infinity-chest",
+            unit_number = entity.unit_number,
+            position = { x = entity.position.x, y = entity.position.y },
+            item_filters = filters,
+            remove_unfiltered_items = entity.remove_unfiltered_items
+        }
+    else
+        local inventory = entity.get_inventory(defines.inventory.chest)
+        if not inventory then return nil end
+        local contents = inventory.get_contents()
+        local storage_size = inventory.supports_bar() and (inventory.get_bar() - 1) or #inventory
+        -- A buffer chest has no filter in the game: its item is the first one it holds, else the one the inserters around
+        -- it say (inferred_item); a chest that has neither is left out.
+        local first_item = contents and contents[1]
+        if not first_item and inferred_item then
+            first_item = { name = inferred_item }
+        end
+        if not first_item then
+            return nil
+        end
+
+        ---@type BufferChestData
+        return {
+            chest_type = "buffer-chest",
+            unit_number = entity.unit_number,
+            position = { x = entity.position.x, y = entity.position.y },
+            name = entity.name,
+            storage_size = storage_size,
+            item_filter = first_item.name
+        }
+    end
+end
+
+---The items a recipe's products or ingredients name, fluids left out, as a set
+---@param recipe_name string|nil
+---@param field "products"|"ingredients"
+---@return table<string, true>|nil nil when the recipe is unknown or names no item
+local function recipe_items(recipe_name, field)
+    local recipe = recipe_name and prototypes.recipe[recipe_name]
+    if not recipe then
+        return nil
+    end
+    local items = {}
+    local any = false
+    for _, entry in pairs(recipe[field]) do
+        if entry.type == "item" then
+            items[entry.name] = true
+            any = true
+        end
+    end
+    return any and items or nil
+end
+
+---The items a chest empty at export time can hold, from the inserters and drills around it. Each one that touches the
+---chest must move the chest's item, so each gives a set of items the chest's item is in, and the chest's item is in all
+---of them. An inserter's whitelist gives its set; without one, the items of what it takes from (into the chest) or puts
+---into (out of it): a machine's recipe products or ingredients, the lanes of a belt, the item of another chest, once
+---known. A drill that drops into the chest gives the item it mines. A blacklist, a machine without a recipe and a chest
+---of no known item give no set. A chest with exactly one item left is resolved; the others are repeated over until none
+---changes, so a chain of empty chests resolves from either end.
+---@param result ExtractionResult The machines, drills, belts, inserters and the chests that hold something
+---@param empty_chests LuaEntity[] The buffer chests that hold nothing
+---@param known table<number, table<string, true>> A chest's unit number -> the items it holds or has filters for
+---@return table<number, string> The chest's unit number -> its item, for each chest resolved
+local function infer_empty_chest_items(result, empty_chests, known)
+    local inferred = {}
+
+    -- the items of the end of an inserter that is not the chest: nil when they are not known
+    local function items_of_end(target, as_source)
+        if not target or not target.unit_number then
+            return nil
+        end
+        if target.type == "machine" then
+            local machine = result.machines[result.unit_number_to_id[target.unit_number] or 0]
+            return machine and recipe_items(machine.recipe, as_source and "products" or "ingredients") or nil
+        elseif target.type == "belt" then
+            local belt = result.belts[result.belt_unit_number_to_id[target.unit_number] or 0]
+            if not belt then
+                return nil
+            end
+            local items, any = {}, false
+            for _, lane in ipairs(belt.lanes) do
+                if lane.ingredient then
+                    items[lane.ingredient] = true
+                    any = true
+                end
+            end
+            return any and items or nil
+        elseif target.type == "chest" then
+            return known[target.unit_number]
+        end
+        return nil
+    end
+
+    -- the set an inserter that touches the chest gives, nil when it gives none
+    local function items_of_inserter(inserter, other_end, other_is_source)
+        if inserter.filter_mode == "whitelist" and #inserter.filters > 0 then
+            local items = {}
+            for _, name in ipairs(inserter.filters) do
+                items[name] = true
+            end
+            return items
+        end
+        return items_of_end(other_end, other_is_source)
+    end
+
+    local changed = true
+    while changed do
+        changed = false
+        for _, chest in ipairs(empty_chests) do
+            local unit_number = chest.unit_number
+            if unit_number and not inferred[unit_number] then
+                local candidates = nil -- nil: no set yet
+                local function narrow(items)
+                    if not items then
+                        return
+                    end
+                    if not candidates then
+                        candidates = {}
+                        for name in pairs(items) do
+                            candidates[name] = true
+                        end
+                    else
+                        for name in pairs(candidates) do
+                            if not items[name] then
+                                candidates[name] = nil
+                            end
+                        end
+                    end
+                end
+                for _, inserter in ipairs(result.inserters) do
+                    if inserter.sink and inserter.sink.type == "chest" and inserter.sink.unit_number == unit_number then
+                        narrow(items_of_inserter(inserter, inserter.source, true))
+                    end
+                    if inserter.source and inserter.source.type == "chest" and inserter.source.unit_number == unit_number then
+                        narrow(items_of_inserter(inserter, inserter.sink, false))
+                    end
+                end
+                for _, drill in ipairs(result.drills) do
+                    if drill.drop_target_unit_number == unit_number and drill.mined_item_name then
+                        narrow({ [drill.mined_item_name] = true })
+                    end
+                end
+                if candidates then
+                    local only, count = nil, 0
+                    for name in pairs(candidates) do
+                        only, count = name, count + 1
+                    end
+                    if count == 1 then
+                        inferred[unit_number] = only
+                        known[unit_number] = { [only] = true }
+                        changed = true
+                    end
+                end
+            end
+        end
+    end
+    return inferred
+end
+
+---Extract data from an inserter
+---@param entity LuaEntity
+---@return InserterData|nil
+local function extract_inserter_data(entity)
+    if not entity or not entity.valid then
+        return nil
+    end
+
+    if entity.type ~= "inserter" then
+        return nil
+    end
+
+    -- Get stack size (use inserter_stack_size_override if set, otherwise the current target pickup count)
+    local stack_size = entity.inserter_stack_size_override
+    if stack_size == 0 then
+        -- No override, use the effective stack size
+        stack_size = entity.inserter_target_pickup_count
+    end
+
+    -- Get filters, only while they are switched on: an inserter whose filters are set but switched off moves whatever
+    -- it is given, as one without filters does. Its mode says whether they name the items to move (a whitelist) or the
+    -- items to leave (a blacklist).
+    local filters = {}
+    local filter_mode = nil
+    local filter_slot_count = entity.filter_slot_count or 0
+    if filter_slot_count > 0 and entity.use_filters then
+        for i = 1, filter_slot_count do
+            local filter = entity.get_filter(i)
+            if filter and filter.name then
+                table.insert(filters, filter.name)
+            end
+        end
+        filter_mode = entity.inserter_filter_mode
+    end
+
+    -- Get source (pickup target)
+    local source = nil
+    local pickup_target = extraction.inserter_end(entity, "pickup")
+    if pickup_target and pickup_target.valid then
+        local target_type = helpers.get_target_type(pickup_target)
+        if target_type then
+            source = {
+                type = target_type,
+                unit_number = pickup_target.unit_number,
+                name = pickup_target.name
+            }
+            if target_type == "belt" then
+                source.entity_type = pickup_target.type
+                source.near_lane = helpers.get_near_lane(entity, pickup_target)
+                source.pickup_length = helpers.get_pickup_length(entity, pickup_target)
+                source.pickup_layout = helpers.get_pickup_layout(entity, pickup_target)
+                source.pickup_problem = helpers.get_pickup_problem(entity, pickup_target)
+            end
+
+        end
+    end
+
+    -- Get sink (drop target)
+    local sink = nil
+    local drop_target = extraction.inserter_end(entity, "drop")
+    if drop_target and drop_target.valid then
+        local target_type = helpers.get_target_type(drop_target)
+        if target_type then
+            sink = {
+                type = target_type,
+                unit_number = drop_target.unit_number,
+                name = drop_target.name
+            }
+        end
+    end
+
+    ---@type InserterData
+    local data = {
+        entity = entity,
+        inserter_type = entity.name,
+        quality = entity.quality.name,
+        position = entity.position,
+        stack_size = stack_size,
+        filters = filters,
+        filter_mode = filter_mode,
+        source = source,
+        sink = sink
+    }
+
+    return data
+end
+
+---Whether a crafting machine's burner burns nutrients, as a biochamber does: read from its prototype, never its name
+---@param entity LuaEntity
+---@return boolean
+local function burns_nutrients(entity)
+    local burner = entity.prototype.burner_prototype
+    return burner ~= nil and burner.fuel_categories["nutrients"] == true
+end
+
+---Whether an entity can be an exported receiver for a machine that places results itself
+---@param entity LuaEntity
+---@return boolean
+local function can_receive_placed_results(entity)
+    local target_type = helpers.get_target_type(entity)
+    return target_type == "machine" or target_type == "chest"
+end
+
+---Extract crafting data from a single crafting machine entity
+---@param entity LuaEntity
+---@param selected_unit_numbers table<number, true>
+---@return MachineData|nil
+local function extract_crafting_machine_data(entity, selected_unit_numbers)
+    if not entity or not entity.valid then
+        return nil
+    end
+
+    -- Get recipe (fallback to previous_recipe for furnaces that may not have an active recipe)
+    local recipe = helpers.get_recipe_or_previous(entity)
+    if not recipe then
+        return nil
+    end
+
+    -- A machine burning nutrients (a biochamber): the energy consumption effect (modules/beacons) scales how fast.
+    -- consumption_bonus is a fraction (0.5 = +50%), exported as a percentage like productivity. How the machine is
+    -- simulated the Clock Generator works out from its prototype, which is exported.
+    local energy_consumption_bonus = nil
+    if burns_nutrients(entity) then
+        energy_consumption_bonus = (entity.consumption_bonus or 0) * 100
+    end
+
+    -- Get entity productivity from modules/beacons
+    local entity_prod_bonus = entity.productivity_bonus or 0
+
+    -- Get research productivity from the force's recipe
+    local research_prod = 0
+    if entity.force and recipe then
+        local force_recipe = entity.force.recipes[recipe.name]
+        if force_recipe then
+            research_prod = force_recipe.productivity_bonus or 0
+        end
+    end
+
+    -- Combine entity productivity (modules/beacons) with research productivity
+    local total_productivity = entity_prod_bonus + research_prod
+
+    -- A machine that places its results itself (a recycler: its prototype has a vector_to_place_result) puts them into
+    -- the machine or container at its result spot. Its drop_position is a scatter point inside the destination tile,
+    -- not the receiver's center, so use the bounded drop footprint when the game has not set drop_target yet.
+    local result_target_unit_number = nil
+    if entity.prototype.vector_to_place_result then
+        local ok, target = pcall(function() return entity.drop_target end)
+        if ok and target and target.valid then
+            if target.unit_number and selected_unit_numbers[target.unit_number] and can_receive_placed_results(target) then
+                result_target_unit_number = target.unit_number
+            end
+        else
+            target = nil
+            local found = {}
+            for _, candidate in ipairs(drop_candidates(entity)) do
+                if candidate.valid and candidate.unit_number and selected_unit_numbers[candidate.unit_number]
+                    and can_receive_placed_results(candidate) then
+                    table.insert(found, candidate)
+                end
+            end
+            if #found == 1 then result_target_unit_number = found[1].unit_number end
+        end
+    end
+
+    -- Cap productivity at 300% (Factorio maximum)
+    if total_productivity > 3.0 then
+        total_productivity = 3.0
+    end
+
+    -- Extract data
+    ---@type MachineData
+    local data = {
+        entity = entity,
+        name = entity.name,
+        quality = entity.quality and entity.quality.name or "normal",
+        recipe = recipe.name,
+        recipe_quality = helpers.get_recipe_quality(entity),
+        crafting_speed = entity.crafting_speed,
+        productivity = total_productivity * 100,
+        energy_consumption_bonus = energy_consumption_bonus,
+        result_target_unit_number = result_target_unit_number
+    }
+
+    return data
+end
+
+---Extract crafting data from a single entity (dispatches to appropriate handler)
+---@param entity LuaEntity
+---@return MachineData|nil, string|nil category The extracted data and category ("machine" or "drill")
+local function extract_machine_data(entity, selected_unit_numbers)
+    if not entity or not entity.valid then
+        return nil, nil
+    end
+
+    -- Handle mining drills separately
+    if entity.type == "mining-drill" then
+        return extract_mining_drill_data(entity), "drill"
+    end
+
+    -- Only handle entities with supported subgroups
+    local supported_subgroups = {
+        ["smelting-machine"] = true,
+        ["production-machine"] = true,
+        ["agriculture"] = true
+    }
+
+    if debug then
+        helpers.print("Entity: " .. entity.name .. ", subgroup: " .. (entity.prototype.subgroup and entity.prototype.subgroup.name or "nil"))
+    end
+
+    local prototype = entity.prototype
+    local subgroup = prototype and prototype.subgroup and prototype.subgroup.name
+    if not supported_subgroups[subgroup] then
+        return nil, nil
+    end
+
+    -- of the agriculture machines only those burning nutrients craft as the Clock Generator models; a captive biter
+    -- spawner burns food
+    if subgroup == "agriculture" and not burns_nutrients(entity) then
+        return nil, nil
+    end
+
+    -- Labs share the production-machine subgroup but have no recipe: get_recipe raises an error on them
+    if entity.type ~= "assembling-machine" and entity.type ~= "furnace" then
+        return nil, nil
+    end
+
+    -- Handle crafting machines (assemblers, furnaces, etc.)
+    return extract_crafting_machine_data(entity, selected_unit_numbers), "machine"
+end
+
+-- Empty output belts
+
+---The belt pieces an inserter's drop onto an empty belt is read on: the kinds the lanes of a belt with items are read on
+---(transport belts and underground belts), and splitters, whose lines only name the item
+local DROP_PIECE_TYPES = { ["transport-belt"] = true, ["underground-belt"] = true, ["splitter"] = true }
+
+---The item an inserter puts on a belt, from what it takes from: an exported crafting machine whose recipe makes one
+---item product, which a blacklist must not name; or, through a whitelist, the one item product of the recipe that the
+---whitelist names. Nil when it takes from anything else, or when none or more than one item is left.
+---@param inserter LuaEntity
+---@param result ExtractionResult The machines extracted so far
+---@return string|nil
+local function drop_line_item(inserter, result)
+    local source = extraction.inserter_end(inserter, "pickup")
+    if not (source and source.valid and source.unit_number) then
+        return nil
+    end
+    local machine = result.machines[result.unit_number_to_id[source.unit_number] or 0]
+    local products = machine and recipe_items(machine.recipe, "products")
+    if not products then
+        return nil
+    end
+    -- the filters as the export reads them (extract_inserter_data): only while they are switched on
+    local filters, mode = {}, nil
+    if (inserter.filter_slot_count or 0) > 0 and inserter.use_filters then
+        for index = 1, inserter.filter_slot_count do
+            local filter = inserter.get_filter(index)
+            if filter and filter.name then filters[filter.name] = true end
+        end
+        if next(filters) then mode = inserter.inserter_filter_mode end
+    end
+    local only, count = nil, 0
+    for name in pairs(products) do
+        if mode ~= "whitelist" or filters[name] then
+            only, count = name, count + 1
+        end
+    end
+    if count ~= 1 or (mode == "blacklist" and filters[only]) then
+        return nil
+    end
+    return only
+end
+
+---Points read along a splitter's transport line to find the line nearest a drop position
+local LINE_SAMPLES = 32
+
+---The way each direction a belt piece faces runs, y pointing south
+local RUN = {
+    [defines.direction.north] = { x = 0, y = -1 },
+    [defines.direction.east] = { x = 1, y = 0 },
+    [defines.direction.south] = { x = 0, y = 1 },
+    [defines.direction.west] = { x = -1, y = 0 },
+}
+
+---The transport line of a belt piece an inserter's drop lands on. Its side is the side of the drop tile's centre that
+---the drop position is on, looking the way the piece faces, on a curve too (the way it faces is the way it puts its
+---items out). A drop on that centre line, from in front of the piece or behind it, lands on the right side, or on the
+---left side for a mirrored inserter; on a curve it takes the side of the centre that the drop position is on looking the
+---way the items come in, mirrored or not. On a splitter it is the line of that side, of the two halves, that passes nearest
+---the drop position; on a belt or an underground belt it is line 1 or 2 (a drop onto an underground entrance from its
+---side lands on the entrance's line 3 or 4 of the same side, which line 1 or 2 runs into). Measured for straight belts,
+---curves, both underground ends and a splitter, from the side, from in front and from behind, mirrored and not
+---(Factorio 2.1.24). A function of the module so that the game test of the export can hold it against where the game
+---puts the first item.
+---@param inserter LuaEntity
+---@param piece LuaEntity The belt piece it drops onto
+---@return number|nil index The transport line's index in the piece; nil for a piece that faces no way of the four
+function extraction.drop_line(inserter, piece)
+    local run = RUN[piece.direction]
+    if not run then
+        return nil
+    end
+    local drop = inserter.drop_position
+    local dx, dy = drop.x - (math.floor(drop.x) + 0.5), drop.y - (math.floor(drop.y) + 0.5)
+    local left = dx * run.y - dy * run.x
+    if math.abs(left) < 1 / 256 and piece.type == "transport-belt" and piece.belt_shape ~= "straight" then
+        -- on a curve, looking the way the items come in
+        local incoming = RUN[(piece.direction + (piece.belt_shape == "right" and 12 or 4)) % 16]
+        left = dx * incoming.y - dy * incoming.x
+    end
+    local side
+    if math.abs(left) < 1 / 256 then
+        side = inserter.mirroring and 1 or 2
+    else
+        side = left > 0 and 1 or 2
+    end
+    if piece.type ~= "splitter" then
+        return side
+    end
+    local best, best_distance = nil, math.huge
+    for index = side, piece.get_max_transport_line_index(), 2 do
+        local length = piece.get_transport_line(index).line_length
+        for step = 0, LINE_SAMPLES do
+            local at = piece.get_line_item_position(index, length * step / LINE_SAMPLES)
+            local distance = (at.x - drop.x) ^ 2 + (at.y - drop.y) ^ 2
+            if distance < best_distance then
+                best, best_distance = index, distance
+            end
+        end
+    end
+    return best
+end
+
+---The sides of the transport lines that items put on a line of a belt piece run onto, over the selected pieces: the
+---line itself, the pieces whose line is the same line of the game (it spans pieces), and the lines it puts its items
+---onto, through undergrounds, side-loads and splitters, onwards. Lines of transport belts and underground belts give
+---their side (1 left, 2 right, as the export reads the lanes); lines of other pieces give `other`.
+---@param piece LuaEntity
+---@param index number The transport line's index in the piece
+---@param pieces table<number, LuaEntity> The belt pieces of the export by unit number
+---@return {[1]: true|nil, [2]: true|nil, other: true|nil}
+local function lines_reached(piece, index, pieces)
+    local reached = {}
+    local seen = {}
+    local queue = { { piece = piece, index = index } }
+    local head = 1
+    while queue[head] and head <= drop_merge.MAX_STEPS do
+        local at = queue[head]
+        head = head + 1
+        local key = at.piece.unit_number .. ":" .. at.index
+        if not seen[key] then
+            seen[key] = true
+            if at.piece.type == "transport-belt" or at.piece.type == "underground-belt" then
+                reached[at.index % 2 == 1 and 1 or 2] = true
+            else
+                reached.other = true
+            end
+            local line = at.piece.get_transport_line(at.index)
+            local outputs = line.output_lines
+            local near = { at.piece }
+            local ok, neighbours = pcall(function() return at.piece.belt_neighbours end)
+            if ok and type(neighbours) == "table" then
+                for _, list in pairs(neighbours) do
+                    for _, other in pairs(list) do table.insert(near, other) end
+                end
+            end
+            if at.piece.type == "underground-belt" then
+                local ok_partner, partner = pcall(function() return at.piece.underground_belt_neighbour end)
+                if ok_partner and partner then table.insert(near, partner) end
+            end
+            for _, other in ipairs(near) do
+                if other.valid and other.unit_number and pieces[other.unit_number] then
+                    for other_index = 1, other.get_max_transport_line_index() do
+                        local candidate = other.get_transport_line(other_index)
+                        local follows = candidate.line_equals(line)
+                        for _, output in pairs(outputs) do
+                            follows = follows or candidate.line_equals(output)
+                        end
+                        if follows then
+                            table.insert(queue, { piece = other, index = other_index })
+                        end
+                    end
+                end
+            end
+        end
+    end
+    return reached
+end
+
+-- Main Extraction Orchestrator
+--- - Extract data from all selected entities, separating machines, drills, inserters, and belts
+---@param entities LuaEntity[]
+---@param force LuaForce? The player's force; not read: each entity's bonuses, research included, are read from the entity
+---@return ExtractionResult
+function extraction.extract_all_entities(entities, force)
+    local result = {
+        machines = {},
+        drills = {},
+        inserters = {},
+        belts = {},
+        chests = {},
+        unit_number_to_id = {},
+        belt_unit_number_to_id = {},
+        chest_unit_number_to_id = {}
+    }
+
+    local selected_unit_numbers = {}
+    for _, entity in pairs(entities) do
+        if entity.valid and entity.unit_number then selected_unit_numbers[entity.unit_number] = true end
+    end
+
+    -- First pass: extract machines and build unit_number -> id mapping
+    local machine_id = 0
+    for _, entity in pairs(entities) do
+        if entity.type ~= "mining-drill" and entity.type ~= "inserter" and entity.type ~= "transport-belt" then
+            local data, entity_category = extract_machine_data(entity, selected_unit_numbers)
+            if data and entity_category == "machine" then
+                machine_id = machine_id + 1
+                table.insert(result.machines, data)
+                -- Map the entity's unit_number to its assigned ID
+                if entity.unit_number then
+                    result.unit_number_to_id[entity.unit_number] = machine_id
+                end
+            end
+        end
+    end
+
+    -- Second pass: belts. Pieces joined to each other, through undergrounds and splitters as well, are one belt
+    -- whatever lies on each piece at this instant: a lane that has run dry under one inserter still belongs to the
+    -- belt it is part of, and a piece that is empty is still the belt its inserter drops on. Belts that carry the
+    -- same items on the same lanes are then treated as one, as before. Two that carry them on opposite lanes are two
+    -- belts: near_lane (1 left, 2 right) is read off the lanes of the belt an inserter stands by.
+    local belt_id = 0
+    local ingredient_signature_to_belt = {} -- Maps "ingredient1|ingredient2#lane 1 item|lane 2 item" to {belt_id, data}
+
+    local pieces = {} -- unit_number -> belt piece
+    local parent = {} -- union-find over unit numbers
+    for _, entity in pairs(entities) do
+        if entity.valid and entity.unit_number and entity.prototype.subgroup and entity.prototype.subgroup.name == "belt" then
+            pieces[entity.unit_number] = entity
+            parent[entity.unit_number] = entity.unit_number
+        end
+    end
+    local function find(unit_number)
+        while parent[unit_number] ~= unit_number do
+            parent[unit_number] = parent[parent[unit_number]]
+            unit_number = parent[unit_number]
+        end
+        return unit_number
+    end
+    local function join(a, b)
+        local root_a, root_b = find(a), find(b)
+        if root_a ~= root_b then
+            parent[root_a] = root_b
+        end
+    end
+    local function join_with(unit_number, other)
+        local ok, valid = pcall(function() return other.valid and other.unit_number end)
+        if ok and valid and parent[valid] then
+            join(unit_number, valid)
+        end
+    end
+    -- the other end of an underground belt: the nearest one of its kind that faces the same way, within reach
+    local direction_offsets = {
+        [defines.direction.north] = { 0, -1 },
+        [defines.direction.east] = { 1, 0 },
+        [defines.direction.south] = { 0, 1 },
+        [defines.direction.west] = { -1, 0 },
+    }
+    local function underground_partner(entity)
+        if entity.belt_to_ground_type ~= "input" then
+            return nil
+        end
+        local offset = direction_offsets[entity.direction]
+        if not offset then
+            return nil
+        end
+        local reach = entity.prototype.max_underground_distance or 0
+        for distance = 1, reach + 1 do
+            local x = entity.position.x + offset[1] * distance
+            local y = entity.position.y + offset[2] * distance
+            for _, other in pairs(pieces) do
+                if other.type == "underground-belt" and other.name == entity.name and other.belt_to_ground_type == "output"
+                    and other.direction == entity.direction
+                    and math.abs(other.position.x - x) < 0.01 and math.abs(other.position.y - y) < 0.01 then
+                    return other
+                end
+            end
+        end
+        return nil
+    end
+    for unit_number, entity in pairs(pieces) do
+        local ok, neighbours = pcall(function() return entity.belt_neighbours end)
+        if ok and type(neighbours) == "table" then
+            for _, list in pairs(neighbours) do
+                for _, other in pairs(list) do
+                    join_with(unit_number, other)
+                end
+            end
+        end
+        if entity.type == "underground-belt" then
+            join_with(unit_number, underground_partner(entity))
+        elseif entity.type == "linked-belt" then
+            local ok_other, other = pcall(function() return entity.linked_belt_neighbour end)
+            if ok_other then
+                join_with(unit_number, other)
+            end
+        end
+    end
+
+    -- the pieces of each belt, in a fixed order so the lanes read the same every time
+    local unit_numbers = {}
+    for unit_number in pairs(pieces) do
+        table.insert(unit_numbers, unit_number)
+    end
+    table.sort(unit_numbers)
+    local belts_pieces = {} -- root unit_number -> ordered list of pieces
+    local roots = {}
+    for _, unit_number in ipairs(unit_numbers) do
+        local root = find(unit_number)
+        if not belts_pieces[root] then
+            belts_pieces[root] = {}
+            table.insert(roots, root)
+        end
+        table.insert(belts_pieces[root], pieces[unit_number])
+    end
+
+    -- An empty belt that inserters only drop onto (an output belt whose inserters have not swung yet, such as inserters
+    -- held by a circuit condition) has no contents to read. It gets the item of the machines its inserters take from
+    -- (drop_line_item) on the lanes their drops reach (lines_reached), as the belt would read once items had run onto
+    -- it. A belt that a selected inserter picks up from gets nothing, nor does a belt that one of the inserters dropping
+    -- onto it says nothing of (its item or its line is not known).
+    local inferred_belt_items = {} -- root unit number -> item-name set
+    local inferred_belt_lines = {} -- root unit number -> {[1]: true|nil, [2]: true|nil, other: true|nil}
+    local belt_unknown_drops = {} -- root unit number -> true
+    local belt_has_pickups = {} -- root unit number -> true
+    local pickup_pieces = {} -- unit_number of a belt piece an inserter picks up from -> true
+    for _, inserter in pairs(entities) do
+        local source = inserter.valid and inserter.type == "inserter" and extraction.inserter_end(inserter, "pickup")
+        if source and source.valid and source.unit_number and pieces[source.unit_number] then
+            belt_has_pickups[find(source.unit_number)] = true
+            pickup_pieces[source.unit_number] = true
+        end
+    end
+    for _, inserter in pairs(entities) do
+        local sink = inserter.valid and inserter.type == "inserter" and extraction.inserter_end(inserter, "drop")
+        if sink and sink.valid and sink.unit_number and pieces[sink.unit_number] then
+            local root = find(sink.unit_number)
+            local item = DROP_PIECE_TYPES[sink.type] and drop_line_item(inserter, result)
+            local line = item and extraction.drop_line(inserter, sink)
+            if not line then
+                belt_unknown_drops[root] = true
+            else
+                inferred_belt_items[root] = inferred_belt_items[root] or {}
+                inferred_belt_items[root][item] = true
+                inferred_belt_lines[root] = inferred_belt_lines[root] or {}
+                for key in pairs(lines_reached(sink, line, pieces)) do
+                    inferred_belt_lines[root][key] = true
+                end
+            end
+        end
+    end
+
+    for _, root in ipairs(roots) do
+        local belt_pieces = belts_pieces[root]
+        local default_belt_stack_size = helpers.get_default_belt_stack_size(belt_pieces[1].force)
+        -- lanes 1 and 2 as the first piece that carries something on them says, the pieces the selected inserters pick
+        -- up from before the others (what lies on a lane upstream of the pickup, or after a merge, is not what the
+        -- inserter takes); every line counts for the items
+        local lane_ingredient = { nil, nil }
+        local lane_stack_size = { default_belt_stack_size, default_belt_stack_size }
+        local ingredient_set = {}
+        local reading_order = {}
+        for _, piece in ipairs(belt_pieces) do
+            if pickup_pieces[piece.unit_number] then table.insert(reading_order, piece) end
+        end
+        for _, piece in ipairs(belt_pieces) do
+            if not pickup_pieces[piece.unit_number] then table.insert(reading_order, piece) end
+        end
+        for _, piece in ipairs(reading_order) do
+            local max_lines = piece.get_max_transport_line_index()
+            for line_index = 1, max_lines do
+                local ingredient, stack_size = helpers.get_lane_info(piece.get_transport_line(line_index), default_belt_stack_size)
+                if ingredient then
+                    ingredient_set[ingredient] = true
+                    local lane = (line_index % 2 == 1) and 1 or 2
+                    if piece.type == "transport-belt" or piece.type == "underground-belt" then
+                        if not lane_ingredient[lane] then
+                            lane_ingredient[lane] = ingredient
+                        end
+                        lane_stack_size[lane] = math.max(lane_stack_size[lane], stack_size)
+                    end
+                end
+            end
+        end
+
+        local inference = inferred_belt_items[root]
+        if inference and next(ingredient_set) == nil and not lane_ingredient[1] and not lane_ingredient[2]
+            and not belt_has_pickups[root] and not belt_unknown_drops[root] then
+            local item, count = nil, 0
+            for name in pairs(inference) do item, count = name, count + 1 end
+            if count == 1 then
+                -- as the lanes read below: a lane of a transport belt or an underground belt the drops reach carries
+                -- the item; lines of splitters only name it
+                ingredient_set[item] = true
+                for lane = 1, 2 do
+                    if inferred_belt_lines[root][lane] then lane_ingredient[lane] = item end
+                end
+            end
+        end
+
+        local ingredients = {}
+        for ingredient, _ in pairs(ingredient_set) do
+            table.insert(ingredients, ingredient)
+        end
+        table.sort(ingredients)
+        -- a belt with nothing on it, and no item from the inserters that drop onto it, is not described: an inserter that
+        -- takes from it or drops onto it is left out of the export (see resolve_target_id in export.lua)
+        if #ingredients > 0 then
+            local lanes = {}
+            if not lane_ingredient[1] and not lane_ingredient[2] then
+                -- items only on the lines of a splitter or loader: one lane per item
+                for _, ingredient in ipairs(ingredients) do
+                    table.insert(lanes, { ingredient = ingredient, stack_size = default_belt_stack_size })
+                end
+            elseif not lane_ingredient[1] then
+                table.insert(lanes, { ingredient = lane_ingredient[2], stack_size = lane_stack_size[2] })
+            else
+                table.insert(lanes, { ingredient = lane_ingredient[1], stack_size = lane_stack_size[1] })
+                table.insert(lanes, { ingredient = lane_ingredient[2], stack_size = lane_stack_size[2] })
+            end
+            local signature = table.concat(ingredients, "|") .. "#" .. (lane_ingredient[1] or "") .. "|" .. (lane_ingredient[2] or "")
+            local existing = ingredient_signature_to_belt[signature]
+            local id, data
+            if existing then
+                id, data = existing.belt_id, existing.data
+            else
+                belt_id = belt_id + 1
+                id = belt_id
+                -- the transport line each listed lane is; nil when the lanes are items of splitter or loader lines
+                local lane_lines = nil
+                if lane_ingredient[1] then
+                    lane_lines = { 1, 2 }
+                elseif lane_ingredient[2] then
+                    lane_lines = { 2 }
+                end
+                ---@type BeltData
+                data = {
+                    belt_type = helpers.belt_type_of_pieces(belt_pieces),
+                    unit_number = belt_pieces[1].unit_number,
+                    lanes = lanes,
+                    lane_lines = lane_lines,
+                }
+                ingredient_signature_to_belt[signature] = { belt_id = id, data = data }
+                table.insert(result.belts, data)
+            end
+            -- The end of each lane and the way the items move, from every piece an inserter picks up from: one end or
+            -- way that all of them give, else unknown (lines of the same items are one belt, and may end apart)
+            for _, piece in ipairs(belt_pieces) do
+                if pickup_pieces[piece.unit_number] then
+                    local ends = drop_merge.lane_ends(piece, pieces, selected_unit_numbers)
+                    data.line_ends = data.line_ends or { ends[1], ends[2] }
+                    for line = 1, 2 do
+                        if data.line_ends[line].kind ~= ends[line].kind then
+                            data.line_ends[line] = { kind = "unknown" }
+                        end
+                    end
+                    -- the pickup piece's way where the line does not turn after it (the export states the copy spacing's
+                    -- way instead where it has one)
+                    local way = drop_merge.pickup_way(piece, pieces)
+                    if data.flow_direction == nil then
+                        data.flow_direction = way
+                    elseif data.flow_direction ~= way then
+                        data.flow_direction = false
+                    end
+                end
+            end
+            for _, piece in ipairs(belt_pieces) do
+                result.belt_unit_number_to_id[piece.unit_number] = id
+            end
+        end
+    end
+
+    -- Third pass: extract drills (now we have the unit_number mapping)
+    for _, entity in pairs(entities) do
+        if entity.type == "mining-drill" then
+            local data = extract_mining_drill_data(entity)
+            if data then
+                table.insert(result.drills, data)
+            end
+        end
+    end
+
+    -- Fourth pass: extract inserters
+    for _, entity in pairs(entities) do
+        if entity.type == "inserter" then
+            local data = extract_inserter_data(entity)
+            if data then
+                -- A pickup tile that another belt side-loads onto is out of scope: the export marks it unsupported.
+                -- Only a pickup without a pickup_problem (a bend, a splitter, an inline pickup) is checked, so those keep
+                -- their reason.
+                if data.source and data.source.type == "belt" and not data.source.pickup_problem then
+                    data.source.supply_problem = pickup_supply.problem(extraction.inserter_end(entity, "pickup"))
+                end
+                -- A drop whose stream side-loads onto a belt that is fed from behind, within the selected belt pieces, is
+                -- marked with the tiles to the merge.
+                local drop_piece = data.sink and data.sink.type == "belt" and extraction.inserter_end(entity, "drop")
+                if drop_piece then
+                    data.sink.side_load_tiles = drop_merge.tiles(drop_piece, pieces)
+                    -- the way the belt runs at the drop tile, for the order of the drops along it
+                    data.sink.belt_direction = drop_piece.direction
+                end
+                table.insert(result.inserters, data)
+            end
+        end
+    end
+
+    -- Where the next copy stands from a copy, from the inserters along the lines they take from
+    local selected_inserters = {}
+    for _, entity in pairs(entities) do
+        if entity.valid and entity.type == "inserter" then table.insert(selected_inserters, entity) end
+    end
+    result.copy_offset = drop_merge.copy_offset(selected_inserters, pieces)
+
+    -- Fifth pass: extract chests and build chest unit_number -> id mapping. A buffer chest that holds nothing at this
+    -- instant has the item the inserters and drills around it say, if they say one.
+    local known = {} -- chest unit_number -> set of the items it holds or filters for
+    local empty_chests = {}
+    for _, entity in pairs(entities) do
+        if is_chest_entity(entity) and entity.unit_number then
+            local data = extract_chest_data(entity)
+            if data and data.chest_type == "buffer-chest" then
+                known[entity.unit_number] = { [data.item_filter] = true }
+            elseif data and data.chest_type == "infinity-chest" and #data.item_filters > 0 then
+                known[entity.unit_number] = {}
+                for _, filter in ipairs(data.item_filters) do
+                    known[entity.unit_number][filter.item_name] = true
+                end
+            elseif not data and (entity.type == "container" or entity.type == "logistic-container") then
+                table.insert(empty_chests, entity)
+            end
+        end
+    end
+    local inferred = infer_empty_chest_items(result, empty_chests, known)
+    local chest_id = 0
+    for _, entity in pairs(entities) do
+        if is_chest_entity(entity) then
+            local data = extract_chest_data(entity, entity.unit_number and inferred[entity.unit_number])
+            if data then
+                chest_id = chest_id + 1
+                table.insert(result.chests, data)
+                if entity.unit_number then
+                    result.chest_unit_number_to_id[entity.unit_number] = chest_id
+                end
+            end
+        end
+    end
+
+    return result
+end
+
+return extraction

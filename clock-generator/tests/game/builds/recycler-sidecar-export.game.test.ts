@@ -10,8 +10,8 @@ import {composeProbeSource} from "../helpers/probe-source";
 const MODULES = ["types", "helpers", "pickup-supply", "drop-merge", "suggested-target", "extraction", "export"];
 const sidecarModules = "local capture_modules, require = {}, nil\nrequire = function(name) return assert(capture_modules[name], name) end\n"
     + MODULES.map(name => {
-        const source = fs.readFileSync(path.join(REPOSITORY_ROOT, "clock-generator-sidecar/scripts/" + name + ".lua"), "utf8");
-        return "capture_modules[\"__clock-generator-sidecar__.scripts." + name + "\"] = (function()\n" + source + "\nend)() or true\n";
+        const source = fs.readFileSync(path.join(REPOSITORY_ROOT, "clock-generator-recorder/scripts/describe/" + name + ".lua"), "utf8");
+        return "capture_modules[\"__clock-generator-recorder__.scripts.describe." + name + "\"] = (function()\n" + source + "\nend)() or true\n";
     }).join("");
 const scaffold = path.join(REPOSITORY_ROOT, "clock-generator/resources/config-samples/science/electromagnetic/electromagnetic-240-recycler-belt-fed.scaffold");
 const originalHash = "3cb6ca71400bda8580d605cbbc3eff69f4db594ee761a27311bdefe2487573a5";

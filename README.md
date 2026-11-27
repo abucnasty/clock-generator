@@ -91,4 +91,4 @@ generated from the user topics `docs/user/export-a-build.md` and `docs/user/side
 run `npm run docs:portal` in `clock-generator/` (CI fails when PORTAL.md is not current).
 
 The `clock-generator-recorder` mod is a development tool. It keeps its own version by hand and is not published. It
-depends on the sidecar and uses its extraction and export, so it needs the sidecar of this repository beside it.
+carries its own copy of the Lua that describes a build (`scripts/describe/`) and needs no sidecar.
