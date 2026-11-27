@@ -1,0 +1,2206 @@
+{
+ "resources/config-samples/gleba/iron-bacteria/iron-bacteria-380-cultivation.scaffold": {
+  "entities": 58,
+  "prototypes": {
+   "beacon": {
+    "entities": 14,
+    "quality": 14,
+    "request_rows": 28,
+    "requests": 14
+   },
+   "biochamber": {
+    "entities": 2,
+    "quality": 2,
+    "recipe": 2,
+    "recipe_quality": 2,
+    "request_rows": 8,
+    "requests": 2
+   },
+   "decider-combinator": {
+    "control_behavior": 2,
+    "direction": 2,
+    "entities": 2
+   },
+   "infinity-chest": {
+    "entities": 9,
+    "infinity": 9,
+    "infinity_rows": 3
+   },
+   "stack-inserter": {
+    "control_behavior": 2,
+    "direction": 10,
+    "entities": 11,
+    "mirror": 10,
+    "quality": 11
+   },
+   "turbo-loader": {
+    "direction": 2,
+    "entities": 2,
+    "type": 2
+   },
+   "turbo-splitter": {
+    "direction": 1,
+    "entities": 1,
+    "filter": 1,
+    "output_priority": 1
+   },
+   "turbo-transport-belt": {
+    "control_behavior": 2,
+    "direction": 13,
+    "entities": 13
+   },
+   "turbo-underground-belt": {
+    "direction": 4,
+    "entities": 4,
+    "type": 4
+   }
+  },
+  "version": {
+   "build": 11,
+   "major": 2,
+   "minor": 1,
+   "patch": 21
+  }
+ },
+ "resources/config-samples/gleba/rocket-fuel/rocket-fuel-60.scaffold": {
+  "entities": 101,
+  "prototypes": {
+   "beacon": {
+    "entities": 13,
+    "quality": 13,
+    "request_rows": 26,
+    "requests": 13
+   },
+   "biochamber": {
+    "direction": 2,
+    "entities": 3,
+    "mirror": 1,
+    "quality": 3,
+    "recipe": 3,
+    "recipe_quality": 3,
+    "request_rows": 12,
+    "requests": 3
+   },
+   "decider-combinator": {
+    "control_behavior": 1,
+    "direction": 1,
+    "entities": 1
+   },
+   "infinity-chest": {
+    "entities": 9,
+    "infinity": 9,
+    "infinity_rows": 5
+   },
+   "infinity-pipe": {
+    "entities": 1
+   },
+   "pipe": {
+    "entities": 4
+   },
+   "pipe-to-ground": {
+    "direction": 5,
+    "entities": 5
+   },
+   "stack-inserter": {
+    "control_behavior": 13,
+    "direction": 12,
+    "entities": 18,
+    "filter_rows": 1,
+    "filters": 1,
+    "mirror": 10,
+    "quality": 18,
+    "use_filters": 1
+   },
+   "turbo-loader": {
+    "direction": 4,
+    "entities": 4,
+    "type": 4
+   },
+   "turbo-splitter": {
+    "direction": 1,
+    "entities": 1,
+    "filter": 1,
+    "output_priority": 1
+   },
+   "turbo-transport-belt": {
+    "control_behavior": 1,
+    "direction": 25,
+    "entities": 25
+   },
+   "turbo-underground-belt": {
+    "direction": 17,
+    "entities": 17,
+    "type": 17
+   }
+  },
+  "version": {
+   "build": 1,
+   "major": 2,
+   "minor": 1,
+   "patch": 24
+  }
+ },
+ "resources/config-samples/intermediates/accumulator/accumulator-320.scaffold": {
+  "entities": 814,
+  "prototypes": {
+   "beacon": {
+    "entities": 151,
+    "quality": 151,
+    "request_rows": 302,
+    "requests": 151
+   },
+   "cryogenic-plant": {
+    "direction": 9,
+    "entities": 18,
+    "mirror": 9,
+    "quality": 18,
+    "recipe": 18,
+    "recipe_quality": 18,
+    "request_rows": 144,
+    "requests": 18
+   },
+   "electromagnetic-plant": {
+    "entities": 18,
+    "quality": 18,
+    "recipe": 18,
+    "recipe_quality": 18,
+    "request_rows": 90,
+    "requests": 18
+   },
+   "foundry": {
+    "direction": 9,
+    "entities": 18,
+    "quality": 18,
+    "recipe": 18,
+    "recipe_quality": 18,
+    "request_rows": 72,
+    "requests": 18
+   },
+   "infinity-chest": {
+    "entities": 2,
+    "infinity": 2
+   },
+   "infinity-pipe": {
+    "entities": 4
+   },
+   "pipe": {
+    "entities": 230
+   },
+   "pipe-to-ground": {
+    "direction": 118,
+    "entities": 127
+   },
+   "stack-inserter": {
+    "control_behavior": 90,
+    "direction": 54,
+    "entities": 90,
+    "mirror": 72,
+    "quality": 90
+   },
+   "turbo-loader": {
+    "direction": 2,
+    "entities": 2,
+    "type": 2
+   },
+   "turbo-transport-belt": {
+    "direction": 78,
+    "entities": 80
+   },
+   "turbo-underground-belt": {
+    "direction": 74,
+    "entities": 74,
+    "type": 74
+   }
+  },
+  "version": {
+   "build": 1,
+   "major": 2,
+   "minor": 1,
+   "patch": 24
+  }
+ },
+ "resources/config-samples/intermediates/advanced-circuit/advanced-circuit.scaffold": {
+  "entities": 121,
+  "prototypes": {
+   "beacon": {
+    "entities": 21,
+    "quality": 21,
+    "request_rows": 42,
+    "requests": 21
+   },
+   "cryogenic-plant": {
+    "entities": 1,
+    "mirror": 1,
+    "quality": 1,
+    "recipe": 1,
+    "recipe_quality": 1,
+    "request_rows": 8,
+    "requests": 1
+   },
+   "electromagnetic-plant": {
+    "entities": 2,
+    "quality": 2,
+    "recipe": 2,
+    "recipe_quality": 2,
+    "request_rows": 10,
+    "requests": 2
+   },
+   "foundry": {
+    "direction": 2,
+    "entities": 2,
+    "mirror": 1,
+    "quality": 2,
+    "recipe": 2,
+    "recipe_quality": 2,
+    "request_rows": 8,
+    "requests": 2
+   },
+   "infinity-chest": {
+    "entities": 7,
+    "infinity": 7,
+    "infinity_rows": 6
+   },
+   "infinity-pipe": {
+    "entities": 3
+   },
+   "pipe": {
+    "entities": 11
+   },
+   "stack-inserter": {
+    "control_behavior": 13,
+    "direction": 10,
+    "entities": 15,
+    "mirror": 2,
+    "quality": 15
+   },
+   "turbo-loader": {
+    "direction": 1,
+    "entities": 1,
+    "type": 1
+   },
+   "turbo-transport-belt": {
+    "direction": 28,
+    "entities": 37
+   },
+   "turbo-underground-belt": {
+    "direction": 21,
+    "entities": 21,
+    "type": 21
+   }
+  },
+  "version": {
+   "build": 11,
+   "major": 2,
+   "minor": 1,
+   "patch": 21
+  }
+ },
+ "resources/config-samples/intermediates/electric-furnace/electric-furnace-20.scaffold": {
+  "entities": 48,
+  "prototypes": {
+   "assembling-machine-3": {
+    "control_behavior": 1,
+    "entities": 1,
+    "quality": 1,
+    "recipe": 1,
+    "recipe_quality": 1,
+    "request_rows": 4,
+    "requests": 1
+   },
+   "beacon": {
+    "entities": 17,
+    "quality": 17,
+    "request_rows": 34,
+    "requests": 17
+   },
+   "electric-furnace": {
+    "entities": 3,
+    "quality": 3,
+    "request_rows": 6,
+    "requests": 3
+   },
+   "electric-mining-drill": {
+    "control_behavior": 3,
+    "direction": 1,
+    "entities": 3,
+    "quality": 3,
+    "request_rows": 9,
+    "requests": 3
+   },
+   "foundry": {
+    "direction": 1,
+    "entities": 1,
+    "quality": 1,
+    "recipe": 1,
+    "recipe_quality": 1,
+    "request_rows": 4,
+    "requests": 1
+   },
+   "infinity-chest": {
+    "entities": 3,
+    "infinity": 3,
+    "infinity_rows": 2
+   },
+   "infinity-pipe": {
+    "entities": 1
+   },
+   "stack-inserter": {
+    "control_behavior": 6,
+    "direction": 6,
+    "entities": 8,
+    "mirror": 2,
+    "quality": 8
+   },
+   "turbo-loader": {
+    "direction": 1,
+    "entities": 1,
+    "type": 1
+   },
+   "turbo-transport-belt": {
+    "direction": 5,
+    "entities": 5
+   },
+   "turbo-underground-belt": {
+    "direction": 5,
+    "entities": 5,
+    "type": 5
+   }
+  },
+  "version": {
+   "build": 1,
+   "major": 2,
+   "minor": 1,
+   "patch": 24
+  }
+ },
+ "resources/config-samples/intermediates/electronic-circuit/electronic-circuit-2-belt-chest.scaffold": {
+  "entities": 22,
+  "prototypes": {
+   "assembling-machine-3": {
+    "entities": 1,
+    "recipe": 1,
+    "recipe_quality": 1
+   },
+   "infinity-chest": {
+    "entities": 4,
+    "infinity": 4,
+    "infinity_rows": 3
+   },
+   "stack-inserter": {
+    "direction": 5,
+    "entities": 6,
+    "filter_rows": 3,
+    "filters": 3,
+    "override_stack_size": 1,
+    "quality": 6,
+    "use_filters": 3
+   },
+   "steel-chest": {
+    "bar": 1,
+    "entities": 1
+   },
+   "turbo-transport-belt": {
+    "direction": 10,
+    "entities": 10
+   }
+  },
+  "version": {
+   "build": 1,
+   "major": 2,
+   "minor": 1,
+   "patch": 24
+  }
+ },
+ "resources/config-samples/intermediates/flying-robot-frame/flying-robot-frame-80.scaffold": {
+  "entities": 289,
+  "prototypes": {
+   "assembling-machine-3": {
+    "entities": 12,
+    "quality": 12,
+    "recipe": 12,
+    "recipe_quality": 12,
+    "request_rows": 48,
+    "requests": 12
+   },
+   "beacon": {
+    "entities": 70,
+    "quality": 70,
+    "request_rows": 140,
+    "requests": 70
+   },
+   "constant-combinator": {
+    "control_behavior": 2,
+    "direction": 2,
+    "entities": 2
+   },
+   "infinity-chest": {
+    "entities": 7,
+    "infinity": 7,
+    "infinity_rows": 5
+   },
+   "stack-inserter": {
+    "control_behavior": 36,
+    "direction": 26,
+    "entities": 41,
+    "mirror": 2,
+    "quality": 41
+   },
+   "turbo-loader": {
+    "direction": 2,
+    "entities": 2,
+    "type": 2
+   },
+   "turbo-transport-belt": {
+    "direction": 62,
+    "entities": 69
+   },
+   "turbo-underground-belt": {
+    "direction": 84,
+    "entities": 86,
+    "type": 86
+   }
+  },
+  "version": {
+   "build": 1,
+   "major": 2,
+   "minor": 1,
+   "patch": 24
+  }
+ },
+ "resources/config-samples/intermediates/grenade/grenade-240-fills-belt-exactly.scaffold": {
+  "entities": 86,
+  "prototypes": {
+   "assembling-machine-3": {
+    "entities": 4,
+    "quality": 4,
+    "recipe": 4,
+    "recipe_quality": 4,
+    "request_rows": 16,
+    "requests": 4
+   },
+   "beacon": {
+    "entities": 22,
+    "quality": 22,
+    "request_rows": 44,
+    "requests": 22
+   },
+   "constant-combinator": {
+    "control_behavior": 2,
+    "direction": 2,
+    "entities": 2
+   },
+   "electric-mining-drill": {
+    "control_behavior": 4,
+    "direction": 4,
+    "entities": 4,
+    "mirror": 1,
+    "quality": 4,
+    "request_rows": 12,
+    "requests": 4
+   },
+   "foundry": {
+    "control_behavior": 1,
+    "direction": 1,
+    "entities": 1,
+    "mirror": 1,
+    "quality": 1,
+    "recipe": 1,
+    "recipe_quality": 1,
+    "request_rows": 4,
+    "requests": 1
+   },
+   "infinity-chest": {
+    "entities": 1,
+    "infinity": 1
+   },
+   "infinity-pipe": {
+    "entities": 1
+   },
+   "stack-inserter": {
+    "control_behavior": 8,
+    "direction": 4,
+    "entities": 8,
+    "mirror": 2,
+    "quality": 8
+   },
+   "turbo-loader": {
+    "direction": 1,
+    "entities": 1,
+    "type": 1
+   },
+   "turbo-transport-belt": {
+    "direction": 34,
+    "entities": 42
+   }
+  },
+  "version": {
+   "build": 11,
+   "major": 2,
+   "minor": 1,
+   "patch": 21
+  }
+ },
+ "resources/config-samples/intermediates/inserter-crafting/inserter-crafting-240-shared-signal-clock.scaffold": {
+  "entities": 98,
+  "prototypes": {
+   "assembling-machine-3": {
+    "entities": 2,
+    "quality": 2,
+    "recipe": 2,
+    "recipe_quality": 2,
+    "request_rows": 8,
+    "requests": 2
+   },
+   "beacon": {
+    "entities": 23,
+    "quality": 23,
+    "request_rows": 46,
+    "requests": 23
+   },
+   "electric-furnace": {
+    "entities": 4,
+    "quality": 4,
+    "request_rows": 8,
+    "requests": 4
+   },
+   "infinity-chest": {
+    "entities": 13,
+    "infinity": 13,
+    "infinity_rows": 12
+   },
+   "stack-inserter": {
+    "control_behavior": 9,
+    "direction": 12,
+    "entities": 23,
+    "mirror": 6,
+    "quality": 23
+   },
+   "turbo-loader": {
+    "direction": 1,
+    "entities": 1,
+    "type": 1
+   },
+   "turbo-transport-belt": {
+    "direction": 19,
+    "entities": 21
+   },
+   "turbo-underground-belt": {
+    "direction": 11,
+    "entities": 11,
+    "type": 11
+   }
+  },
+  "version": {
+   "build": 1,
+   "major": 2,
+   "minor": 1,
+   "patch": 24
+  }
+ },
+ "resources/config-samples/intermediates/lds/lds-240.scaffold": {
+  "entities": 190,
+  "prototypes": {
+   "beacon": {
+    "entities": 32,
+    "quality": 32,
+    "request_rows": 64,
+    "requests": 32
+   },
+   "constant-combinator": {
+    "control_behavior": 6,
+    "direction": 6,
+    "entities": 6
+   },
+   "cryogenic-plant": {
+    "entities": 1,
+    "quality": 1,
+    "recipe": 1,
+    "recipe_quality": 1,
+    "request_rows": 8,
+    "requests": 1
+   },
+   "foundry": {
+    "direction": 2,
+    "entities": 4,
+    "mirror": 2,
+    "quality": 4,
+    "recipe": 4,
+    "recipe_quality": 4,
+    "request_rows": 16,
+    "requests": 4
+   },
+   "infinity-chest": {
+    "entities": 5,
+    "infinity": 5,
+    "infinity_rows": 4
+   },
+   "infinity-pipe": {
+    "entities": 5
+   },
+   "pipe": {
+    "entities": 27
+   },
+   "pipe-to-ground": {
+    "direction": 28,
+    "entities": 28
+   },
+   "stack-inserter": {
+    "control_behavior": 15,
+    "direction": 14,
+    "entities": 19,
+    "override_stack_size": 8,
+    "quality": 19
+   },
+   "steel-chest": {
+    "bar": 2,
+    "entities": 2
+   },
+   "storage-tank": {
+    "direction": 1,
+    "entities": 2,
+    "quality": 2
+   },
+   "turbo-loader": {
+    "direction": 1,
+    "entities": 1,
+    "type": 1
+   },
+   "turbo-transport-belt": {
+    "direction": 22,
+    "entities": 31
+   },
+   "turbo-underground-belt": {
+    "direction": 27,
+    "entities": 27,
+    "type": 27
+   }
+  },
+  "version": {
+   "build": 11,
+   "major": 2,
+   "minor": 1,
+   "patch": 21
+  }
+ },
+ "resources/config-samples/intermediates/processing-unit/processing-unit-15-chest-fed.scaffold": {
+  "entities": 9,
+  "prototypes": {
+   "beacon": {
+    "entities": 3,
+    "quality": 3,
+    "request_rows": 6,
+    "requests": 3
+   },
+   "electromagnetic-plant": {
+    "entities": 1,
+    "quality": 1,
+    "recipe": 1,
+    "recipe_quality": 1,
+    "request_rows": 5,
+    "requests": 1
+   },
+   "infinity-chest": {
+    "entities": 2,
+    "infinity": 2,
+    "infinity_rows": 2
+   },
+   "infinity-pipe": {
+    "entities": 1
+   },
+   "stack-inserter": {
+    "direction": 1,
+    "entities": 2,
+    "quality": 2
+   }
+  },
+  "version": {
+   "build": 1,
+   "major": 2,
+   "minor": 1,
+   "patch": 24
+  }
+ },
+ "resources/config-samples/intermediates/processing-unit/processing-unit-80-circuit-export.scaffold": {
+  "entities": 111,
+  "prototypes": {
+   "arithmetic-combinator": {
+    "control_behavior": 2,
+    "direction": 2,
+    "entities": 2
+   },
+   "beacon": {
+    "entities": 20,
+    "quality": 20,
+    "request_rows": 40,
+    "requests": 20
+   },
+   "constant-combinator": {
+    "control_behavior": 1,
+    "direction": 1,
+    "entities": 1
+   },
+   "decider-combinator": {
+    "control_behavior": 2,
+    "direction": 2,
+    "entities": 2
+   },
+   "display-panel": {
+    "direction": 1,
+    "entities": 1
+   },
+   "electromagnetic-plant": {
+    "control_behavior": 2,
+    "direction": 2,
+    "entities": 6,
+    "mirror": 1,
+    "quality": 6,
+    "recipe": 6,
+    "recipe_quality": 6,
+    "request_rows": 30,
+    "requests": 6
+   },
+   "foundry": {
+    "direction": 3,
+    "entities": 3,
+    "mirror": 1,
+    "quality": 3,
+    "recipe": 3,
+    "recipe_quality": 3,
+    "request_rows": 12,
+    "requests": 3
+   },
+   "infinity-chest": {
+    "entities": 10,
+    "infinity": 10,
+    "infinity_rows": 4
+   },
+   "infinity-pipe": {
+    "entities": 5
+   },
+   "stack-inserter": {
+    "control_behavior": 4,
+    "direction": 29,
+    "entities": 32,
+    "quality": 32
+   },
+   "turbo-loader": {
+    "direction": 1,
+    "entities": 2,
+    "type": 2
+   },
+   "turbo-transport-belt": {
+    "direction": 18,
+    "entities": 21
+   },
+   "turbo-underground-belt": {
+    "direction": 6,
+    "entities": 6,
+    "type": 6
+   }
+  },
+  "version": {
+   "build": 11,
+   "major": 2,
+   "minor": 1,
+   "patch": 21
+  }
+ },
+ "resources/config-samples/intermediates/productivity-module/productivity-module-80-chest-chain.scaffold": {
+  "entities": 95,
+  "prototypes": {
+   "beacon": {
+    "entities": 23,
+    "quality": 23,
+    "request_rows": 46,
+    "requests": 23
+   },
+   "cryogenic-plant": {
+    "direction": 1,
+    "entities": 1,
+    "mirror": 1,
+    "quality": 1,
+    "recipe": 1,
+    "recipe_quality": 1,
+    "request_rows": 8,
+    "requests": 1
+   },
+   "electromagnetic-plant": {
+    "control_behavior": 4,
+    "entities": 4,
+    "quality": 4,
+    "recipe": 4,
+    "recipe_quality": 4,
+    "request_rows": 20,
+    "requests": 4
+   },
+   "foundry": {
+    "control_behavior": 3,
+    "direction": 1,
+    "entities": 4,
+    "mirror": 2,
+    "quality": 4,
+    "recipe": 4,
+    "recipe_quality": 4,
+    "request_rows": 16,
+    "requests": 4
+   },
+   "infinity-chest": {
+    "entities": 2,
+    "infinity": 2,
+    "infinity_rows": 1
+   },
+   "infinity-pipe": {
+    "entities": 5
+   },
+   "pipe": {
+    "entities": 12
+   },
+   "stack-inserter": {
+    "control_behavior": 11,
+    "direction": 13,
+    "entities": 15,
+    "filter_rows": 15,
+    "filters": 15,
+    "mirror": 15,
+    "quality": 15,
+    "use_filters": 15
+   },
+   "steel-chest": {
+    "bar": 3,
+    "entities": 3,
+    "quality": 3
+   },
+   "turbo-loader": {
+    "direction": 1,
+    "entities": 1,
+    "type": 1
+   },
+   "turbo-transport-belt": {
+    "control_behavior": 1,
+    "direction": 19,
+    "entities": 19
+   },
+   "turbo-underground-belt": {
+    "direction": 6,
+    "entities": 6,
+    "type": 6
+   }
+  },
+  "version": {
+   "build": 11,
+   "major": 2,
+   "minor": 1,
+   "patch": 21
+  }
+ },
+ "resources/config-samples/recycling/iron-ore/iron-ore-voider-400-exact-speed.scaffold": {
+  "entities": 16,
+  "prototypes": {
+   "beacon": {
+    "entities": 4,
+    "quality": 4,
+    "request_rows": 8,
+    "requests": 4
+   },
+   "car": {
+    "entities": 1,
+    "orientation": 1
+   },
+   "infinity-chest": {
+    "entities": 4,
+    "infinity": 4,
+    "infinity_rows": 4
+   },
+   "recycler": {
+    "control_behavior": 1,
+    "entities": 1,
+    "quality": 1,
+    "request_rows": 1,
+    "requests": 1
+   },
+   "stack-inserter": {
+    "control_behavior": 6,
+    "direction": 4,
+    "entities": 6,
+    "filter_rows": 4,
+    "filters": 4,
+    "quality": 6,
+    "use_filters": 4
+   }
+  },
+  "version": {
+   "build": 11,
+   "major": 2,
+   "minor": 1,
+   "patch": 21
+  }
+ },
+ "resources/config-samples/recycling/iron-ore/iron-ore-voider-400-overbeaconed.scaffold": {
+  "entities": 18,
+  "prototypes": {
+   "beacon": {
+    "entities": 6,
+    "quality": 6,
+    "request_rows": 12,
+    "requests": 6
+   },
+   "car": {
+    "entities": 1,
+    "orientation": 1
+   },
+   "infinity-chest": {
+    "entities": 4,
+    "infinity": 4,
+    "infinity_rows": 4
+   },
+   "recycler": {
+    "control_behavior": 1,
+    "entities": 1,
+    "quality": 1,
+    "request_rows": 4,
+    "requests": 1
+   },
+   "stack-inserter": {
+    "control_behavior": 4,
+    "direction": 4,
+    "entities": 6,
+    "filter_rows": 4,
+    "filters": 4,
+    "quality": 6,
+    "use_filters": 4
+   }
+  },
+  "version": {
+   "build": 11,
+   "major": 2,
+   "minor": 1,
+   "patch": 21
+  }
+ },
+ "resources/config-samples/science/agricultural/agricultural-250.scaffold": {
+  "entities": 293,
+  "prototypes": {
+   "beacon": {
+    "entities": 33,
+    "quality": 33,
+    "request_rows": 66,
+    "requests": 33
+   },
+   "biochamber": {
+    "control_behavior": 10,
+    "entities": 25,
+    "mirror": 10,
+    "quality": 15,
+    "recipe": 25,
+    "recipe_quality": 25,
+    "request_rows": 100,
+    "requests": 25
+   },
+   "decider-combinator": {
+    "control_behavior": 4,
+    "direction": 4,
+    "entities": 4
+   },
+   "infinity-chest": {
+    "entities": 15,
+    "infinity": 15,
+    "infinity_rows": 6
+   },
+   "infinity-pipe": {
+    "entities": 1
+   },
+   "pipe": {
+    "entities": 20
+   },
+   "pipe-to-ground": {
+    "direction": 11,
+    "entities": 11
+   },
+   "stack-inserter": {
+    "control_behavior": 50,
+    "direction": 19,
+    "entities": 66,
+    "mirror": 42,
+    "quality": 66
+   },
+   "turbo-loader": {
+    "direction": 4,
+    "entities": 4,
+    "type": 4
+   },
+   "turbo-splitter": {
+    "direction": 2,
+    "entities": 2,
+    "filter": 2,
+    "output_priority": 2
+   },
+   "turbo-transport-belt": {
+    "control_behavior": 4,
+    "direction": 94,
+    "entities": 100
+   },
+   "turbo-underground-belt": {
+    "direction": 12,
+    "entities": 12,
+    "type": 12
+   }
+  },
+  "version": {
+   "build": 1,
+   "major": 2,
+   "minor": 1,
+   "patch": 24
+  }
+ },
+ "resources/config-samples/science/automation/automation-120-foundries-feed-belt-to-assembler.scaffold": {
+  "entities": 39,
+  "prototypes": {
+   "assembling-machine-3": {
+    "entities": 1,
+    "quality": 1,
+    "recipe": 1,
+    "recipe_quality": 1,
+    "request_rows": 4,
+    "requests": 1
+   },
+   "beacon": {
+    "entities": 6,
+    "quality": 6,
+    "request_rows": 12,
+    "requests": 6
+   },
+   "foundry": {
+    "direction": 1,
+    "entities": 2,
+    "mirror": 2,
+    "quality": 2,
+    "recipe": 2,
+    "recipe_quality": 2,
+    "request_rows": 8,
+    "requests": 2
+   },
+   "infinity-chest": {
+    "entities": 1,
+    "infinity": 1
+   },
+   "infinity-pipe": {
+    "entities": 2
+   },
+   "pipe": {
+    "entities": 6
+   },
+   "stack-inserter": {
+    "direction": 2,
+    "entities": 4,
+    "mirror": 2,
+    "quality": 4
+   },
+   "turbo-loader": {
+    "direction": 1,
+    "entities": 1,
+    "type": 1
+   },
+   "turbo-transport-belt": {
+    "direction": 12,
+    "entities": 14
+   },
+   "turbo-underground-belt": {
+    "direction": 2,
+    "entities": 2,
+    "type": 2
+   }
+  },
+  "version": {
+   "build": 11,
+   "major": 2,
+   "minor": 1,
+   "patch": 21
+  }
+ },
+ "resources/config-samples/science/automation/automation-240.scaffold": {
+  "entities": 204,
+  "prototypes": {
+   "assembling-machine-3": {
+    "entities": 9,
+    "quality": 9,
+    "recipe": 9,
+    "recipe_quality": 9,
+    "request_rows": 36,
+    "requests": 9
+   },
+   "beacon": {
+    "entities": 76,
+    "quality": 76,
+    "request_rows": 152,
+    "requests": 76
+   },
+   "infinity-chest": {
+    "entities": 5,
+    "infinity": 5,
+    "infinity_rows": 4
+   },
+   "stack-inserter": {
+    "control_behavior": 18,
+    "direction": 2,
+    "entities": 22,
+    "mirror": 3,
+    "quality": 22
+   },
+   "turbo-loader": {
+    "direction": 1,
+    "entities": 1,
+    "type": 1
+   },
+   "turbo-splitter": {
+    "direction": 1,
+    "entities": 1,
+    "input_priority": 1,
+    "output_priority": 1
+   },
+   "turbo-transport-belt": {
+    "direction": 34,
+    "entities": 49
+   },
+   "turbo-underground-belt": {
+    "direction": 41,
+    "entities": 41,
+    "type": 41
+   }
+  },
+  "version": {
+   "build": 1,
+   "major": 2,
+   "minor": 1,
+   "patch": 24
+  }
+ },
+ "resources/config-samples/science/chemical/chemical-240-shared-foundry.scaffold": {
+  "entities": 161,
+  "prototypes": {
+   "assembling-machine-3": {
+    "control_behavior": 5,
+    "entities": 8,
+    "quality": 8,
+    "recipe": 8,
+    "recipe_quality": 8,
+    "request_rows": 32,
+    "requests": 8
+   },
+   "beacon": {
+    "entities": 40,
+    "quality": 40,
+    "request_rows": 80,
+    "requests": 40
+   },
+   "foundry": {
+    "control_behavior": 1,
+    "direction": 1,
+    "entities": 1,
+    "quality": 1,
+    "recipe": 1,
+    "recipe_quality": 1,
+    "request_rows": 4,
+    "requests": 1
+   },
+   "infinity-chest": {
+    "entities": 9,
+    "infinity": 9,
+    "infinity_rows": 7
+   },
+   "infinity-pipe": {
+    "entities": 1
+   },
+   "small-lamp": {
+    "entities": 2
+   },
+   "stack-inserter": {
+    "control_behavior": 20,
+    "direction": 14,
+    "entities": 28,
+    "filter_rows": 4,
+    "filters": 4,
+    "mirror": 4,
+    "quality": 28,
+    "use_filters": 4
+   },
+   "turbo-loader": {
+    "direction": 2,
+    "entities": 2,
+    "type": 2
+   },
+   "turbo-transport-belt": {
+    "direction": 52,
+    "entities": 52
+   },
+   "turbo-underground-belt": {
+    "direction": 18,
+    "entities": 18,
+    "type": 18
+   }
+  },
+  "version": {
+   "build": 11,
+   "major": 2,
+   "minor": 1,
+   "patch": 21
+  }
+ },
+ "resources/config-samples/science/electromagnetic/electromagnetic-240-recycler-belt-fed.scaffold": {
+  "entities": 211,
+  "prototypes": {
+   "beacon": {
+    "entities": 24,
+    "quality": 24,
+    "request_rows": 48,
+    "requests": 24
+   },
+   "electromagnetic-plant": {
+    "direction": 6,
+    "entities": 6,
+    "mirror": 4,
+    "quality": 6,
+    "recipe": 6,
+    "recipe_quality": 6,
+    "request_rows": 30,
+    "requests": 6
+   },
+   "infinity-chest": {
+    "entities": 10,
+    "infinity": 10,
+    "infinity_rows": 6
+   },
+   "infinity-pipe": {
+    "entities": 5
+   },
+   "pipe": {
+    "entities": 20
+   },
+   "pipe-to-ground": {
+    "direction": 14,
+    "entities": 24
+   },
+   "recycler": {
+    "entities": 2,
+    "mirror": 2,
+    "quality": 2
+   },
+   "stack-inserter": {
+    "control_behavior": 18,
+    "direction": 28,
+    "entities": 30,
+    "filter_rows": 4,
+    "filters": 4,
+    "mirror": 16,
+    "quality": 30,
+    "use_filters": 4
+   },
+   "steel-chest": {
+    "entities": 4
+   },
+   "turbo-loader": {
+    "direction": 1,
+    "entities": 1,
+    "type": 1
+   },
+   "turbo-transport-belt": {
+    "direction": 50,
+    "entities": 56
+   },
+   "turbo-underground-belt": {
+    "direction": 29,
+    "entities": 29,
+    "type": 29
+   }
+  },
+  "version": {
+   "build": 11,
+   "major": 2,
+   "minor": 1,
+   "patch": 21
+  }
+ },
+ "resources/config-samples/science/electromagnetic/electromagnetic-330.scaffold": {
+  "entities": 224,
+  "prototypes": {
+   "beacon": {
+    "entities": 92,
+    "quality": 92,
+    "request_rows": 184,
+    "requests": 92
+   },
+   "electromagnetic-plant": {
+    "entities": 11,
+    "quality": 11,
+    "recipe": 11,
+    "recipe_quality": 11,
+    "request_rows": 55,
+    "requests": 11
+   },
+   "infinity-chest": {
+    "entities": 26,
+    "infinity": 26,
+    "infinity_rows": 4
+   },
+   "infinity-pipe": {
+    "entities": 22
+   },
+   "stack-inserter": {
+    "control_behavior": 33,
+    "direction": 2,
+    "entities": 37,
+    "quality": 37
+   },
+   "turbo-transport-belt": {
+    "direction": 13,
+    "entities": 13
+   },
+   "turbo-underground-belt": {
+    "direction": 23,
+    "entities": 23,
+    "type": 23
+   }
+  },
+  "version": {
+   "build": 1,
+   "major": 2,
+   "minor": 1,
+   "patch": 24
+  }
+ },
+ "resources/config-samples/science/logistic/logistic-240-direct-insert.scaffold": {
+  "entities": 66,
+  "prototypes": {
+   "assembling-machine-3": {
+    "entities": 2,
+    "quality": 2,
+    "recipe": 2,
+    "recipe_quality": 2,
+    "request_rows": 8,
+    "requests": 2
+   },
+   "beacon": {
+    "entities": 23,
+    "quality": 23,
+    "request_rows": 46,
+    "requests": 23
+   },
+   "foundry": {
+    "control_behavior": 1,
+    "direction": 2,
+    "entities": 3,
+    "mirror": 1,
+    "quality": 3,
+    "recipe": 3,
+    "recipe_quality": 3,
+    "request_rows": 12,
+    "requests": 3
+   },
+   "infinity-chest": {
+    "entities": 4,
+    "infinity": 4,
+    "infinity_rows": 2
+   },
+   "infinity-pipe": {
+    "entities": 2
+   },
+   "stack-inserter": {
+    "control_behavior": 6,
+    "direction": 6,
+    "entities": 10,
+    "filter_rows": 2,
+    "filters": 2,
+    "mirror": 3,
+    "quality": 10,
+    "use_filters": 2
+   },
+   "turbo-loader": {
+    "direction": 2,
+    "entities": 2,
+    "type": 2
+   },
+   "turbo-transport-belt": {
+    "direction": 11,
+    "entities": 12
+   },
+   "turbo-underground-belt": {
+    "direction": 8,
+    "entities": 8,
+    "type": 8
+   }
+  },
+  "version": {
+   "build": 11,
+   "major": 2,
+   "minor": 1,
+   "patch": 21
+  }
+ },
+ "resources/config-samples/science/logistic/logistic-240.scaffold": {
+  "entities": 492,
+  "prototypes": {
+   "assembling-machine-3": {
+    "entities": 22,
+    "quality": 22,
+    "recipe": 22,
+    "recipe_quality": 22,
+    "request_rows": 88,
+    "requests": 22
+   },
+   "beacon": {
+    "entities": 120,
+    "quality": 120,
+    "request_rows": 240,
+    "requests": 120
+   },
+   "infinity-chest": {
+    "entities": 10,
+    "infinity": 10,
+    "infinity_rows": 8
+   },
+   "medium-electric-pole": {
+    "entities": 10,
+    "quality": 10
+   },
+   "stack-inserter": {
+    "direction": 26,
+    "entities": 52,
+    "mirror": 4,
+    "quality": 52
+   },
+   "turbo-loader": {
+    "direction": 2,
+    "entities": 2,
+    "type": 2
+   },
+   "turbo-splitter": {
+    "direction": 4,
+    "entities": 4,
+    "input_priority": 2,
+    "output_priority": 2
+   },
+   "turbo-transport-belt": {
+    "direction": 181,
+    "entities": 198
+   },
+   "turbo-underground-belt": {
+    "direction": 74,
+    "entities": 74,
+    "type": 74
+   }
+  },
+  "version": {
+   "build": 1,
+   "major": 2,
+   "minor": 1,
+   "patch": 24
+  }
+ },
+ "resources/config-samples/science/metallurgic/metallurgic-45.scaffold": {
+  "entities": 94,
+  "prototypes": {
+   "assembling-machine-3": {
+    "entities": 1,
+    "quality": 1,
+    "recipe": 1,
+    "recipe_quality": 1,
+    "request_rows": 4,
+    "requests": 1
+   },
+   "beacon": {
+    "entities": 16,
+    "quality": 16,
+    "request_rows": 32,
+    "requests": 16
+   },
+   "cryogenic-plant": {
+    "entities": 1,
+    "quality": 1,
+    "recipe": 1,
+    "recipe_quality": 1,
+    "request_rows": 8,
+    "requests": 1
+   },
+   "foundry": {
+    "entities": 2,
+    "quality": 2,
+    "recipe": 2,
+    "recipe_quality": 2,
+    "request_rows": 8,
+    "requests": 2
+   },
+   "infinity-chest": {
+    "entities": 9,
+    "infinity": 9,
+    "infinity_rows": 8
+   },
+   "infinity-pipe": {
+    "entities": 6
+   },
+   "stack-inserter": {
+    "direction": 14,
+    "entities": 16,
+    "override_stack_size": 16,
+    "quality": 16
+   },
+   "turbo-transport-belt": {
+    "direction": 38,
+    "entities": 39
+   },
+   "turbo-underground-belt": {
+    "direction": 4,
+    "entities": 4,
+    "type": 4
+   }
+  },
+  "version": {
+   "build": 2,
+   "major": 2,
+   "minor": 1,
+   "patch": 23
+  }
+ },
+ "resources/config-samples/science/military/military-240.scaffold": {
+  "entities": 395,
+  "prototypes": {
+   "assembling-machine-3": {
+    "entities": 20,
+    "quality": 20,
+    "recipe": 20,
+    "recipe_quality": 20,
+    "request_rows": 80,
+    "requests": 20
+   },
+   "beacon": {
+    "entities": 68,
+    "quality": 68,
+    "request_rows": 136,
+    "requests": 68
+   },
+   "foundry": {
+    "entities": 5,
+    "mirror": 4,
+    "quality": 5,
+    "recipe": 5,
+    "recipe_quality": 5,
+    "request_rows": 20,
+    "requests": 5
+   },
+   "infinity-chest": {
+    "entities": 20,
+    "infinity": 20,
+    "infinity_rows": 18
+   },
+   "infinity-pipe": {
+    "entities": 1
+   },
+   "pipe": {
+    "entities": 20
+   },
+   "pipe-to-ground": {
+    "direction": 11,
+    "entities": 11
+   },
+   "stack-inserter": {
+    "direction": 44,
+    "entities": 70,
+    "mirror": 35,
+    "quality": 70
+   },
+   "turbo-loader": {
+    "direction": 2,
+    "entities": 2,
+    "type": 2
+   },
+   "turbo-splitter": {
+    "direction": 6,
+    "entities": 6,
+    "input_priority": 6,
+    "output_priority": 6
+   },
+   "turbo-transport-belt": {
+    "direction": 78,
+    "entities": 94
+   },
+   "turbo-underground-belt": {
+    "direction": 78,
+    "entities": 78,
+    "type": 78
+   }
+  },
+  "version": {
+   "build": 1,
+   "major": 2,
+   "minor": 1,
+   "patch": 24
+  }
+ },
+ "resources/config-samples/science/production/production-120-two-belts.scaffold": {
+  "entities": 56,
+  "prototypes": {
+   "assembling-machine-3": {
+    "control_behavior": 2,
+    "entities": 2,
+    "quality": 2,
+    "recipe": 2,
+    "recipe_quality": 2,
+    "request_rows": 8,
+    "requests": 2
+   },
+   "beacon": {
+    "entities": 10,
+    "quality": 10,
+    "request_rows": 20,
+    "requests": 10
+   },
+   "electric-mining-drill": {
+    "control_behavior": 1,
+    "direction": 1,
+    "entities": 1,
+    "quality": 1
+   },
+   "foundry": {
+    "direction": 2,
+    "entities": 2,
+    "quality": 2,
+    "recipe": 2,
+    "recipe_quality": 2,
+    "request_rows": 8,
+    "requests": 2
+   },
+   "infinity-chest": {
+    "entities": 3,
+    "infinity": 3,
+    "infinity_rows": 2
+   },
+   "infinity-pipe": {
+    "entities": 1
+   },
+   "pipe": {
+    "entities": 14
+   },
+   "stack-inserter": {
+    "control_behavior": 5,
+    "direction": 3,
+    "entities": 7,
+    "filter_rows": 2,
+    "filters": 1,
+    "quality": 7,
+    "use_filters": 1
+   },
+   "turbo-loader": {
+    "direction": 1,
+    "entities": 1,
+    "type": 1
+   },
+   "turbo-transport-belt": {
+    "direction": 9,
+    "entities": 9
+   },
+   "turbo-underground-belt": {
+    "direction": 6,
+    "entities": 6,
+    "type": 6
+   }
+  },
+  "version": {
+   "build": 1,
+   "major": 2,
+   "minor": 1,
+   "patch": 24
+  }
+ },
+ "resources/config-samples/science/utility/utility-120-processing-unit-and-lds-on-one-belt.scaffold": {
+  "entities": 63,
+  "prototypes": {
+   "assembling-machine-3": {
+    "control_behavior": 2,
+    "entities": 2,
+    "quality": 2,
+    "recipe": 2,
+    "recipe_quality": 2,
+    "request_rows": 8,
+    "requests": 2
+   },
+   "beacon": {
+    "entities": 17,
+    "quality": 17,
+    "request_rows": 34,
+    "requests": 17
+   },
+   "infinity-chest": {
+    "entities": 5,
+    "infinity": 5,
+    "infinity_rows": 4
+   },
+   "stack-inserter": {
+    "control_behavior": 6,
+    "direction": 6,
+    "entities": 10,
+    "mirror": 2,
+    "quality": 10
+   },
+   "turbo-loader": {
+    "direction": 1,
+    "entities": 1,
+    "type": 1
+   },
+   "turbo-transport-belt": {
+    "direction": 13,
+    "entities": 13
+   },
+   "turbo-underground-belt": {
+    "direction": 15,
+    "entities": 15,
+    "type": 15
+   }
+  },
+  "version": {
+   "build": 1,
+   "major": 2,
+   "minor": 1,
+   "patch": 24
+  }
+ },
+ "resources/config-samples/science/utility/utility-120.scaffold": {
+  "entities": 42,
+  "prototypes": {
+   "assembling-machine-3": {
+    "control_behavior": 1,
+    "entities": 1,
+    "quality": 1,
+    "recipe": 1,
+    "recipe_quality": 1,
+    "request_rows": 4,
+    "requests": 1
+   },
+   "beacon": {
+    "entities": 12,
+    "quality": 12,
+    "request_rows": 24,
+    "requests": 12
+   },
+   "infinity-chest": {
+    "entities": 5,
+    "infinity": 5,
+    "infinity_rows": 4
+   },
+   "stack-inserter": {
+    "control_behavior": 3,
+    "direction": 4,
+    "entities": 7,
+    "mirror": 3,
+    "quality": 7
+   },
+   "turbo-loader": {
+    "direction": 1,
+    "entities": 1,
+    "type": 1
+   },
+   "turbo-transport-belt": {
+    "direction": 8,
+    "entities": 8
+   },
+   "turbo-underground-belt": {
+    "direction": 8,
+    "entities": 8,
+    "type": 8
+   }
+  },
+  "version": {
+   "build": 11,
+   "major": 2,
+   "minor": 1,
+   "patch": 21
+  }
+ },
+ "resources/config-samples/science/utility/utility-320-metered-takers.scaffold": {
+  "entities": 231,
+  "prototypes": {
+   "assembling-machine-3": {
+    "entities": 6,
+    "quality": 6,
+    "recipe": 6,
+    "recipe_quality": 6,
+    "request_rows": 24,
+    "requests": 6
+   },
+   "beacon": {
+    "entities": 50,
+    "quality": 50,
+    "request_rows": 100,
+    "requests": 50
+   },
+   "cryogenic-plant": {
+    "direction": 1,
+    "entities": 1,
+    "mirror": 1,
+    "quality": 1,
+    "recipe": 1,
+    "recipe_quality": 1,
+    "request_rows": 8,
+    "requests": 1
+   },
+   "express-transport-belt": {
+    "direction": 6,
+    "entities": 8
+   },
+   "express-underground-belt": {
+    "direction": 9,
+    "entities": 9,
+    "type": 9
+   },
+   "foundry": {
+    "direction": 1,
+    "entities": 2,
+    "mirror": 2,
+    "quality": 2,
+    "recipe": 2,
+    "recipe_quality": 2,
+    "request_rows": 8,
+    "requests": 2
+   },
+   "infinity-chest": {
+    "entities": 10,
+    "infinity": 10,
+    "infinity_rows": 8
+   },
+   "infinity-pipe": {
+    "entities": 5
+   },
+   "stack-inserter": {
+    "control_behavior": 21,
+    "direction": 22,
+    "entities": 29,
+    "mirror": 9,
+    "override_stack_size": 2,
+    "quality": 29
+   },
+   "turbo-loader": {
+    "direction": 2,
+    "entities": 2,
+    "type": 2
+   },
+   "turbo-transport-belt": {
+    "direction": 63,
+    "entities": 79
+   },
+   "turbo-underground-belt": {
+    "direction": 24,
+    "entities": 30,
+    "type": 30
+   }
+  },
+  "version": {
+   "build": 10,
+   "major": 2,
+   "minor": 1,
+   "patch": 25
+  }
+ },
+ "resources/config-samples/science/utility/utility-480-lds-foundry-chain.scaffold": {
+  "entities": 186,
+  "prototypes": {
+   "assembling-machine-3": {
+    "entities": 8,
+    "quality": 8,
+    "recipe": 8,
+    "recipe_quality": 8,
+    "request_rows": 32,
+    "requests": 8
+   },
+   "beacon": {
+    "entities": 54,
+    "quality": 54,
+    "request_rows": 108,
+    "requests": 54
+   },
+   "cryogenic-plant": {
+    "direction": 1,
+    "entities": 1,
+    "quality": 1,
+    "recipe": 1,
+    "recipe_quality": 1,
+    "request_rows": 8,
+    "requests": 1
+   },
+   "foundry": {
+    "direction": 4,
+    "entities": 4,
+    "mirror": 2,
+    "quality": 4,
+    "recipe": 4,
+    "recipe_quality": 4,
+    "request_rows": 16,
+    "requests": 4
+   },
+   "infinity-chest": {
+    "entities": 7,
+    "infinity": 7,
+    "infinity_rows": 5
+   },
+   "infinity-pipe": {
+    "entities": 9
+   },
+   "stack-inserter": {
+    "control_behavior": 29,
+    "direction": 20,
+    "entities": 34,
+    "override_stack_size": 4,
+    "quality": 34
+   },
+   "turbo-loader": {
+    "direction": 2,
+    "entities": 2,
+    "type": 2
+   },
+   "turbo-transport-belt": {
+    "direction": 29,
+    "entities": 32
+   },
+   "turbo-underground-belt": {
+    "direction": 35,
+    "entities": 35,
+    "type": 35
+   }
+  },
+  "version": {
+   "build": 11,
+   "major": 2,
+   "minor": 1,
+   "patch": 21
+  }
+ },
+ "resources/config-samples/smelting/iron-plate/iron-plate-80-car-chest.scaffold": {
+  "entities": 31,
+  "prototypes": {
+   "beacon": {
+    "entities": 9,
+    "quality": 9,
+    "request_rows": 18,
+    "requests": 9
+   },
+   "big-mining-drill": {
+    "direction": 1,
+    "entities": 1,
+    "request_rows": 4,
+    "requests": 1
+   },
+   "car": {
+    "entities": 1,
+    "orientation": 1
+   },
+   "electric-furnace": {
+    "entities": 2,
+    "quality": 2,
+    "request_rows": 4,
+    "requests": 2
+   },
+   "infinity-chest": {
+    "entities": 1,
+    "infinity": 1
+   },
+   "stack-inserter": {
+    "direction": 3,
+    "entities": 4,
+    "mirror": 1,
+    "quality": 4
+   },
+   "turbo-loader": {
+    "direction": 1,
+    "entities": 1,
+    "type": 1
+   },
+   "turbo-transport-belt": {
+    "direction": 7,
+    "entities": 10
+   },
+   "turbo-underground-belt": {
+    "entities": 2,
+    "type": 2
+   }
+  },
+  "version": {
+   "build": 11,
+   "major": 2,
+   "minor": 1,
+   "patch": 21
+  }
+ },
+ "resources/config-samples/smelting/lithium-plate/lithium-plate-80-silo-chest.scaffold": {
+  "entities": 83,
+  "prototypes": {
+   "beacon": {
+    "entities": 15,
+    "quality": 15,
+    "request_rows": 30,
+    "requests": 15
+   },
+   "cryogenic-plant": {
+    "direction": 2,
+    "entities": 2,
+    "mirror": 1,
+    "quality": 2,
+    "recipe": 2,
+    "recipe_quality": 2,
+    "request_rows": 16,
+    "requests": 2
+   },
+   "electric-furnace": {
+    "entities": 6,
+    "quality": 6,
+    "request_rows": 12,
+    "requests": 6
+   },
+   "infinity-chest": {
+    "entities": 3,
+    "infinity": 3,
+    "infinity_rows": 2
+   },
+   "infinity-pipe": {
+    "entities": 4
+   },
+   "rocket-silo": {
+    "entities": 1,
+    "recipe": 1,
+    "recipe_quality": 1
+   },
+   "stack-inserter": {
+    "direction": 13,
+    "entities": 16,
+    "mirror": 2,
+    "quality": 16
+   },
+   "turbo-loader": {
+    "direction": 1,
+    "entities": 1,
+    "type": 1
+   },
+   "turbo-transport-belt": {
+    "direction": 13,
+    "entities": 21
+   },
+   "turbo-underground-belt": {
+    "direction": 12,
+    "entities": 14,
+    "type": 14
+   }
+  },
+  "version": {
+   "build": 11,
+   "major": 2,
+   "minor": 1,
+   "patch": 21
+  }
+ },
+ "resources/config-samples/smelting/steel-plate/steel-plate-26-wagon-chest.scaffold": {
+  "entities": 37,
+  "prototypes": {
+   "beacon": {
+    "entities": 12,
+    "quality": 12,
+    "request_rows": 24,
+    "requests": 12
+   },
+   "big-mining-drill": {
+    "direction": 1,
+    "entities": 1,
+    "request_rows": 4,
+    "requests": 1
+   },
+   "cargo-wagon": {
+    "entities": 1,
+    "inventory": 1,
+    "inventory_rows": 40,
+    "orientation": 1
+   },
+   "electric-furnace": {
+    "entities": 2,
+    "quality": 2,
+    "request_rows": 4,
+    "requests": 2
+   },
+   "infinity-chest": {
+    "entities": 1,
+    "infinity": 1
+   },
+   "stack-inserter": {
+    "direction": 5,
+    "entities": 5,
+    "filter_rows": 5,
+    "filters": 5,
+    "mirror": 1,
+    "quality": 5,
+    "use_filters": 5
+   },
+   "straight-rail": {
+    "entities": 2
+   },
+   "turbo-loader": {
+    "direction": 1,
+    "entities": 1,
+    "type": 1
+   },
+   "turbo-transport-belt": {
+    "direction": 12,
+    "entities": 12
+   }
+  },
+  "version": {
+   "build": 11,
+   "major": 2,
+   "minor": 1,
+   "patch": 21
+  }
+ },
+ "resources/config-samples/smelting/stone-brick/stone-brick-120-drill-direct-insert.scaffold": {
+  "entities": 17,
+  "prototypes": {
+   "beacon": {
+    "entities": 8,
+    "quality": 8,
+    "request_rows": 16,
+    "requests": 8
+   },
+   "electric-furnace": {
+    "entities": 1,
+    "quality": 1,
+    "request_rows": 2,
+    "requests": 1
+   },
+   "electric-mining-drill": {
+    "direction": 1,
+    "entities": 1,
+    "quality": 1
+   },
+   "infinity-chest": {
+    "entities": 1,
+    "infinity": 1
+   },
+   "stack-inserter": {
+    "direction": 1,
+    "entities": 1,
+    "quality": 1
+   },
+   "turbo-loader": {
+    "direction": 1,
+    "entities": 1,
+    "type": 1
+   },
+   "turbo-transport-belt": {
+    "direction": 1,
+    "entities": 1
+   },
+   "turbo-underground-belt": {
+    "direction": 3,
+    "entities": 3,
+    "type": 3
+   }
+  },
+  "version": {
+   "build": 1,
+   "major": 2,
+   "minor": 1,
+   "patch": 24
+  }
+ }
+}
