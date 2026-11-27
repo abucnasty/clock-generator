@@ -195,6 +195,23 @@ export {
     decodeBlueprintFileBrowser,
 } from './blueprints/serde-browser';
 
+// ============================================================================
+// Research on a build
+// ============================================================================
+
+export { ResearchBlockSchema } from './config/research-block';
+export type { ResearchBase, ResearchBlock, ResearchBonuses } from './config/research-block';
+export { applyResearch, researchDifferences } from './import/apply-research';
+export type {
+    OutsideReason,
+    ResearchBuild,
+    ResearchChoice,
+    ResearchDifferences,
+    ResearchEdit,
+    ResearchKind,
+    ResearchOutside,
+} from './import/apply-research';
+
 export {
     FactorioBlueprint,
     FactorioBlueprintFile,
