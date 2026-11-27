@@ -618,8 +618,7 @@ describe("purity and malformed input", () => {
             IDS_DATA,
         );
         expect(shuffled).toEqual(reference);
-        expect(reference.belts).toHaveLength(1);
-        expect(reference.belts[0].lines).toEqual([4, 6]);
+        expect(reference.belts.map((b) => b.lines)).toEqual([[4], [6]]);
     });
 
     it("sorts every list by its stated key", () => {
@@ -627,7 +626,7 @@ describe("purity and malformed input", () => {
         for (const list of [reference.machines, reference.chests, reference.drills, reference.inserters, reference.left_out_inserters, reference.left_out_drills]) {
             expect(sorted(list)).toEqual([...sorted(list)].sort((a, b) => a - b));
         }
-        expect(reference.belts.map((b) => b.id)).toEqual([1]);
+        expect(reference.belts.map((b) => b.id)).toEqual([1, 2]);
         expect(reference.lines.map((l) => l.line)).toEqual([4, 6]);
     });
 
@@ -1002,11 +1001,10 @@ describe("the ids of the 7 sample builds under their frame", () => {
         ]);
     });
 
-    it("takes from the read the ore of iron's drill and the two lane items of logistic 240's belt 2", () => {
+    it("takes from the read the ore of iron's drill, and asks nothing of the others: logistic 240's row lanes hold one item each past the splitters", () => {
         const answers = (name: string) => RUNS.find((r) => r.name === name)!.answered.answers;
         expect(answers("iron")).toEqual({ "drill-ore:1": "iron-ore" });
-        expect(answers("logistic-240")).toEqual({ "lane-item:3:1": "transport-belt", "lane-item:3:2": "inserter" });
-        for (const name of ["lithium", "steel", "stone-brick-120", "electromagnetic-240", "productivity-module-80"]) expect(answers(name), name).toEqual({});
+        for (const name of ["lithium", "steel", "logistic-240", "stone-brick-120", "electromagnetic-240", "productivity-module-80"]) expect(answers(name), name).toEqual({});
     });
 });
 

@@ -45,7 +45,7 @@ type Tier1Build = {
 const TIER1 = (JSON.parse(read(path.join(FIXTURES, "tier1.json"))) as { builds: Tier1Build[] }).builds;
 
 /** A row where a read holds a value and the import is expected to give another */
-type Allowed = { build: string; kind: string; entity_number: string; read_belt: string; line: string; lane: string; field: string; source: string };
+type Allowed = { build: string; kind: string; entity_number: string; read_belt: string; line: string; lane: string; field: string; class: string; source: string };
 const ALLOWED: Allowed[] = (() => {
     const lines = read(path.join(FIXTURES, "allowed-differences.tsv")).split("\n").filter((l) => l !== "" && !l.startsWith("#"));
     const header = lines[0].split("\t");

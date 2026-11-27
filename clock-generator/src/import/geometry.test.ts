@@ -824,7 +824,7 @@ function linesOfBelts(g: BuildGeometry, inserters: CopiesBuild["inserters"]): Ma
 
 describe("copies, flow and sharing of sample builds", () => {
     for (const c of samples.copies) {
-        const { geometry } = built(path.join(SAMPLES, c.blueprint));
+        const { geometry, entities } = built(path.join(SAMPLES, c.blueprint));
         const why = SPACING_DIFFERS[c.name];
         const noSpacing = why !== undefined;
         it(noSpacing
@@ -864,14 +864,25 @@ describe("copies, flow and sharing of sample builds", () => {
             }
             expect(differ.map((d) => `${c.name} ${d}`).sort()).toEqual(Object.keys(SHARING_DIFFERS).filter((k) => k.startsWith(`${c.name} `)).sort());
         });
-        if (!noSpacing) it(`${c.name}: on every drop line a lane is shared exactly where the copy step has no part across the line and not every lane of the belt is per copy`, () => {
+        if (!noSpacing) it(`${c.name}: on every drop line a lane is shared exactly where the copy step has no part across the line and not every lane of the belt is per copy; a line no copy touches is shared by default`, () => {
             const offset = geometry.copy_offset.value!;
+            // an arm with no arm of its kind one copy step before or after it is of no copy
+            const arms = new Set(entities.map((e) => `${e.name}|${e.direction}|${e.mirror}|${e.position.x}|${e.position.y}`));
+            const ofNoCopy = (n: number) => {
+                const e = entities.find((x) => x.entity_number === n)!;
+                return [-1, 1].every((k) => !arms.has(`${e.name}|${e.direction}|${e.mirror}|${e.position.x + k * offset.x}|${e.position.y + k * offset.y}`));
+            };
             let drops = 0;
             for (const d of geometry.drops) {
                 const facing = sampleDirection(c, d.inserter);
                 const axis = facing === 0 || facing === 8 ? "x" : "y";
                 const across = axis === "x" ? offset.y : offset.x;
                 const line = lineOf(geometry, d.piece)!;
+                if ([...geometry.drops, ...geometry.pickups].filter((x) => line.pieces.includes(x.piece)).every((x) => ofNoCopy(x.inserter))) {
+                    expect(line.sharing, `inserter ${d.inserter}`).toEqual([{ value: "shared", basis: "default" }, { value: "shared", basis: "default" }]);
+                    drops += 1;
+                    continue;
+                }
                 const perCopy = line.sharing.every((s) => s.value === "per_copy");
                 const shared = Math.abs(across) < 1e-9 && !perCopy;
                 const lane = d.line.value === null ? null : ((d.line.value - 1) % 2);
