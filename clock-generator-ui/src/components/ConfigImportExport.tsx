@@ -441,15 +441,24 @@ export function ConfigImportExport({
         const ask = ++blueprintAskRef.current;
         const request = pasteRequestRef.current;
         setBlueprintAskOut(true);
+        // what the user changed since the ask started (a rate, an override) is in the live session, not in the one the ask began with
+        const keepTyped = (answered: BlueprintSession) => (previous: PendingImport | null): PendingImport => {
+            const live = previous?.blueprint;
+            if (!live) return pendingOf(answered);
+            // the rate follows the suggestion only while the live setpoint still does
+            const rate = live.suggested ? answered.setpoint.items_per_second : live.setpoint.items_per_second;
+            return pendingOf({ ...answered, overrides: live.overrides, suggested: live.suggested, setpoint: { ...answered.setpoint, items_per_second: rate } });
+        };
+        const failed = (previous: PendingImport | null): PendingImport => pendingOf({ ...(previous?.blueprint ?? next), failed: true });
         settle(next).then(({ session, answer }) => {
             if (ask !== blueprintAskRef.current || request !== pasteRequestRef.current) return;
             setBlueprintAskOut(false);
-            setPendingImport(answer.kind === 'build' ? pendingOf({ ...session, pasted: answer, failed: false }) : pendingOf({ ...next, failed: true }));
+            setPendingImport(answer.kind === 'build' ? keepTyped({ ...session, pasted: answer, failed: false }) : failed);
         }, error => {
             if (ask !== blueprintAskRef.current || request !== pasteRequestRef.current) return;
             console.error('Blueprint paste error:', error);
             setBlueprintAskOut(false);
-            setPendingImport(pendingOf({ ...next, failed: true }));
+            setPendingImport(failed);
         });
     }, [pendingImport, pendingOf, settle]);
 
