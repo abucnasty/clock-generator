@@ -207,7 +207,7 @@ it('replays detailed activity through the real worker query without changing the
 describe('a captured inserter kind, quality and filter mode', () => {
     // A build file (its pickup captured as the Sidecar 0.11.0 captured it): a legendary stack inserter picks up from a straight belt, a normal fast inserter empties the machine
     const pickup = { type: 'belt', id: 1, near_lane: 1, pickup_length: 1, pickup_layout: 'side-straight', pickup_capture: { status: 'supported',
-        entity_type: 'transport-belt', entity_name: 'turbo-transport-belt', sidecar_version: '0.11.0', model: 'belt', model_version: 2 } };
+        entity_type: 'transport-belt', entity_name: 'turbo-transport-belt', model: 'belt', model_version: 2 } };
     const exported = (input: object = {}, output: object = {}) => ({
         format: 1, setpoint: { item: 'iron-gear-wheel', items_per_second: 1, copies: 1 },
         machines: [{ id: 1, recipe: 'iron-gear-wheel', crafting_speed: 1, productivity: 0 }],

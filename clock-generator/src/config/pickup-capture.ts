@@ -10,13 +10,11 @@ export const BeltPickupCaptureSchema = z.discriminatedUnion("status", [
         model_version: z.union([z.literal(1), z.literal(2), z.literal(3)]).describe("The version of the pickup model."),
         entity_type: z.enum(["transport-belt", "underground-belt"]).describe("The type of the belt at the pickup."),
         entity_name: z.string().optional().describe("The prototype name of the belt at the pickup."),
-        sidecar_version: z.string().optional().describe("The version of the sidecar that recorded the pickup."),
     }),
     z.object({
         status: z.enum(["unsupported", "unclassified"]).describe("The sidecar does not support this pickup, or did not classify it."),
         entity_type: z.string().optional().describe("The type of the entity at the pickup."),
         entity_name: z.string().optional().describe("The prototype name of the entity at the pickup."),
-        sidecar_version: z.string().optional().describe("The version of the sidecar that recorded the pickup."),
         reason: z.string().describe("Why the sidecar does not support the pickup."),
     }),
 ]);

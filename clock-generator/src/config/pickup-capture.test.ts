@@ -12,7 +12,7 @@ const base = () => ({
     belts: [{id: 1, type: "turbo-transport-belt", lanes: [{ingredient: "iron-plate", stack_size: 4, lane_end: {kind: "infinite"}}]}],
     chests: [{id: 1, type: "infinity-chest", item_filter: [], remove_unfiltered_items: true}],
 });
-const supported = {status: "supported", model: "belt", model_version: 1, entity_type: "transport-belt", sidecar_version: "0.11.0"};
+const supported = {status: "supported", model: "belt", model_version: 1, entity_type: "transport-belt"};
 const withSource = (fields: object) => {
     const config = base();
     return {...config, inserters: [{...config.inserters[0], source: {...config.inserters[0].source, ...fields}}, config.inserters[1]]};

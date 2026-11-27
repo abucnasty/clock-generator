@@ -38,12 +38,12 @@ test("manual half-tile geometry needs a layout choice, including direct engine i
 
 test("older positive underground captures require recapture", () => {
     expect(() => ConfigSchema.parse(config({pickup_length: 0.5, near_lane: 1, pickup_capture: {
-        status: "supported", model: "belt", model_version: 1, entity_type: "underground-belt", sidecar_version: "0.11.0",
+        status: "supported", model: "belt", model_version: 1, entity_type: "underground-belt",
     }}))).toThrow("Update Sidecar and recapture");
 });
 
 test("capture model 2 needs explicit layout and consistent geometry", () => {
-    const capture = {status: "supported", model: "belt", model_version: 2, entity_type: "underground-belt", sidecar_version: "0.11.0"};
+    const capture = {status: "supported", model: "belt", model_version: 2, entity_type: "underground-belt"};
     expect(ConfigSchema.safeParse(config({pickup_length: 0.5, near_lane: 1, pickup_capture: capture})).success).toBe(false);
     const parsed = ConfigSchema.parse(config({pickup_layout: "front-entrance", near_lane: 1, pickup_capture: capture}));
     expect(parsed.inserters[0].source).toMatchObject({pickup_layout: "front-entrance", pickup_length: 0.5, pickup_capture: capture});

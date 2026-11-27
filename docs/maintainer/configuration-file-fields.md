@@ -132,11 +132,9 @@ after the engine reads the file: a field with a default is required, but a confi
 | `inserters[].source{type=belt}.pickup_capture{1}.model_version` | `1` or `2` or `3` | yes | The version of the pickup model. |
 | `inserters[].source{type=belt}.pickup_capture{1}.entity_type` | one of `transport-belt`, `underground-belt` | yes | The type of the belt at the pickup. |
 | `inserters[].source{type=belt}.pickup_capture{1}.entity_name` | string | no | The prototype name of the belt at the pickup. |
-| `inserters[].source{type=belt}.pickup_capture{1}.sidecar_version` | string | no | The version of the sidecar that recorded the pickup. |
 | `inserters[].source{type=belt}.pickup_capture{2}.status` | one of `unsupported`, `unclassified` | yes | The sidecar does not support this pickup, or did not classify it. |
 | `inserters[].source{type=belt}.pickup_capture{2}.entity_type` | string | no | The type of the entity at the pickup. |
 | `inserters[].source{type=belt}.pickup_capture{2}.entity_name` | string | no | The prototype name of the entity at the pickup. |
-| `inserters[].source{type=belt}.pickup_capture{2}.sidecar_version` | string | no | The version of the sidecar that recorded the pickup. |
 | `inserters[].source{type=belt}.pickup_capture{2}.reason` | string | yes | Why the sidecar does not support the pickup. |
 | `inserters[].source{type=belt}.drop` | object | no | Not used on a source: the generator refuses it, because a drop belongs on the sink. |
 | `inserters[].source{type=belt}.drop.lane` | `1` or `2` | yes | The lane on which the inserter drops items: 1 or 2, by its place in the belt's lanes. |
@@ -151,7 +149,6 @@ after the engine reads the file: a field with a default is required, but a confi
 | `inserters[].sink{type=belt}.drop_capture` | object | no | A note from the sidecar that the drop side-loads onto another belt; it does not change the clock. |
 | `inserters[].sink{type=belt}.drop_capture.status` | `side-loaded` | yes | The items that the inserter drops side-load onto another belt. |
 | `inserters[].sink{type=belt}.drop_capture.tiles` | integer > 0 | yes | The number of belt tiles from the drop tile to the belt that the items side-load onto. |
-| `inserters[].sink{type=belt}.drop_capture.sidecar_version` | string | no | The version of the sidecar that recorded this. |
 | `inserters[].sink{type=belt}.belt_direction` | integer 0 to 15 | no | The direction in which the belt moves at the drop tile. |
 | `inserters[].sink{type=machine}.id` | integer > 0 | yes | The id of the machine. |
 | `inserters[].sink{type=chest}.id` | integer > 0 | yes | The id of the chest. |

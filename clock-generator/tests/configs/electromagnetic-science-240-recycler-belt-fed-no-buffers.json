@@ -115,8 +115,7 @@
           "model": "belt",
           "model_version": 2,
           "entity_type": "transport-belt",
-          "entity_name": "turbo-transport-belt",
-          "sidecar_version": "0.15.0"
+          "entity_name": "turbo-transport-belt"
         }
       },
       "sink": {
@@ -183,8 +182,7 @@
           "model": "belt",
           "model_version": 2,
           "entity_type": "transport-belt",
-          "entity_name": "turbo-transport-belt",
-          "sidecar_version": "0.15.0"
+          "entity_name": "turbo-transport-belt"
         }
       },
       "sink": {
@@ -236,8 +234,7 @@
           "model": "belt",
           "model_version": 2,
           "entity_type": "underground-belt",
-          "entity_name": "turbo-underground-belt",
-          "sidecar_version": "0.15.0"
+          "entity_name": "turbo-underground-belt"
         }
       },
       "sink": {
@@ -269,8 +266,7 @@
           "model": "belt",
           "model_version": 3,
           "entity_type": "transport-belt",
-          "entity_name": "turbo-transport-belt",
-          "sidecar_version": "0.15.0"
+          "entity_name": "turbo-transport-belt"
         }
       },
       "sink": {
@@ -299,8 +295,7 @@
           "model": "belt",
           "model_version": 2,
           "entity_type": "underground-belt",
-          "entity_name": "turbo-underground-belt",
-          "sidecar_version": "0.15.0"
+          "entity_name": "turbo-underground-belt"
         }
       },
       "sink": {

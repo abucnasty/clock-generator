@@ -159,8 +159,7 @@
           "model": "belt",
           "model_version": 2,
           "entity_type": "transport-belt",
-          "entity_name": "turbo-transport-belt",
-          "sidecar_version": "0.16.0"
+          "entity_name": "turbo-transport-belt"
         }
       },
       "sink": {
@@ -190,8 +189,7 @@
           "model": "belt",
           "model_version": 2,
           "entity_type": "transport-belt",
-          "entity_name": "turbo-transport-belt",
-          "sidecar_version": "0.16.0"
+          "entity_name": "turbo-transport-belt"
         }
       },
       "sink": {
@@ -282,8 +280,7 @@
           "model": "belt",
           "model_version": 2,
           "entity_type": "transport-belt",
-          "entity_name": "express-transport-belt",
-          "sidecar_version": "0.16.0"
+          "entity_name": "express-transport-belt"
         }
       },
       "sink": {
@@ -353,8 +350,7 @@
           "model": "belt",
           "model_version": 2,
           "entity_type": "transport-belt",
-          "entity_name": "turbo-transport-belt",
-          "sidecar_version": "0.16.0"
+          "entity_name": "turbo-transport-belt"
         }
       },
       "sink": {
@@ -405,8 +401,7 @@
           "model": "belt",
           "model_version": 2,
           "entity_type": "transport-belt",
-          "entity_name": "turbo-transport-belt",
-          "sidecar_version": "0.16.0"
+          "entity_name": "turbo-transport-belt"
         }
       },
       "sink": {
@@ -579,8 +574,7 @@
           "model": "belt",
           "model_version": 2,
           "entity_type": "transport-belt",
-          "entity_name": "turbo-transport-belt",
-          "sidecar_version": "0.16.0"
+          "entity_name": "turbo-transport-belt"
         }
       },
       "sink": {
@@ -610,8 +604,7 @@
           "model": "belt",
           "model_version": 2,
           "entity_type": "transport-belt",
-          "entity_name": "turbo-transport-belt",
-          "sidecar_version": "0.16.0"
+          "entity_name": "turbo-transport-belt"
         }
       },
       "sink": {

@@ -15,7 +15,7 @@ const fromBelt = (fields: Partial<Source> = {}): Source => ({ type: 'belt', id: 
 const twoInputs = { inserters: [inserter(8, { source: fromBelt({ pickup_length: 1 }) }), inserter(3, { source: fromBelt() })] };
 const underground = { inserters: [inserter(4, { source: fromBelt({ pickup_length: 0.5 }) })] };
 const bend = fromBelt({ pickup_layout: 'bend-right-upstream', pickup_length: 1, near_lane: 1, pickup_capture: { status: 'supported', model: 'belt',
-    model_version: 3, entity_type: 'transport-belt', sidecar_version: '0.15.0' } });
+    model_version: 3, entity_type: 'transport-belt' } });
 /** A pickup Sidecar recorded but the generator cannot use, and why */
 const unsupported = (reason: string) => fromBelt({ pickup_capture: { status: 'unsupported', entity_type: 'transport-belt', reason } });
 const STRAIGHT_DEFAULT = 'Straight belt is the default. Choose the belt shape and pickup approach.';
@@ -85,7 +85,7 @@ it.each([
     { reason: 'side-loaded', entity_type: 'transport-belt' },
 ] as const)('keeps an out-of-scope $reason pickup visible as not supported in the editor and saved-run summary', ({ reason, entity_type }) => {
     const { label, detail } = OUT_OF_SCOPE_PICKUPS[reason];
-    const source = fromBelt({ pickup_length: 1, pickup_capture: { status: 'unsupported', entity_type, reason, sidecar_version: '0.11.0' } });
+    const source = fromBelt({ pickup_length: 1, pickup_capture: { status: 'unsupported', entity_type, reason } });
     const { unmount } = showPickers(source);
     const shown = `Not supported: ${label}`;
     expect(lockedPickers(`This imported pickup is not supported. ${detail} ${OUT_OF_SCOPE_PICKUP_SCOPE}`)).toEqual([[shown, 'true'], [shown, 'true']]);

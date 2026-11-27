@@ -470,7 +470,6 @@ const SideLoadedDropCaptureSchema = z.object({
     status: z.literal("side-loaded").describe("The items that the inserter drops side-load onto another belt."),
     /** The belt tiles from the drop tile to the belt its stream side-loads onto */
     tiles: z.number().int().positive().describe("The number of belt tiles from the drop tile to the belt that the items side-load onto."),
-    sidecar_version: z.string().optional().describe("The version of the sidecar that recorded this."),
 });
 
 const InserterBeltSinkConfigSchema = z.object({

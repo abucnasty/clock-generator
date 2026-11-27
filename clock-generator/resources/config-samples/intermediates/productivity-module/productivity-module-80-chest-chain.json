@@ -137,8 +137,7 @@
           "model": "belt",
           "model_version": 2,
           "entity_type": "underground-belt",
-          "entity_name": "turbo-underground-belt",
-          "sidecar_version": "0.13.0"
+          "entity_name": "turbo-underground-belt"
         }
       },
       "sink": {
