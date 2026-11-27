@@ -41635,6 +41635,7 @@
     "assembling-machine-1": {
       "name": "assembling-machine-1",
       "type": "assembling-machine",
+      "subgroup": "production-machine",
       "crafting_categories": [
         "crafting",
         "advanced-crafting"
@@ -41669,6 +41670,7 @@
     "assembling-machine-2": {
       "name": "assembling-machine-2",
       "type": "assembling-machine",
+      "subgroup": "production-machine",
       "crafting_categories": [
         "crafting",
         "advanced-crafting",
@@ -41702,6 +41704,7 @@
     "assembling-machine-3": {
       "name": "assembling-machine-3",
       "type": "assembling-machine",
+      "subgroup": "production-machine",
       "crafting_categories": [
         "crafting",
         "advanced-crafting",
@@ -41735,6 +41738,7 @@
     "oil-refinery": {
       "name": "oil-refinery",
       "type": "assembling-machine",
+      "subgroup": "production-machine",
       "crafting_categories": [
         "oil-processing"
       ],
@@ -41765,6 +41769,7 @@
     "chemical-plant": {
       "name": "chemical-plant",
       "type": "assembling-machine",
+      "subgroup": "production-machine",
       "crafting_categories": [
         "chemistry"
       ],
@@ -41796,6 +41801,7 @@
     "centrifuge": {
       "name": "centrifuge",
       "type": "assembling-machine",
+      "subgroup": "production-machine",
       "crafting_categories": [
         "centrifuging"
       ],
@@ -41827,6 +41833,7 @@
     "biochamber": {
       "name": "biochamber",
       "type": "assembling-machine",
+      "subgroup": "agriculture",
       "crafting_categories": [
         "organic"
       ],
@@ -41885,6 +41892,7 @@
     "crusher": {
       "name": "crusher",
       "type": "assembling-machine",
+      "subgroup": "space-platform",
       "crafting_categories": [
         "crushing"
       ],
@@ -41913,6 +41921,7 @@
     "foundry": {
       "name": "foundry",
       "type": "assembling-machine",
+      "subgroup": "smelting-machine",
       "crafting_categories": [
         "metallurgy"
       ],
@@ -41949,6 +41958,7 @@
     "captive-biter-spawner": {
       "name": "captive-biter-spawner",
       "type": "assembling-machine",
+      "subgroup": "agriculture",
       "crafting_categories": [
         "captive-spawner-process"
       ],
@@ -41993,6 +42003,7 @@
     "electromagnetic-plant": {
       "name": "electromagnetic-plant",
       "type": "assembling-machine",
+      "subgroup": "production-machine",
       "crafting_categories": [
         "electromagnetics"
       ],
@@ -42029,6 +42040,7 @@
     "cryogenic-plant": {
       "name": "cryogenic-plant",
       "type": "assembling-machine",
+      "subgroup": "production-machine",
       "crafting_categories": [
         "cryogenics"
       ],
@@ -42060,6 +42072,7 @@
     "stone-furnace": {
       "name": "stone-furnace",
       "type": "furnace",
+      "subgroup": "smelting-machine",
       "crafting_categories": [
         "smelting"
       ],
@@ -42124,6 +42137,7 @@
     "electric-furnace": {
       "name": "electric-furnace",
       "type": "furnace",
+      "subgroup": "smelting-machine",
       "crafting_categories": [
         "smelting"
       ],
@@ -42155,6 +42169,7 @@
     "steel-furnace": {
       "name": "steel-furnace",
       "type": "furnace",
+      "subgroup": "smelting-machine",
       "crafting_categories": [
         "smelting"
       ],
@@ -42215,6 +42230,7 @@
     "recycler": {
       "name": "recycler",
       "type": "furnace",
+      "subgroup": "smelting-machine",
       "crafting_categories": [
         "recycling"
       ],

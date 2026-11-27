@@ -163,6 +163,34 @@ function entityFootprints(rawData) {
     return footprints;
 }
 
+/**
+ * The subgroup of a crafting machine: the prototype's own where it sets one, else that of the item that places it
+ * (`place_result` names the machine), searched over every raw section; "other" where that item names none, as for an item
+ * in `itemOrder`. Derived, not a manifest property: the manifest would put `subgroup` on every entity section. A machine
+ * that no item places is refused, and so is one that several items place with different subgroups.
+ */
+function craftingMachineSubgroup(rawData, machine) {
+    if (machine.subgroup !== undefined) {
+        return machine.subgroup;
+    }
+    const subgroups = new Map();
+    for (const section of Object.values(rawData)) {
+        for (const [item_name, item] of Object.entries(section ?? {})) {
+            if (item && typeof item === "object" && item.place_result === machine.name) {
+                subgroups.set(item_name, item.subgroup ?? "other");
+            }
+        }
+    }
+    if (subgroups.size === 0) {
+        throw new Error(`No item places the crafting machine ${machine.name}, so it has no subgroup`);
+    }
+    if (new Set(subgroups.values()).size > 1) {
+        const places = [...subgroups].map(([item_name, subgroup]) => `${item_name} (${subgroup})`).join(", ");
+        throw new Error(`The items that place the crafting machine ${machine.name} name different subgroups: ${places}`);
+    }
+    return [...subgroups.values()][0];
+}
+
 /** Every prototype of a raw section with only the manifest's properties of its class */
 function manifestSection(raw_section, class_name) {
     sectioned_classes.add(class_name);
@@ -328,7 +356,8 @@ function mapRawDataToFilteredFactorioData(rawData) {
 
     // the crafting machines a build can name as a machine: their prototype type (a furnace picks its recipe from its
     // input; an assembling machine is set to one), the crafting categories they make recipes of, and the fuel
-    // categories they burn when their energy source is a burner (none for an electric one); what the simulation rule
+    // categories they burn when their energy source is a burner (none for an electric one), their subgroup (the
+    // prototype's own, else that of the item that places them: craftingMachineSubgroup); what the simulation rule
     // of a machine follows from (src/entities/machine/machine-rule.ts). Their base crafting speed (the game's default
     // 1 when the prototype sets none) picks the machine for an older config's type (src/config/migrate-machine-type.ts).
     // A machine that places its results itself into what stands at a spot beside it (the recycler) has that spot as its
@@ -345,6 +374,7 @@ function mapRawDataToFilteredFactorioData(rawData) {
             filtered["crafting_machine"][name] = withManifestFields({
                 name: machine.name,
                 type: category,
+                subgroup: craftingMachineSubgroup(rawData, machine),
                 crafting_categories: machine.crafting_categories ?? [],
                 burner_fuel_categories: fuel_categories,
                 crafting_speed: machine.crafting_speed ?? 1,

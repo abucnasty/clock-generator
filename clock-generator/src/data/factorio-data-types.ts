@@ -151,6 +151,11 @@ export interface CraftingMachinePrototype extends Pick<Game.AssemblingMachinePro
   name: string
   /** The prototype's type in the game: a furnace picks its recipe from what it is given; an assembling machine is set to one */
   type: "assembling-machine" | "furnace"
+  /**
+   * Its subgroup, as the filter derives it: the prototype's own subgroup where it sets one, else the subgroup of the item
+   * that places it, and "other" where that item names none (resources/filter-raw.js)
+   */
+  subgroup: string
   /** The crafting categories of the recipes it can make */
   crafting_categories: string[]
   /** The fuel categories it burns when its energy source is a burner; none for any other energy source */
