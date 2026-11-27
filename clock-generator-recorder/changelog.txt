@@ -2,7 +2,7 @@
 Version: 0.12.0
 Date: 2026-11-26
   Changes:
-    - The recorder carries its own copy of the Lua that describes a build (scripts/describe/) and no longer depends on the Sidecar: it needs no other mod, and the description it returns has no "sidecar" part (what a player gets from the Sidecar) and no sidecar_version stamp
+    - The recorder carries its own copy of the Lua that describes a build (scripts/describe/) and no longer depends on the Sidecar: it needs no other mod, and the description it returns has no "sidecar" part (the second copy of the export that the Sidecar gives a user) and no sidecar_version stamp
 ---------------------------------------------------------------------------------------------------
 Version: 0.11.4
 Date: 2026-11-19
