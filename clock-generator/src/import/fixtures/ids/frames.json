@@ -1,0 +1,145 @@
+{
+ "note": "the frame that the tie rule chooses on each repository build: read = M x blueprint + translation",
+ "rows": [
+  {
+   "build": "iron",
+   "scaffold": "smelting/iron-plate/iron-plate-80-car-chest.scaffold",
+   "read": "smelting/iron-plate/iron-plate-80-car-chest.sidecar-export.json",
+   "transform": "identity",
+   "translation": {
+    "x": 774.0,
+    "y": 625.0
+   },
+   "placed": 9,
+   "reads": 9,
+   "tie_count": 1,
+   "mirrored": false
+  },
+  {
+   "build": "lithium",
+   "scaffold": "smelting/lithium-plate/lithium-plate-80-silo-chest.scaffold",
+   "read": "smelting/lithium-plate/lithium-plate-80-silo-chest.sidecar-export.json",
+   "transform": "identity",
+   "translation": {
+    "x": 836.0,
+    "y": 649.0
+   },
+   "placed": 28,
+   "reads": 28,
+   "tie_count": 2,
+   "mirrored": false
+  },
+  {
+   "build": "steel",
+   "scaffold": "smelting/steel-plate/steel-plate-26-wagon-chest.scaffold",
+   "read": "smelting/steel-plate/steel-plate-26-wagon-chest.sidecar-export.json",
+   "transform": "identity",
+   "translation": {
+    "x": 746.0,
+    "y": 624.0
+   },
+   "placed": 10,
+   "reads": 10,
+   "tie_count": 1,
+   "mirrored": false
+  },
+  {
+   "build": "logistic-240",
+   "scaffold": "science/logistic/logistic-240.scaffold",
+   "read": "science/logistic/logistic-240.json",
+   "transform": "identity",
+   "translation": {
+    "x": -24.0,
+    "y": 0.0
+   },
+   "placed": 3,
+   "reads": 3,
+   "tie_count": 22,
+   "mirrored": false
+  },
+  {
+   "build": "stone-brick-120",
+   "scaffold": "smelting/stone-brick/stone-brick-120-drill-direct-insert.scaffold",
+   "read": "smelting/stone-brick/stone-brick-120-drill-direct-insert.json",
+   "transform": "identity",
+   "translation": {
+    "x": 0.0,
+    "y": 0.0
+   },
+   "placed": 3,
+   "reads": 3,
+   "tie_count": 2,
+   "mirrored": false
+  },
+  {
+   "build": "electromagnetic-240",
+   "scaffold": "science/electromagnetic/electromagnetic-240-recycler-belt-fed.scaffold",
+   "read": "science/electromagnetic/electromagnetic-240-recycler-belt-fed.json",
+   "transform": "identity",
+   "translation": {
+    "x": 981.0,
+    "y": 748.0
+   },
+   "placed": 20,
+   "reads": 20,
+   "tie_count": 2,
+   "mirrored": false
+  },
+  {
+   "build": "productivity-module-80",
+   "scaffold": "intermediates/productivity-module/productivity-module-80-chest-chain.scaffold",
+   "read": "intermediates/productivity-module/productivity-module-80-chest-chain.json",
+   "transform": "identity",
+   "translation": {
+    "x": 0.0,
+    "y": 0.0
+   },
+   "placed": 26,
+   "reads": 26,
+   "tie_count": 1,
+   "mirrored": false
+  },
+  {
+   "build": "grenade-240",
+   "scaffold": "intermediates/grenade/grenade-240-fills-belt-exactly.scaffold",
+   "read": "intermediates/grenade/grenade-240-fills-belt-exactly.json",
+   "transform": "identity",
+   "translation": {
+    "x": -99.0,
+    "y": 0.0
+   },
+   "placed": 17,
+   "reads": 17,
+   "tie_count": 2,
+   "mirrored": false
+  },
+  {
+   "build": "processing-unit-80",
+   "scaffold": "intermediates/processing-unit/processing-unit-80-circuit-export.scaffold",
+   "read": "intermediates/processing-unit/processing-unit-80-circuit-export.json",
+   "transform": "rotate 270",
+   "translation": {
+    "x": 245.0,
+    "y": -1107.0
+   },
+   "placed": 31,
+   "reads": 31,
+   "tie_count": 2,
+   "mirrored": false
+  },
+  {
+   "build": "utility-320",
+   "scaffold": "science/utility/utility-320-metered-takers.scaffold",
+   "read": "science/utility/utility-320-metered-takers.json",
+   "transform": "transpose",
+   "translation": {
+    "x": -76.0,
+    "y": -305.0
+   },
+   "placed": 24,
+   "reads": 30,
+   "tie_count": 1,
+   "mirrored": true
+  }
+ ]
+}
