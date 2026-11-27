@@ -15,7 +15,22 @@ for _, entity in pairs(entities) do
 end
 -- the inserters of a staged start (options.staged) are built in the tick the probe runs in and know their targets a tick later: they are counted by the host
 assert(options.staged or (#outputs == 2 and #takers == 2), "expected 2 output and 2 car inserters")
-assert(drill.drop_target == car, "the drill drops into the car")
+-- A staged start may hold the drill until the opening, and a drill that has not run yet has no drop target: it is then read
+-- in the run, before the first stop of the drill or else at the end, and a run in which it never has one fails (report.drill_drop)
+local drill_drop = {}
+local function read_drill_drop(t)
+    if drill_drop.tick ~= nil then return end
+    local target = drill.drop_target
+    if target == nil then return end
+    drill_drop.tick, drill_drop.unit_number, drill_drop.type, drill_drop.into_car = t, target.unit_number, target.type, target == car
+end
+if options.staged and drill.drop_target == nil then
+    drill_drop.at_opening = false
+else
+    assert(drill.drop_target == car, "the drill drops into the car")
+    drill_drop.at_opening = true
+    read_drill_drop(0)
+end
 local sink = capture.find_one(entities, function(entity) return entity.type == "infinity-container" end, "sink")
 assert(sink.remove_unfiltered_items, "a sink that removes")
 local trunk = car.get_inventory(defines.inventory.car_trunk)
@@ -25,15 +40,24 @@ local function units(list)
     table.sort(out)
     return out
 end
-local report = {events = {}, initial = {
+local report = {events = {}, drill_drop = drill_drop, initial = {
     car_contents = trunk.get_item_count(), taker_units = units(takers), output_units = units(outputs),
     drill_unit = drill.unit_number, car_unit = car.unit_number}}
+local function check_drill_drop()
+    read_drill_drop(report.protocol.ended)
+    if drill_drop.tick == nil then
+        report.protocol.error = "the drill never had a drop target in the run, so it never dropped into the car"
+    elseif not drill_drop.into_car then
+        report.protocol.error = "the drill drops into " .. drill_drop.type .. ", not the car"
+    end
+end
 local function event(t, action) table.insert(report.events, {tick = t, action = action, car = trunk.get_item_count()}) end
 local function stop_drill()
     return {
         kind = "stop drill",
         -- the ore in the car goes with the cut (abucnasty, 2026-11-03), so the loss shows at once
         start = function(t)
+            read_drill_drop(t)
             drill.disabled_by_script = true
             local removed = trunk.remove{name = "iron-ore", count = 1000000}
             table.insert(report.events, {tick = t, action = "stop-drill", removed = removed})
@@ -65,6 +89,7 @@ local function run(finals, waited)
         disturbances = {stop_drill(), block, stop_drill()},
         tail = options.tail,
         report = report, output = "clock-speed.json", settle = settle,
+        done = check_drill_drop,
     }
 end
 if options.staged then steady.after_finals(entities, options, run)

@@ -970,13 +970,13 @@ net output is the target over whole clock cycles, the stock guard holds, and the
 | `ADVANCED_CIRCUIT_230` | Pitch Pickups Subtick (12,672 a clock cycle, `9cdc8d06`) | two cable foundries full (200 cables), the circuit plants and the plastic plant empty | 1 / 1 | 16,356 | 46,659 |
 | `ADVANCED_CIRCUIT_240` | Takt Batches Observed (528, `e45bff6b`) | as the 230 | 6 / 6 | 6,768 | 22,764 |
 | `ADVANCED_CIRCUIT_240_BACKED_UP` (variant) | the same clock (528, `e45bff6b`) | as the 230 | 6 / 6 | 6,768 | 22,764 |
-| `STONE_BRICK_120_DRILL_DIRECT_INSERT` | Batched Swings observed (144, `ecc4d93e`) | the furnace holds 24 stone and 100 bricks (the drill and the furnace run before the clock) | 25 / 25 | 7,200 | 11,086 |
+| `STONE_BRICK_120_DRILL_DIRECT_INSERT` | Batched Swings observed (144, `ecc4d93e`) | the furnace empty (the drill is held until the fill's opening) | 25 / 25 | 8,343 | 12,230 |
 
-- The lock opened 7,200 ticks after the build was placed (10,800 for the stone brick build, whose furnace has no recipe at the placement and keeps `late_recording`).
+- The lock opened 7,200 ticks after the build was placed.
 - **Named limit, copies.** The four jobs of three copies (the two advanced circuit 240 jobs, 230 and stone brick 120) are recorded on one copy: the harness builds the blueprint it is
   given, the sample's scaffold is one copy, and no scaffold of three copies of these builds exists, so the joins of the other two copies are not in these runs.
 - The baseline of the 230 pick is its one whole clock cycle of 12,672 ticks (16,192 of 16,192), as before; the run goes on 12,700 ticks after its last loss.
-- The stone brick build's only loss is the output block (the stone comes from a drill that drops into the furnace); it recovers at tick 11,086, 286 ticks after it starts.
+- The stone brick build's only loss is the output block (the stone comes from a drill that drops into the furnace); it recovers at tick 12,230, 287 ticks after it starts.
 
 ## The container outputs and the steel wagon builds, from ruling 60's start
 
