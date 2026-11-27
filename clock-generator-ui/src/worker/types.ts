@@ -51,6 +51,14 @@ import type {
     RecordTimelineRequest,
     TimelineRecording,
     UncalibratedBeltPickup,
+    ImportBuild,
+    ImportInputs,
+    ImportProblem,
+    ResearchBase,
+    ResearchBlock,
+    ResearchBuild,
+    ResearchChoice,
+    ResearchDifferences,
 } from 'clock-generator/browser';
 import type { SideLoadedDropFact } from '../utils/advisory';
 import type { ClockInstallFacts } from './installFacts';
@@ -490,6 +498,13 @@ export interface PastedEntities {
 }
 
 /**
+ * A pasted blueprint as the import reads it: the five lists, each checked against its schema as a Sidecar paste's are,
+ * and what the dialog asks and shows. It gives no guidance and picks no machine: the blueprint names each one.
+ */
+export type PastedBlueprint = Omit<PastedEntities, 'picked_machines'>
+    & Pick<ImportBuild, 'questions' | 'notes' | 'read' | 'ignored' | 'research' | 'copy_offset' | 'layout' | 'entities' | 'speeds'>;
+
+/**
  * What the main thread, which loads none of the engine, asks of it. One worker answers these, so they are not held
  * up by a generation running on the others.
  */
@@ -523,7 +538,13 @@ export type EngineQuery =
         sidecar_version: unknown;
         pickup_warnings?: unknown;
         suggested_target: unknown;
-    };
+    }
+    /** A pasted text that is not JSON, read by the blueprint import, again after each answer and each change of the inputs */
+    | { kind: 'pasted-blueprint'; text: string; inputs: ImportInputs }
+    /** Another research profile put on a build, from the base its research block holds */
+    | { kind: 'apply-research'; build: ResearchBuild; base: ResearchBase; choice: ResearchChoice }
+    /** The values of a build that were changed by hand since its research was put on, and the rows research leaves alone */
+    | { kind: 'research-differences'; build: ResearchBuild & { research?: ResearchBlock } };
 
 /** A lane of a belt of the config and its role, as the engine reads it (the light entry's `laneRolesOf`) */
 export interface LaneRoleOfLane {
@@ -585,6 +606,9 @@ export interface EngineAnswers {
     'saved-config': { problem: string | null; form: unknown };
     'config-file': Config;
     'pasted-entities': PastedEntities;
+    'pasted-blueprint': { kind: 'problem'; problem: ImportProblem } | ({ kind: 'build' } & PastedBlueprint);
+    'apply-research': { build: ResearchBuild; block: ResearchBlock };
+    'research-differences': ResearchDifferences;
 }
 
 /** Answered by 'answer', or by 'query-failed' with the message of what the engine threw */

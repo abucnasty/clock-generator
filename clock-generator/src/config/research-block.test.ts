@@ -76,6 +76,9 @@ describe("the research block of a config", () => {
         expect(refused(block => { block.profile = ""; })).toBe(true);
         expect(refused(block => { block.profile = "x".repeat(61); })).toBe(true);
         expect(refused(block => { block.profile = "x".repeat(60); })).toBe(false);
+        // a name is counted by character, not by UTF-16 unit: 60 characters outside the basic plane are 120 units
+        expect(refused(block => { block.profile = "\u{1F680}".repeat(60); })).toBe(false);
+        expect(refused(block => { block.profile = "\u{1F680}".repeat(61); })).toBe(true);
     });
 
     it("refuses a base id that is not a positive integer", () => {

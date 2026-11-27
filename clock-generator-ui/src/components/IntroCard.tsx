@@ -14,6 +14,7 @@ import {
     SIDECAR_NEEDS,
 } from '../utils/sidecarGuide';
 import { Panel } from './Panel';
+import { BLUEPRINT_COPY_STEPS, BLUEPRINT_WAY_IN } from '../utils/blueprintPaste';
 
 /** The link to the Sidecar mod's page, which opens in a new tab and says so */
 export function SidecarModLink() {
@@ -30,6 +31,17 @@ export function SidecarCopySteps() {
     return (
         <Box component="ol" sx={{ my: 0.5, pl: 3 }}>
             {SIDECAR_COPY_STEPS.map((step) => (
+                <li key={step}>{step}</li>
+            ))}
+        </Box>
+    );
+}
+
+/** How to copy a blueprint in the game, as a numbered list */
+export function BlueprintCopySteps() {
+    return (
+        <Box component="ol" sx={{ my: 0.5, pl: 3 }}>
+            {BLUEPRINT_COPY_STEPS.map((step) => (
                 <li key={step}>{step}</li>
             ))}
         </Box>
@@ -102,6 +114,11 @@ export function IntroCard({ onPaste, onTryExample, onBuildByHand, onDismiss }: I
             </Button>
             <Box id={guideId} role="region" aria-labelledby={guideButtonId} hidden={!guideOpen}>
                 <Typography variant="body2" component="ol" sx={{ mt: 1, mb: 0, pl: 3, '& > li': { mb: 0.75 } }}>
+                    <li>
+                        {BLUEPRINT_WAY_IN.lead}
+                        <BlueprintCopySteps />
+                        {BLUEPRINT_WAY_IN.then}
+                    </li>
                     <li>
                         {INTRO_STEPS.getBuildIn}
                         <SidecarCopySteps />

@@ -3,7 +3,8 @@ import { useEffect, useRef, useState } from 'react';
 import { useAnnounce } from '../hooks/useMessages';
 import { EXPORT_DEFINITION, PASTE_DIALOG, SIDECAR_NEEDS, type PastePrompt } from '../utils/sidecarGuide';
 import { AppDialog } from './AppDialog';
-import { SidecarCopySteps, SidecarModLink } from './IntroCard';
+import { BlueprintCopySteps, SidecarCopySteps, SidecarModLink } from './IntroCard';
+import { BLUEPRINT_WAY_IN } from '../utils/blueprintPaste';
 
 const PROMPT_ID = 'paste-from-factorio-prompt';
 
@@ -17,8 +18,8 @@ interface PasteFromFactorioDialogProps {
 }
 
 /**
- * Opens when Paste from Factorio cannot use the clipboard: why, how to copy the build with the mod, and a box to paste
- * it into. A paste into the box carries on at once; Continue sends what was typed or changed. Open while mounted.
+ * Opens when Paste from Factorio cannot use the clipboard: why, how to copy a blueprint of the build or copy it with the
+ * mod, and a box to paste it into. A paste into the box carries on at once; Continue sends what was typed or changed. Open while mounted.
  */
 export function PasteFromFactorioDialog({ prompt, promptId, onSubmit, onClose }: PasteFromFactorioDialogProps) {
     const [text, setText] = useState('');
@@ -44,7 +45,9 @@ export function PasteFromFactorioDialog({ prompt, promptId, onSubmit, onClose }:
                 </Alert>
             )}
             <Typography variant="body2" component="div">
-                Copy your build with the <SidecarModLink />: {EXPORT_DEFINITION} {SIDECAR_NEEDS}
+                {BLUEPRINT_WAY_IN.lead}
+                <BlueprintCopySteps />
+                {BLUEPRINT_WAY_IN.orSidecar} <SidecarModLink />: {EXPORT_DEFINITION} {SIDECAR_NEEDS}
                 <SidecarCopySteps />
                 {PASTE_DIALOG.boxStep}
             </Typography>

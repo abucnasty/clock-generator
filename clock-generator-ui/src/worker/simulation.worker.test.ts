@@ -3,8 +3,11 @@ import factorioData from '../../../clock-generator/resources/data-filtered.json?
 import formerSetpoint from '../../../clock-generator/src/config/fixtures/legacy/recipe-setpoint.json?raw';
 import grenadeSample from '../../../clock-generator/resources/config-samples/intermediates/grenade/grenade-240-fills-belt-exactly.json?raw';
 import militarySample from '../../../clock-generator/resources/config-samples/science/military/military-240.json?raw';
+import ironScaffold from '../../../clock-generator/resources/config-samples/smelting/iron-plate/iron-plate-80-car-chest.scaffold?raw';
+import chestChainScaffold from '../../../clock-generator/resources/config-samples/intermediates/productivity-module/productivity-module-80-chest-chain.scaffold?raw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ConfigSchema, LATEST_SIDECAR_VERSION, type Config, type DebugSteps } from 'clock-generator/browser';
+import { applyResearch, BeltConfigSchema, decodeBlueprintFileBrowser, encodeBlueprintFileBrowser, ChestConfigSchema, ConfigSchema, importBlueprint, InserterConfigSchema, LATEST_SIDECAR_VERSION, MachineConfigurationSchema, MiningDrillConfigSchema, researchDifferences,
+    type Config, type DebugSteps, type FactorioData, type ImportInputs } from 'clock-generator/browser';
 import type { EngineAnswers, EngineQuery, LiveCoverage, PastedEntities, PrimaryCompletedResponse, ValidationFailedResponse, WorkerRequest, WorkerResponse } from './types';
 import { readConfigFile, readSavedConfig, serializeConfig } from '../hooks/usePersistedConfigForm';
 import { configToFormData, formDataToConfig } from '../utils/configForm/configMapping';
@@ -966,4 +969,79 @@ it('checks and plans the exact entered rate after a structured-clone handoff', a
     expect(primary?.alternatives.length).toBeGreaterThan(0);
     const received = await ask({ kind: 'config-file', config });
     expect(JSON.stringify(received.setpoint.items_per_second)).toBe('{"numerator":16,"denominator":7}');
+});
+
+describe('a pasted blueprint', () => {
+    const data = JSON.parse(factorioData) as FactorioData;
+    const iron = ironScaffold.trim();
+    const noResearch: ImportInputs['research'] = { profile: 'No research', template: 'no-research',
+        bonuses: { mining_drill_productivity_bonus: 0, inserter_stack_size_bonus: 0, bulk_inserter_capacity_bonus: 0, belt_stack_size_bonus: 0, recipes: {} } };
+    const pastedOf = (text: string, answers: Record<string, string> = {}) => ask({ kind: 'pasted-blueprint', text, inputs: { research: noResearch, answers } });
+    /** A blueprint string of the JSON, as the game writes it */
+    const pack = (json: unknown) => encodeBlueprintFileBrowser(json as Parameters<typeof encodeBlueprintFileBrowser>[0]);
+    const unpack = (text: string) => decodeBlueprintFileBrowser(text.trim()) as unknown as { blueprint: { entities: Record<string, unknown>[] } };
+    const listsOf = (pasted: { machines: unknown; drills: unknown; inserters: unknown; belts: unknown; chests: unknown }) =>
+        ({ machines: pasted.machines, drills: pasted.drills, inserters: pasted.inserters, belts: pasted.belts, chests: pasted.chests });
+
+    it('first asks the drill\'s ore with short lists that each schema takes, then gives the import\'s own lists once it is answered', async () => {
+        const first = await pastedOf(iron);
+        if (first.kind !== 'build') throw new Error('no build');
+        expect(first.questions.map(question => question.kind)).toEqual(['drill-ore']);
+        const schemas = [[MachineConfigurationSchema, first.machines], [MiningDrillConfigSchema, first.drills], [InserterConfigSchema, first.inserters],
+            [BeltConfigSchema, first.belts], [ChestConfigSchema, first.chests]] as const;
+        for (const [schema, list] of schemas) for (const row of list as unknown[]) expect(schema.safeParse(row).success).toBe(true);
+        // a short list: what waits on the answer is not in it yet
+        expect(first.drills).toEqual([]);
+        expect(first.guidance).toEqual(Option.none);
+        expect('picked_machines' in first).toBe(false);
+
+        const answers = { [first.questions[0].key]: 'iron-ore' };
+        const second = await pastedOf(iron, answers);
+        if (second.kind !== 'build') throw new Error('no build');
+        expect(second.questions).toEqual([]);
+        const direct = importBlueprint(iron, { research: noResearch, answers }, data);
+        if (direct.kind !== 'build') throw new Error('no build');
+        // the import's lists as each schema reads them, with its defaults
+        const parsed = <T,>(schema: { parse: (row: unknown) => T }, rows: readonly unknown[]) => rows.map(row => schema.parse(row));
+        expect(listsOf(second)).toEqual({ machines: parsed(MachineConfigurationSchema, direct.machines), drills: parsed(MiningDrillConfigSchema, direct.drills),
+            inserters: parsed(InserterConfigSchema, direct.inserters), belts: parsed(BeltConfigSchema, direct.belts), chests: parsed(ChestConfigSchema, direct.chests) });
+        expect(second.drills.map(drill => drill.mined_item_name)).toEqual(['iron-ore']);
+        expect(second.suggested_target).toEqual(Option.fromNullable(direct.suggested_target));
+        expect({ notes: second.notes, research: second.research, read: second.read, ignored: second.ignored, copy_offset: second.copy_offset, entities: second.entities, speeds: second.speeds })
+            .toEqual({ notes: direct.notes, research: direct.research, read: direct.read, ignored: direct.ignored, copy_offset: direct.copy_offset, entities: direct.entities, speeds: direct.speeds });
+        expect(second.guidance).toEqual(Option.none);
+    });
+
+    it.each([
+        ['book', pack({ blueprint_book: { blueprints: [{ index: 0, blueprint: { item: 'blueprint', entities: [] } }], item: 'blueprint-book', version: 562949954076673 } })],
+        ['not-a-blueprint', '0notablueprint'],
+    ] as const)('gives the problem %s, and no throw', async (problem, text) => {
+        expect(await pastedOf(text)).toEqual({ kind: 'problem', problem });
+    });
+
+    it('goes on past a chest whose limit leaves it no slot: the chest and the inserters at it are left out, each with a note', async () => {
+        const json = unpack(chestChainScaffold);
+        const chest = json.blueprint.entities.find(entity => typeof entity.name === 'string' && /-chest$/.test(entity.name) && entity.name !== 'infinity-chest')!;
+        chest.bar = 0;
+        const pasted = await pastedOf(pack(json));
+        if (pasted.kind !== 'build') throw new Error('no build');
+        expect(pasted.notes).toContainEqual(expect.objectContaining({ code: 'chest:no-slots', entity_number: chest.entity_number }));
+        expect(pasted.chests.map(row => row.position)).not.toContainEqual(chest.position);
+    });
+
+    it('puts another profile on a build from its block, and finds the values changed by hand', async () => {
+        const answers = { 'drill-ore:1': 'iron-ore' };
+        const direct = importBlueprint(iron, { research: noResearch, answers }, data);
+        if (direct.kind !== 'build') throw new Error('no build');
+        const build = { machines: direct.machines, drills: { configs: direct.drills }, inserters: direct.inserters, belts: direct.belts, chests: direct.chests };
+        const choice = { profile: 'Mine', template: null, bonuses: { ...noResearch.bonuses, mining_drill_productivity_bonus: 100, belt_stack_size_bonus: 3 } };
+        const applied = await ask({ kind: 'apply-research', build, base: direct.research.base, choice });
+        expect(applied).toEqual(applyResearch(build, direct.research.base, choice, data));
+        expect(applied.build.drills!.configs.map(drill => drill.productivity)).toEqual(direct.drills.map(drill => drill.productivity + 100));
+        const edited = { ...applied.build, research: applied.block, machines: applied.build.machines.map((machine, i) => i === 0 ? { ...machine, productivity: machine.productivity + 7 } : machine) };
+        const differences = await ask({ kind: 'research-differences', build: edited });
+        expect(differences).toEqual(researchDifferences(edited, data));
+        expect(differences.recorded && differences.edited.map(edit => edit.kind)).toEqual(['machine']);
+        expect(await ask({ kind: 'research-differences', build })).toEqual({ recorded: false });
+    });
 });

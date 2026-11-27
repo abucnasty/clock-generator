@@ -196,6 +196,31 @@ export {
 } from './blueprints/serde-browser';
 
 // ============================================================================
+// The import of a pasted blueprint
+// ============================================================================
+
+export { importBlueprint, isPleaseCheck, NOTE_CODES, SHARING_ANSWERS, READ_KINDS } from './import';
+export type {
+    DropLane,
+    DropPosition,
+    ImportBuild,
+    ImportEntity,
+    ImportInputs,
+    ImportList,
+    ImportLayout,
+    ImportNote,
+    ImportOutcome,
+    ImportProblem,
+    ImportQuestion,
+    ImportResearch,
+    ImportSpeed,
+    NoteCode,
+    OutputLine,
+    QuestionKind,
+    ReadKind,
+} from './import';
+
+// ============================================================================
 // Research on a build
 // ============================================================================
 

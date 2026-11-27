@@ -1,4 +1,4 @@
-import { canonicalRate } from 'clock-generator/light';
+import { canonicalRate, Option } from 'clock-generator/light';
 import { missingDataSections, type InternalError } from '../utils/internalError';
 /**
  * Web Worker for running clock-generator simulation.
@@ -10,7 +10,7 @@ import { missingDataSections, type InternalError } from '../utils/internalError'
 
 import type { z } from 'zod';
 import { renameSetpointRecipeToItem, renameTargetOutputToSetpoint, type LaneRole, type SetpointReason } from 'clock-generator/light';
-import type { ClockAlternativeRun, Config, DebugSteps, LogMessage, Logger, MachineToName, NotMadeClock, SearchRangeEdge } from 'clock-generator/browser';
+import type { ClockAlternativeRun, Config, DebugSteps, FactorioData, LogMessage, Logger, MachineToName, NotMadeClock, SearchRangeEdge } from 'clock-generator/browser';
 import { parseFormConfig } from './formConfig';
 import { laneRolesAnswer } from './laneRoles';
 import { convertBeltSetting } from '../utils/beltSettingConversion';
@@ -31,6 +31,8 @@ let gameNames: GameNames = NO_NAMES;
 let hiddenRecipes: string[] = [];
 /** The sections the loaded game data lacks, for telling a data file of another version from a bug */
 let missingSections: string[] = [];
+/** The loaded game data, which the blueprint import and research read as an argument */
+let gameData: FactorioData;
 
 const LOG_FLUSH_INTERVAL_MS = 100;
 
@@ -50,6 +52,7 @@ async function handleInitialize(factorioData: string): Promise<void> {
 
         const parsed = JSON.parse(factorioData);
         clockGenerator.FactorioDataService.initialize(parsed);
+        gameData = parsed as FactorioData;
         liveCoverage = clockGenerator.createInserterCoverageValidator();
         missingSections = missingDataSections(parsed);
         gameNames = parsed.names ?? NO_NAMES;
@@ -421,6 +424,34 @@ function pastedEntities(pasted: Extract<EngineQuery, { kind: 'pasted-entities' }
 }
 
 /**
+ * A pasted blueprint, through the import: each list checked against its schema on every call, as a Sidecar paste's are.
+ * Neither the Sidecar's version check nor its pickup marks are used: the import writes each pickup's capture itself.
+ */
+function pastedBlueprint(pasted: Extract<EngineQuery, { kind: 'pasted-blueprint' }>): EngineAnswers['pasted-blueprint'] {
+    const outcome = clockGenerator.importBlueprint(pasted.text, pasted.inputs, gameData);
+    if (outcome.kind === 'problem') return outcome;
+    return {
+        kind: 'build',
+        machines: validateEntries(clockGenerator.MachineConfigurationSchema, outcome.machines, 'machine'),
+        drills: validateEntries(clockGenerator.MiningDrillConfigSchema, outcome.drills, 'drill'),
+        inserters: validateEntries(clockGenerator.InserterConfigSchema, outcome.inserters, 'inserter'),
+        belts: validateEntries(clockGenerator.BeltConfigSchema, outcome.belts, 'belt'),
+        chests: validateEntries(clockGenerator.ChestConfigSchema, outcome.chests, 'chest'),
+        guidance: Option.none,
+        suggested_target: Option.fromNullable(outcome.suggested_target),
+        questions: outcome.questions,
+        notes: outcome.notes,
+        read: outcome.read,
+        ignored: outcome.ignored,
+        research: outcome.research,
+        copy_offset: outcome.copy_offset,
+        layout: outcome.layout,
+        entities: outcome.entities,
+        speeds: outcome.speeds,
+    };
+}
+
+/**
  * The roles of the lanes of a build, as the engine's lane facts give them, for the conversion of the former belt setting.
  * A machine with no recipe stops the engine from reading any role; the roles are then read without such machines and the
  * inserters at them, so a lane only those inserters use has no role. A build the engine cannot read at all has none.
@@ -549,6 +580,12 @@ function answer(asked: EngineQuery): EngineAnswers[EngineQuery['kind']] {
             return configFile(query.config);
         case 'pasted-entities':
             return pastedEntities(query);
+        case 'pasted-blueprint':
+            return pastedBlueprint(query);
+        case 'apply-research':
+            return clockGenerator.applyResearch(query.build, query.base, query.choice, gameData);
+        case 'research-differences':
+            return clockGenerator.researchDifferences(query.build, gameData);
     }
 }
 

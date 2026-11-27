@@ -35,6 +35,7 @@ import { selectBuildEntity } from './utils/buildViewContext';
 import { useMachinesMax } from './hooks/useMachineFacts';
 import { useTargetRateMax } from './hooks/useTargetRateMax';
 import { SetpointForm } from './components/SetpointForm';
+import { BuildResearchLine } from './components/BuildResearchLine';
 import { countsOf } from './utils/targetCounts';
 import { rateMaxOf, resultComesBack } from './utils/targetRateLimit';
 import { MachinesForm } from './components/MachinesForm';
@@ -94,7 +95,7 @@ import { CraftingMachinesContext } from './hooks/useCraftingMachines';
 import type { CraftingMachineData } from './worker/types';
 import { RuleTimingContext } from './components/RuleTimingContext';
 import { ruleTimingOf, type RuleTiming } from './utils/ruleTiming';
-import type { EntityKind } from './utils/configForm/formData';
+import type { ConfigFormData, EntityKind } from './utils/configForm/formData';
 import { describeChestSwitch, removalMessage, removedDeleteLabel, reorderMessage } from './utils/undoSnapshot';
 import { isBlankBuild } from './utils/introCard';
 import { configToFormData, formDataToConfig } from './utils/configForm/configMapping';
@@ -119,9 +120,6 @@ import {
     type BuildMeta,
 } from './utils/buildLibrary';
 import { sharedBuildSummary, sharedOpenedMessage, sharedPlaceNote, type SharedBuild } from './utils/shareLink';
-
-/** The research profiles show in the dev server only, until the import that uses them is on the page */
-const SHOW_RESEARCH_PROFILES = import.meta.env.DEV;
 
 /** The page's own items in ⋮ */
 const TOOLS_MENU = {
@@ -346,6 +344,12 @@ function App() {
         if (fix.type === 'add_lane_to_existing_belt') setBeltFocusRequest({ id: fix.belt_id });
         else if (id !== undefined) setInserterFocusRequest({ id, filters: false });
     }, [fixUnavailable, setConfigView, captureBuildMutation, offerUndo, setConfig]);
+
+    // another research profile on the build, as one step that Undo takes back
+    const applyResearchProfile = useCallback((next: ConfigFormData, message: string) => {
+        offerUndo(message, { snapshot: captureBuildMutation().form });
+        setConfig(next);
+    }, [captureBuildMutation, offerUndo, setConfig]);
     const [changelogOpen, setChangelogOpen] = useState(false);
 
     // null until the engine has looked for missing inserters; until then the check catches them
@@ -1154,7 +1158,8 @@ function App() {
                             onInstall={blueprintString ? () => setInstallOpen(true) : undefined}
                             onCheckOnly={handleCheckOnly}
                             checkDisabled={busy || invalid_rate}
-                            onOpenResearchProfiles={SHOW_RESEARCH_PROFILES ? () => setResearchProfilesOpen(true) : undefined}
+                            onOpenResearchProfiles={() => setResearchProfilesOpen(true)}
+                            itemNames={itemNamesComposite}
                             renderControls={(paste, menu) => (
                                 <WorkflowBar
                                     entryAction={paste}
@@ -1278,6 +1283,8 @@ function App() {
                                 onCopyOffsetChange={(value) => updateSetpoint('copy_offset', value)}
                                 copyOffsetNote={checkedCoverage?.dropRoom}
                             />
+
+                            <BuildResearchLine form={config} onApply={applyResearchProfile} />
 
                             <BuildPanel view={configView} onViewChange={setConfigView}>
                                 <PickupGeometrySummary build={config} onEdit={reviewPickup} busy={busy}
@@ -1630,9 +1637,7 @@ function App() {
 
             {manualCopy && <ManualBlueprintDialog failure={manualCopy} onClose={() => setManualCopy(null)} />}
 
-            {SHOW_RESEARCH_PROFILES && (
-                <ResearchProfilesDialog open={researchProfilesOpen} onClose={() => setResearchProfilesOpen(false)} recipeOptions={recipeNames} />
-            )}
+            <ResearchProfilesDialog open={researchProfilesOpen} onClose={() => setResearchProfilesOpen(false)} recipeOptions={recipeNames} />
 
             <MessageHost />
         </PageProviders>
