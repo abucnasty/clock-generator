@@ -42,5 +42,12 @@
  "src/crafting/verification-signature.generation.test.ts": 82,
  "src/crafting/whole-build-copies.generation.test.ts": 67.7,
  "src/crafting/whole-build.generation.test.ts": 103.1,
- "src/crafting/why-not-stable.generation.test.ts": 4.4
+ "src/crafting/why-not-stable.generation.test.ts": 4.4,
+ "src/import/paste-clock/electromagnetic-240.generation.test.ts": 149.9,
+ "src/import/paste-clock/iron.generation.test.ts": 10.2,
+ "src/import/paste-clock/lithium.generation.test.ts": 97.8,
+ "src/import/paste-clock/productivity-module-80.generation.test.ts": 247,
+ "src/import/paste-clock/steel.generation.test.ts": 248.5,
+ "src/import/paste-clock/stone-brick-120.generation.test.ts": 3.1,
+ "src/import/paste-clock/utility-320.generation.test.ts": 378.4
 }
