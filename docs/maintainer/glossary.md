@@ -233,7 +233,7 @@ The place of a clock in the generator's order for a build. Rank 1 is the recomme
 the game and STE have no entry for it.
 
 **Blueprint**:
-A clock as a Factorio blueprint string, with its wiring, which the user takes into the game.
+A group of entities saved by the game as a string. A blueprint of the build goes into the generator. A blueprint of a clock, with its wiring, goes into the game.
 _Avoid_: export
 
 **Sidecar**:

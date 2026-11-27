@@ -200,8 +200,8 @@ export const GLOSSARY: readonly GlossaryEntry[] = [
     {
         id: 'blueprint',
         term: 'blueprint',
-        definition: 'The Factorio string you paste in the game. It holds a clock\'s combinators, not your build.',
-        insteadOf: '"blueprint" for a clock or a build',
+        definition: 'The Factorio string of a group of entities. You paste one of your build into the generator, and copy one of a clock into the game.',
+        insteadOf: '"blueprint" for a build or a clock',
     },
     {
         id: 'research-profile',
