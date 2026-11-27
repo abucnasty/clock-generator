@@ -43,7 +43,6 @@ import {
     type InserterFormData,
     type MachineFormData,
 } from '../utils/configForm/formData';
-import { formSlotFilters } from '../utils/containerSlotFilters';
 
 /** Each inserter row with its `_uuid` */
 function inserterRows(inserters: unknown[]): InserterFormData[] {
@@ -63,11 +62,9 @@ function chestRows(chests: unknown[]): ChestFormData[] {
         if (c.type === ChestType.INFINITY_CHEST) {
             return { ...(c as InfinityChestFormData), _uuid: uuid };
         }
-        // a car, a tank, a cargo wagon or a rocket silo is kept as it is, a slot filtered to a marker read as blocked
+        // a car, a tank, a cargo wagon or a rocket silo is kept as it is
         if (c.type !== undefined && (CONTAINER_CHEST_TYPES as string[]).includes(c.type)) {
-            const container = c as ContainerChestFormData;
-            return { ...container, ...('slot_filters' in container && Array.isArray(container.slot_filters)
-                && { slot_filters: formSlotFilters(container.slot_filters) }), _uuid: uuid } as ContainerChestFormData;
+            return { ...(c as ContainerChestFormData), _uuid: uuid };
         }
         if (c.type !== ChestType.BUFFER_CHEST) {
             return { ...(c as ChestFormData), _uuid: uuid };

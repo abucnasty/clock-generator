@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ChestType } from 'clock-generator/light';
-import { formDataToConfig } from '../utils/configForm/configMapping';
+import type { Config } from 'clock-generator/browser';
+import { configToFormData, formDataToConfig } from '../utils/configForm/configMapping';
 import * as edits from '../utils/configForm/edits';
 import { createDefaultConfig, type ConfigFormData } from '../utils/configForm/formData';
 import { backupKey } from '../utils/buildLibrary';
@@ -40,6 +41,19 @@ describe('readSavedConfig', () => {
         expect(edits.addInserter(config).inserters.at(-1)!.id).toBe(5);
         expect('next_ids' in formDataToConfig(config)).toBe(false);
         expect(serializeConfig(config)).not.toContain('next_ids');
+    });
+
+    it('keeps a slot filter that names a marker as its item as that item filter, in a saved build and a config', () => {
+        const slot_filters = [{ slot: 1, item: 'iron-plate' }, { slot: 2, item: 'deconstruction-planner' }, { slot: 3, item: 'no-item' }];
+        const build = {
+            setpoint: { item: 'iron-gear-wheel', items_per_second: 1, copies: 1 },
+            machines: [{ id: 1, recipe: 'iron-gear-wheel', productivity: 0, crafting_speed: 1 }],
+            inserters: [],
+            belts: [],
+            chests: [{ type: ChestType.CAR, id: 1, slot_filters }],
+        };
+        expect(readSavedConfig(JSON.stringify(build))?.chests[0]).toMatchObject({ slot_filters });
+        expect(configToFormData(build as unknown as Config).chests[0]).toMatchObject({ slot_filters });
     });
 
     it('gives null for what is not the form state', () => {
