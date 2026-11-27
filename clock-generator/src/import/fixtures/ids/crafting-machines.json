@@ -1,0 +1,105 @@
+{
+  "source": "the 2.1.24 game data: each machine's own subgroup where it sets one, else the subgroup of the item that places it",
+  "game_version": {
+    "base": [
+      2,
+      1,
+      24
+    ],
+    "space-age": [
+      2,
+      1,
+      24
+    ]
+  },
+  "machines": {
+    "assembling-machine-1": {
+      "type": "assembling-machine",
+      "burner_fuel_categories": [],
+      "subgroup": "production-machine"
+    },
+    "assembling-machine-2": {
+      "type": "assembling-machine",
+      "burner_fuel_categories": [],
+      "subgroup": "production-machine"
+    },
+    "assembling-machine-3": {
+      "type": "assembling-machine",
+      "burner_fuel_categories": [],
+      "subgroup": "production-machine"
+    },
+    "biochamber": {
+      "type": "assembling-machine",
+      "burner_fuel_categories": [
+        "nutrients"
+      ],
+      "subgroup": "agriculture"
+    },
+    "captive-biter-spawner": {
+      "type": "assembling-machine",
+      "burner_fuel_categories": [
+        "food"
+      ],
+      "subgroup": "agriculture"
+    },
+    "centrifuge": {
+      "type": "assembling-machine",
+      "burner_fuel_categories": [],
+      "subgroup": "production-machine"
+    },
+    "chemical-plant": {
+      "type": "assembling-machine",
+      "burner_fuel_categories": [],
+      "subgroup": "production-machine"
+    },
+    "crusher": {
+      "type": "assembling-machine",
+      "burner_fuel_categories": [],
+      "subgroup": "space-platform"
+    },
+    "cryogenic-plant": {
+      "type": "assembling-machine",
+      "burner_fuel_categories": [],
+      "subgroup": "production-machine"
+    },
+    "electric-furnace": {
+      "type": "furnace",
+      "burner_fuel_categories": [],
+      "subgroup": "smelting-machine"
+    },
+    "electromagnetic-plant": {
+      "type": "assembling-machine",
+      "burner_fuel_categories": [],
+      "subgroup": "production-machine"
+    },
+    "foundry": {
+      "type": "assembling-machine",
+      "burner_fuel_categories": [],
+      "subgroup": "smelting-machine"
+    },
+    "oil-refinery": {
+      "type": "assembling-machine",
+      "burner_fuel_categories": [],
+      "subgroup": "production-machine"
+    },
+    "recycler": {
+      "type": "furnace",
+      "burner_fuel_categories": [],
+      "subgroup": "smelting-machine"
+    },
+    "steel-furnace": {
+      "type": "furnace",
+      "burner_fuel_categories": [
+        "chemical"
+      ],
+      "subgroup": "smelting-machine"
+    },
+    "stone-furnace": {
+      "type": "furnace",
+      "burner_fuel_categories": [
+        "chemical"
+      ],
+      "subgroup": "smelting-machine"
+    }
+  }
+}
