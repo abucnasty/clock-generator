@@ -121,9 +121,6 @@ import {
 } from './utils/buildLibrary';
 import { sharedBuildSummary, sharedOpenedMessage, sharedPlaceNote, type SharedBuild } from './utils/shareLink';
 
-/** The research profiles show in the dev server only, until the import that uses them is on the page */
-const SHOW_RESEARCH_PROFILES = import.meta.env.DEV;
-
 /** The page's own items in ⋮ */
 const TOOLS_MENU = {
     terms: 'Terms',
@@ -1161,7 +1158,7 @@ function App() {
                             onInstall={blueprintString ? () => setInstallOpen(true) : undefined}
                             onCheckOnly={handleCheckOnly}
                             checkDisabled={busy || invalid_rate}
-                            onOpenResearchProfiles={SHOW_RESEARCH_PROFILES ? () => setResearchProfilesOpen(true) : undefined}
+                            onOpenResearchProfiles={() => setResearchProfilesOpen(true)}
                             itemNames={itemNamesComposite}
                             renderControls={(paste, menu) => (
                                 <WorkflowBar
@@ -1640,9 +1637,7 @@ function App() {
 
             {manualCopy && <ManualBlueprintDialog failure={manualCopy} onClose={() => setManualCopy(null)} />}
 
-            {SHOW_RESEARCH_PROFILES && (
-                <ResearchProfilesDialog open={researchProfilesOpen} onClose={() => setResearchProfilesOpen(false)} recipeOptions={recipeNames} />
-            )}
+            <ResearchProfilesDialog open={researchProfilesOpen} onClose={() => setResearchProfilesOpen(false)} recipeOptions={recipeNames} />
 
             <MessageHost />
         </PageProviders>
