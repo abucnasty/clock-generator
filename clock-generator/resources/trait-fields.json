@@ -175,7 +175,7 @@
       "properties": []
     },
     "LinkedContainerPrototype": {
-      "$comment": "Storage (blueprint import): not a ContainerPrototype in the spec; chests of one link_id share one inventory",
+      "$comment": "Storage (blueprint import): not a ContainerPrototype in the game's prototype API; chests of one link_id share one inventory",
       "parent": "EntityWithOwnerPrototype",
       "properties": ["inventory_size", "inventory_type", "inventory_weight_limit"]
     },

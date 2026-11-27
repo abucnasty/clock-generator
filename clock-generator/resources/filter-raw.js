@@ -361,7 +361,7 @@ function mapRawDataToFilteredFactorioData(rawData) {
     // class: the beacons and the modules (what a beacon gives a machine), the underground belts (how far they reach),
     // the splitters, the loaders (the raw `loader` and `loader-1x1` both have LoaderPrototype's fields) and the chests
     // (the chest, the logistic chest and the infinity chest from their classes; the linked chest from its own, which
-    // the spec does not make a ContainerPrototype). The belts keep their `speed` in these sections too.
+    // the game's prototype API does not make a ContainerPrototype). The belts keep their `speed` in these sections too.
     filtered["beacon"] = manifestSection(rawData["beacon"], "BeaconPrototype");
     filtered["module"] = manifestSection(rawData["module"], "ModulePrototype");
     filtered["underground_belt"] = manifestSection(rawData["underground-belt"], "UndergroundBeltPrototype");
