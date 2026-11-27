@@ -24,7 +24,7 @@ import { createEntityRegistryFromConfig, SimulationContext } from "./sequence/si
 import { buildToNameOf } from "./build-names";
 import { capitalized, inserterNameInText, theName, lanesInSentence, NO_BUILD, textWords, type BuildToName } from "./entity-name";
 import { droppedOnto, ModelLane, modelLanesOf, takenLanesOf, takenTogether, takerSpacingUnknown } from "./shared-lane-lanes";
-import { DropRecorder, HandDropped, LaidOutLane, LaneFeeders, LaneRow, recordInserters, runOnSharedLanes, SharedLaneLayout, sharedLaneLayoutOf } from "./shared-lane-model";
+import { DropRecorder, HandDropped, LaidOutLane, LaneFeeders, LaneRow, recordInserters, runOnSharedLanes, SharedLaneLayout, sharedLaneLayoutOf, type SharedLaneRun } from "./shared-lane-model";
 import type { OutputBeltRun } from "./output-belt-run";
 import { recordHandConditions, TakerConditions } from "./hand-conditions";
 import { InserterTimetableRecord, recordTimetable, timetableOf as timetableLineOf, windowRangesOf } from "./timetable";
@@ -247,36 +247,58 @@ function recordStops(context: SimulationContext, config: Config, layout: SharedL
  * (`taker_hands`). The verdict reads the copies' figures here alone, so that where they come from can change in this function only.
  */
 export function copyLaneTakes(config: Config, windows: Map<string, OpenRange[]>, window_cycle: WindowCycle, layout: SharedLaneLayout,
-    window_cycles: number, logger: Logger, ends: OutputEnds | null = null, for_log = false, log_errors: string[] = []): { takes: CopyLaneTake[]; made: CopyMade[]; last_tick: number; output_belt?: OutputBeltRun;
-        stops: TakerStops[]; taker_hands: ReadonlyMap<string, readonly HandDropped[]>; conditions?: TakerConditions[]; timetable?: InserterTimetableRecord[] } {
-    let madeOf = (): CopyMade[] => [];
-    let stopsOf = (): TakerStops[] => [];
-    let conditionsOf: (() => TakerConditions[]) | null = null;
-    let timetableOf: (() => InserterTimetableRecord[]) | null = null;
+    window_cycles: number, logger: Logger, ends: OutputEnds | null = null, for_log = false, log_errors: string[] = []): CopyLaneTakes {
+    let recorded: TakesRecorders | undefined;
     const model = runOnSharedLanes(config, windows, window_cycle, layout, window_cycles, logger, context => {
-        madeOf = recordCopiesMade(context, ends);
-        stopsOf = recordStops(context, config, layout);
-        // for the maker log only: the four conditions of every taker, read and never changed
-        if (for_log) conditionsOf = recordHandConditions(context, config, new Set(layout.rows.flatMap(row => row.takers.map(taker => `${taker.copy}|${taker.inserter_id}`))));
-        // and the timetable of every inserter of every copy
-        if (for_log) timetableOf = recordTimetable(context);
+        recorded = recordTakes(context, config, layout, ends, for_log);
     });
-    let last_tick = 0;
-    const takes = layout.rows.flatMap(row => {
-        const item = config.belts.find(belt => belt.id === row.belt_id)!.lanes[row.lane - 1].ingredient;
-        return row.takers.flatMap(taker => {
-            const record = model.takers.find(it => it.copy === taker.copy && it.inserter_id === taker.inserter_id);
-            if (record === undefined) return [];
-            last_tick = Math.max(last_tick, record.last_tick);
-            return [{ belt_id: row.belt_id, lane: row.lane, item, copy: taker.copy, inserter_id: taker.inserter_id, hands: record.hands.filter(hand => hand.item === item) }];
+    return recorded!.read(model, log_errors);
+}
+
+/** What `copyLaneTakes` gives of a run of the copies */
+interface CopyLaneTakes {
+    takes: CopyLaneTake[];
+    made: CopyMade[];
+    last_tick: number;
+    output_belt?: OutputBeltRun;
+    stops: TakerStops[];
+    taker_hands: ReadonlyMap<string, readonly HandDropped[]>;
+    conditions?: TakerConditions[];
+    timetable?: InserterTimetableRecord[];
+}
+
+/** The recorders of `copyLaneTakes` in a run: what the copies made so far, and, once the run is over, all it gives */
+interface TakesRecorders {
+    madeOf: () => CopyMade[];
+    read: (model: SharedLaneRun, log_errors: string[]) => CopyLaneTakes;
+}
+
+/** Puts the recorders of `copyLaneTakes` into a run of the copies before its first tick, in this order */
+function recordTakes(context: SimulationContext, config: Config, layout: SharedLaneLayout, ends: OutputEnds | null, for_log: boolean): TakesRecorders {
+    const madeOf = recordCopiesMade(context, ends);
+    const stopsOf = recordStops(context, config, layout);
+    // for the maker log only: the four conditions of every taker, read and never changed
+    const conditionsOf = for_log ? recordHandConditions(context, config, new Set(layout.rows.flatMap(row => row.takers.map(taker => `${taker.copy}|${taker.inserter_id}`)))) : null;
+    // and the timetable of every inserter of every copy
+    const timetableOf = for_log ? recordTimetable(context) : null;
+    return { madeOf, read: (model, log_errors) => {
+        let last_tick = 0;
+        const takes = layout.rows.flatMap(row => {
+            const item = config.belts.find(belt => belt.id === row.belt_id)!.lanes[row.lane - 1].ingredient;
+            return row.takers.flatMap(taker => {
+                const record = model.takers.find(it => it.copy === taker.copy && it.inserter_id === taker.inserter_id);
+                if (record === undefined) return [];
+                last_tick = Math.max(last_tick, record.last_tick);
+                return [{ belt_id: row.belt_id, lane: row.lane, item, copy: taker.copy, inserter_id: taker.inserter_id, hands: record.hands.filter(hand => hand.item === item) }];
+            });
         });
-    });
-    // every hand of each taker of each copy, of every item it takes: a missed swing of one item moves the next hand of another
-    const taker_hands = new Map(model.takers.map(record => [`${record.copy}|${record.inserter_id}`, record.hands] as const));
-    const conditions = conditionsOf === null ? undefined : forLog(conditionsOf as () => TakerConditions[], log_errors);
-    const timetable = timetableOf === null ? undefined : forLog(timetableOf as () => InserterTimetableRecord[], log_errors);
-    return { takes, made: madeOf(), last_tick, ...(model.output_belt !== undefined && { output_belt: model.output_belt }), stops: stopsOf(), taker_hands,
-        ...(conditions !== undefined && { conditions }), ...(timetable !== undefined && { timetable }) };
+        // every hand of each taker of each copy, of every item it takes: a missed swing of one item moves the next hand of another
+        const taker_hands = new Map(model.takers.map(record => [`${record.copy}|${record.inserter_id}`, record.hands] as const));
+        const conditions = conditionsOf === null ? undefined : forLog(conditionsOf, log_errors);
+        const timetable = timetableOf === null ? undefined : forLog(timetableOf, log_errors);
+        return { takes, made: madeOf(), last_tick, ...(model.output_belt !== undefined && { output_belt: model.output_belt }), stops: stopsOf(), taker_hands,
+            ...(conditions !== undefined && { conditions }), ...(timetable !== undefined && { timetable }) };
+    } };
 }
 
 /** One taker of one copy that loses swings on a lane the copies share */
@@ -778,7 +800,7 @@ interface Shortfall {
 }
 
 /** The run of one copy alone: what each taker put down, the run's last tick, and the hand of each taker for an item */
-interface AloneRun {
+export interface AloneRun {
     recorders: Map<string, DropRecorder>;
     last_tick: number;
     handOf: (inserter_id: string, item: string) => number;
@@ -788,7 +810,7 @@ interface AloneRun {
  * Runs one copy alone, with a stock of each lane of its own, recording the takers named and the output inserters named
  * (`output_ids`: the copy's output swings alone, for a loss whose cause is the output belt); recorders change nothing in the run
  */
-function runAlone(under: Config, taker_ids: readonly string[], windows: Map<string, OpenRange[]>, window_cycle: WindowCycle,
+export function runAlone(under: Config, taker_ids: readonly string[], windows: Map<string, OpenRange[]>, window_cycle: WindowCycle,
     window_cycles: number, logger: Logger, output_ids: readonly string[] = []): AloneRun {
     let recorders = new Map<string, DropRecorder>();
     let takers = new Map<string, Inserter>();
@@ -862,10 +884,27 @@ function loggedRunOf(under: Config, reading: number, layout: SharedLaneLayout, a
  */
 function shortfallsOf(under: Config, lanes: readonly ModelLane[], layout: SharedLaneLayout, alone: AloneRun, windows: Map<string, OpenRange[]>,
     window_cycle: WindowCycle, window_cycles: number, logger: Logger, ends: OutputEnds | null, for_log: { reading: number; errors: string[] } | null = null): RunOfCopies {
-    const window_cycle_ticks = windowCycleTicks(window_cycle);
+    return shortfallsSpanOf(under, lanes, layout, alone, windows, window_cycle, window_cycles, logger, ends, for_log).run;
+}
+
+/** A run of the copies as the judge reads it, and the last tick its judged span is read up to */
+export interface CopiesSpan {
+    run: RunOfCopies;
+    last_tick: number;
+}
+
+/** `shortfallsOf`, with the last tick it judged up to */
+export function shortfallsSpanOf(under: Config, lanes: readonly ModelLane[], layout: SharedLaneLayout, alone: AloneRun, windows: Map<string, OpenRange[]>,
+    window_cycle: WindowCycle, window_cycles: number, logger: Logger, ends: OutputEnds | null, for_log: { reading: number; errors: string[] } | null = null): CopiesSpan {
+    const taken = copyLaneTakes(under, windows, window_cycle, layout, window_cycles, logger, ends, for_log !== null, for_log?.errors);
+    return shortfallsViewOf(under, lanes, layout, alone, windows, windowCycleTicks(window_cycle), window_cycles, taken, for_log);
+}
+
+/** What `shortfallsOf` reads of a run of the copies that is over, from what its recorders kept (`copyLaneTakes`) */
+function shortfallsViewOf(under: Config, lanes: readonly ModelLane[], layout: SharedLaneLayout, alone: AloneRun, windows: Map<string, OpenRange[]>,
+    window_cycle_ticks: number, window_cycles: number, taken: CopyLaneTakes, for_log: { reading: number; errors: string[] } | null): CopiesSpan {
     const facts = laneFactsOfConfig(under);
-    const { takes, made, last_tick, output_belt, stops, taker_hands, conditions, timetable } = copyLaneTakes(under, windows, window_cycle, layout, window_cycles, logger, ends,
-        for_log !== null, for_log?.errors);
+    const { takes, made, last_tick, output_belt, stops, taker_hands, conditions, timetable } = taken;
     const last = Math.min(alone.last_tick, last_tick);
     const first_cycle = Math.ceil(last / 2 / window_cycle_ticks), end_cycle = Math.floor((last + 1) / window_cycle_ticks + 1e-9);
     const from = cycleStart(first_cycle, window_cycle_ticks), to = cycleStart(end_cycle, window_cycle_ticks);
@@ -879,7 +918,7 @@ function shortfallsOf(under: Config, lanes: readonly ModelLane[], layout: Shared
     const joins = { ...(join_full !== undefined && { join_full }), ...(join_waits !== undefined && { join_waits }), ...(output_swings !== undefined && { output_swings }),
         ...(logged_run !== undefined && { for_log: logged_run }) };
     const span = Math.max(0, end_cycle - first_cycle);
-    if (end_cycle <= first_cycle) return { shortfalls: [], made, from, to, window_cycles: span, holds, ...joins };
+    if (end_cycle <= first_cycle) return { run: { shortfalls: [], made, from, to, window_cycles: span, holds, ...joins }, last_tick: last };
     // a taker that takes one item from both lanes of its belt has the same hands on both: a hand cannot be told by its lane,
     // so it makes one loss for the item, which names both lanes
     const by_taker = new Map<string, CopyLaneTake[]>();
@@ -919,7 +958,7 @@ function shortfallsOf(under: Config, lanes: readonly ModelLane[], layout: Shared
             missed: (loss_facts.swings?.missed ?? []).map(it => ({ window_cycle: it.window_cycle, missed: it.missed, cause: it.cause })) }), log_errors);
         return [{ short: alone_items - items, hand, loss, facts: loss_facts, ...(for_log !== undefined && { for_log }) }];
     });
-    return { shortfalls, made, from, to, window_cycles: span, holds, ...joins };
+    return { run: { shortfalls, made, from, to, window_cycles: span, holds, ...joins }, last_tick: last };
 }
 
 /**
@@ -1019,7 +1058,12 @@ function withoutOutputBelt(config: Config): Config {
  */
 function copiesRunOf(config: Config, layout: SharedLaneLayout, windows: Map<string, OpenRange[]>, window_cycle: WindowCycle, window_cycles: number,
     logger: Logger, ends: OutputEnds | null): RunOfCopies {
-    const window_cycle_ticks = windowCycleTicks(window_cycle);
+    return copiesSpanOf(config, layout, windows, window_cycle, window_cycles, logger, ends).run;
+}
+
+/** `copiesRunOf`, with the last tick it judged up to */
+export function copiesSpanOf(config: Config, layout: SharedLaneLayout, windows: Map<string, OpenRange[]>, window_cycle: WindowCycle, window_cycles: number,
+    logger: Logger, ends: OutputEnds | null): CopiesSpan {
     let madeOf = (): CopyMade[] => [];
     let last_tick = 0;
     const model = runOnSharedLanes(config, windows, window_cycle, layout, window_cycles, logger, context => {
@@ -1027,12 +1071,52 @@ function copiesRunOf(config: Config, layout: SharedLaneLayout, windows: Map<stri
         const now = () => context.tick_provider.getCurrentTick();
         context.after_inserters.push({ tick() { last_tick = now(); } });
     });
+    return { run: copiesViewOf(layout, madeOf(), last_tick, windowCycleTicks(window_cycle), model.output_belt), last_tick };
+}
+
+/** What `copiesRunOf` reads of a run of the copies whose last tick so far is `last_tick` */
+function copiesViewOf(layout: SharedLaneLayout, made: CopyMade[], last_tick: number, window_cycle_ticks: number, output_belt: OutputBeltRun | undefined): RunOfCopies {
     const first_cycle = Math.ceil(last_tick / 2 / window_cycle_ticks), end_cycle = Math.floor((last_tick + 1) / window_cycle_ticks + 1e-9);
     const from = cycleStart(first_cycle, window_cycle_ticks), to = cycleStart(end_cycle, window_cycle_ticks);
-    const output_belt = model.output_belt;
-    return { shortfalls: [], made: madeOf(), from, to, window_cycles: Math.max(0, end_cycle - first_cycle), holds: layout.copies.later,
+    return { shortfalls: [], made, from, to, window_cycles: Math.max(0, end_cycle - first_cycle), holds: layout.copies.later,
         ...(output_belt !== undefined && { join_full: joinFullOf(output_belt, from, to), join_waits: joinWaitsOf(output_belt, from, to),
             output_swings: outputSwingsOf(output_belt, first_cycle, end_cycle, window_cycle_ticks) }) };
+}
+
+/**
+ * The rate judge's runs of the copies on one layout (`judgedByRate`) as one run from tick 0 of four times the long run's
+ * window cycles. At the end of the long run's window cycles, and of twice as many, it is read as a run of that length
+ * (`copiesSpanOf`) and goes on only where `goOn` says so. Where it runs to its end, it is read as `shortfallsSpanOf` reads its
+ * run, against the run of one copy alone that `aloneOf` gives then. Recorders change nothing in a run, and nothing before
+ * an end reads how long the run is: each reading is that of a run made for its own window cycles. An end is where such a
+ * run has run its last tick, the repeat of its stability check included (`go_on_at`). A run stopped at an end runs that
+ * repeat on as it ends, and its recorders record it, so each reading at an end is made when the run is asked there.
+ */
+export function ladderRunOf(under: Config, lanes: readonly ModelLane[], layout: SharedLaneLayout, windows: Map<string, OpenRange[]>, window_cycle: WindowCycle,
+    window_cycles: number, logger: Logger, ends: OutputEnds | null, for_log: { reading: number; errors: string[] } | null,
+    goOn: (run: RunOfCopies, multiple: 1 | 2) => boolean, aloneOf: () => AloneRun): { spans: CopiesSpan[]; four?: CopiesSpan & { alone: AloneRun } } {
+    const window_cycle_ticks = windowCycleTicks(window_cycle);
+    let installed: SharedLaneRun | undefined;
+    let recorded: TakesRecorders | undefined;
+    let last_tick = 0;
+    const spans: CopiesSpan[] = [];
+    let stopped = false;
+    const model = runOnSharedLanes(under, windows, window_cycle, layout, 4 * window_cycles, logger, (context, it) => {
+        installed = it;
+        recorded = recordTakes(context, under, layout, ends, for_log !== null);
+        const now = () => context.tick_provider.getCurrentTick();
+        context.after_inserters.push({ tick() { last_tick = now(); } });
+    }, undefined, { window_cycles: [window_cycles, 2 * window_cycles], goOn: count => {
+        // what the copies made so far, copied out of the recorders, which go on recording
+        const made = recorded!.madeOf().map(it => ({ ...it, counts: it.counts.map(entry => ({ ...entry })) }));
+        const span = { run: copiesViewOf(layout, made, last_tick, window_cycle_ticks, installed!.output_belt), last_tick };
+        spans.push(span);
+        stopped = !goOn(span.run, count === window_cycles ? 1 : 2);
+        return !stopped;
+    } });
+    if (stopped) return { spans };
+    const alone = aloneOf();
+    return { spans, four: { ...shortfallsViewOf(under, lanes, layout, alone, windows, window_cycle_ticks, 4 * window_cycles, recorded!.read(model, for_log?.errors ?? []), for_log), alone } };
 }
 
 /** Items of the target's item that copy `copy`'s output inserters put down over the judged window cycles of `run` */
@@ -1398,6 +1482,18 @@ export function judgeSharedLanes(config: Config, clock_windows: SerializableCloc
 }
 
 /**
+ * What the runs of the copies and of one copy alone are made on, as `judgeSharedLanes` makes them: the lanes the model
+ * runs, the clock's windows, the long run's window cycles, the output ends and the ids of the output inserters
+ */
+export function ladderInputsOf(config: Config, clock_windows: SerializableClockWindows, window_cycle: WindowCycle) {
+    const windows = new Map(Object.entries(clock_windows).map(([id, ranges]) => [id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
+    const window_cycles = longRunWindowCyclesOf(windowCycleTicks(window_cycle), undefined, typeof window_cycle === "number" ? undefined : window_cycle);
+    const ends = outputEndsOf(config);
+    const output_ids = ends === null ? [] : [...ends.inserter_ids].map(id => EntityId.forInserter(id).id);
+    return { lanes: modelLanesOf(config), windows, window_cycles, ends, output_ids };
+}
+
+/**
  * `judgeSharedLanes`, with the runs of one copy alone kept in `alone_runs` by the reading and the window cycles they run:
  * such a run does not depend on the copies on the lanes, so a caller that judges one clock with several counts of copies
  * makes each once
@@ -1413,10 +1509,7 @@ function judgedOnLanes(config: Config, clock_windows: SerializableClockWindows, 
             : judgedOnOutputBelt(config, clock_windows, window_cycle, logger);
     }
     const build = buildToNameOf(config);
-    const windows = new Map(Object.entries(clock_windows).map(([id, ranges]) => [id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
-    const window_cycles = longRunWindowCyclesOf(window_cycle_ticks, undefined, typeof window_cycle === "number" ? undefined : window_cycle);
-    const ends = outputEndsOf(config);
-    const output_ids = ends === null ? [] : [...ends.inserter_ids].map(id => EntityId.forInserter(id).id);
+    const { windows, window_cycles, ends, output_ids } = ladderInputsOf(config, clock_windows, window_cycle);
     // the target rates, worked out once and only where a taker's shortfall is a loss
     let rates: TargetRates | null | undefined;
     /** A loss and what the run shows beside it */
@@ -1524,26 +1617,35 @@ function judgedOnLanes(config: Config, clock_windows: SerializableClockWindows, 
         for (const [reading, { under, layouts }] of sharedLaneRunsOf(config, copies_on_lanes, feeders).readings.entries()) {
             const taker_ids = [...new Set(layouts[0].rows.flatMap(row => row.takers.map(taker => taker.inserter_id)))];
             for (const layout of layouts) {
-                const once = copiesRunOf(under, layout, windows, window_cycle, window_cycles, logger, ends);
-                const at_once = rateBehind(once, rates!);
-                if (!at_once.some(it => it.behind > RATE_GRAIN)) {
+                // one run of the copies, read at the end of the long run and of twice its window cycles, and on to four times
+                // as many only where a machine or an output inserter is behind there by more than the grain and that grew
+                let at_once: BehindTarget[] = [], at_twice: BehindTarget[] = [];
+                let grew = new Set<string>();
+                const ladder = ladderRunOf(under, lanes, layout, windows, window_cycle, window_cycles, logger, ends, for_log ? { reading, errors: log_errors } : null,
+                    (run, multiple) => {
+                        if (multiple === 1) {
+                            at_once = rateBehind(run, rates!);
+                            return at_once.some(it => it.behind > RATE_GRAIN);
+                        }
+                        at_twice = rateBehind(run, rates!);
+                        grew = new Set(growing(at_once, at_twice).map(behindKey));
+                        return grew.size > 0;
+                    },
+                    () => aloneOf(reading, under, taker_ids, 4 * window_cycles));
+                const [once, twice] = ladder.spans.map(it => it.run);
+                if (twice === undefined) {
                     waitsOf(once);
                     judgedIn(once, []);
                     continue;
                 }
                 most = Math.max(most, 2);
-                const twice = copiesRunOf(under, layout, windows, window_cycle, 2 * window_cycles, logger, ends);
-                const at_twice = rateBehind(twice, rates!);
-                const grew = new Set(growing(at_once, at_twice).map(behindKey));
-                if (grew.size === 0) {
+                if (ladder.four === undefined) {
                     waitsOf(twice);
                     judgedIn(twice, []);
                     continue;
                 }
                 most = 4;
-                const alone = aloneOf(reading, under, taker_ids, 4 * window_cycles);
-                const four = shortfallsOf(under, lanes, layout, alone, windows, window_cycle, 4 * window_cycles, logger, ends,
-                    for_log ? { reading, errors: log_errors } : null);
+                const { run: four, alone } = ladder.four;
                 waitsOf(four);
                 const grew_again = growing(at_twice, rateBehind(four, rates!)).filter(it => grew.has(behindKey(it))).sort((a, b) => b.behind - a.behind);
                 if (grew_again.length === 0) {

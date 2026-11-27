@@ -5,7 +5,10 @@ import { Config } from "../config/schema";
 import { ConfigPaths } from "../config/config-paths";
 import { loadConfigFromFile } from "../config/loader";
 import { SerializableClockWindows } from "./clock";
-import { BehindTarget, CopyMade, growing, judgeSharedLanes, rateBehind, rateOpenCaseOfBuild, RunOfCopies, TargetRates } from "./shared-lane-verdict";
+import { automationRow } from "../../tests/configs/automation-row";
+import { BehindTarget, copiesSpanOf, CopyMade, growing, judgeSharedLanes, ladderInputsOf, ladderRunOf, rateBehind, rateOpenCaseOfBuild, runAlone, RunOfCopies,
+    sharedLaneRunsOf, shortfallsSpanOf, TargetRates } from "./shared-lane-verdict";
+import { withTickLedger } from "./tick-ledger";
 
 const quiet = { log: () => {}, warn: () => {}, error: () => {}, debug: () => {} };
 const FIXTURES = path.join(__dirname, "fixtures");
@@ -137,6 +140,73 @@ describe("what the rate judge reads of a run of the copies", () => {
         expect(growing([behind(1, 5)], [behind(1, 0.5)])).toEqual([]);
         // from ahead to more than a craft behind is a growth
         expect(growing([behind(1, -3)], [behind(1, 2)]).map(it => it.behind)).toEqual([2]);
+    });
+});
+
+// The one run of the copies of the rate judge stops each count of window cycles where a run made for that many has run its
+// last tick: its recorded window cycles, then the window cycles of its stability check's repeat where the warm-up proved
+// one, each step ending on its own tick. A run stopped there runs that repeat on as it ends, so each reading is made there.
+describe("the rate judge's one run of the copies, stopped where a run made for that many window cycles ends", () => {
+    /** The recorded runs of `work`, the ticks they ran, and what it gives */
+    const counted = <T>(work: () => T): { runs: number; ticks: number; given: T } => {
+        let runs = 0, ticks = 0;
+        const given = withTickLedger(count => {
+            const steps = count.rows.filter(it => it.loop === "simulate_step");
+            runs = steps.reduce((sum, it) => sum + it.runs, 0);
+            ticks = steps.reduce((sum, it) => sum + it.ticks, 0);
+        }, work);
+        return { runs, ticks, given };
+    };
+    const goesNoFurther = (): never => { throw new Error("the run went on to its end"); };
+
+    it("on a window cycle of a part of a tick, where twice the window cycles are not twice the ticks", () => {
+        const exact = { numerator: 105, denominator: 4 };
+        const window_cycles = 2;
+        const row = automationRow({ machines: 1, pitch: 9, copies: 2, copy_offset: { x: 9, y: 0 }, items_per_second: 2 });
+        const { lanes, windows, ends } = ladderInputsOf(row, { "inserter:1": [{ start: 1, end: 24 }] }, exact);
+        const { under, layouts } = sharedLaneRunsOf(row).readings[0];
+        const made = [1, 2].map(multiple => counted(() => copiesSpanOf(under, layouts[0], windows, exact, multiple * window_cycles, quiet, ends)));
+        // a window cycle of a part of a tick proves no repeat: each run made is its recorded run alone
+        expect(made.map(it => it.runs)).toEqual([1, 1]);
+        expect(made[1].ticks).not.toBe(2 * made[0].ticks);
+        for (const multiple of [1, 2] as const) {
+            const read = counted(() => ladderRunOf(under, lanes, layouts[0], windows, exact, window_cycles, quiet, ends, null, (_, at) => at < multiple, goesNoFurther));
+            expect(read.given.four).toBeUndefined();
+            expect(read.given.spans).toHaveLength(multiple);
+            expect(read.given.spans[multiple - 1].last_tick).toBe(made[multiple - 1].given.last_tick);
+            expect(read.given.spans[multiple - 1]).toStrictEqual(made[multiple - 1].given);
+            expect(read.ticks).toBe(made[multiple - 1].ticks);
+        }
+    });
+
+    // the flying robot frame build under the planner's Time-Study Windows: the warm-up proves its state repeating over
+    // several window cycles of 288 ticks, so a run made for its window cycles runs more of them in its stability check.
+    // The stability check reads a repeat on whole ticks only, so no window cycle of a part of a tick has one.
+    it("with the repeat of the stability check, on the flying robot frame build", async () => {
+        const frame = await loadConfigFromFile(path.join(FIXTURES, "flying-robot-frame-80-12-copies-recorded.json"));
+        const { windows: clock_windows, window_cycle_ticks } = clocksOf("flying-robot-frame-80-recorded-clocks.json").time_study_windows_planner;
+        const { lanes, windows, ends, output_ids } = ladderInputsOf(frame, clock_windows, window_cycle_ticks);
+        const window_cycles = 2;
+        const { under, layouts } = sharedLaneRunsOf(frame).readings[0];
+        const made = [1, 2].map(multiple => counted(() => copiesSpanOf(under, layouts[0], windows, window_cycle_ticks, multiple * window_cycles, quiet, ends)));
+        // each run made is its recorded run and the repeat of its stability check
+        expect(made.map(it => it.runs)).toEqual([2, 2]);
+        for (const multiple of [1, 2] as const) {
+            const read = counted(() => ladderRunOf(under, lanes, layouts[0], windows, window_cycle_ticks, window_cycles, quiet, ends, null,
+                (_, at) => at < multiple, goesNoFurther));
+            expect(read.given.four).toBeUndefined();
+            expect(read.given.spans).toHaveLength(multiple);
+            expect(read.given.spans[multiple - 1].last_tick).toBe(made[multiple - 1].given.last_tick);
+            expect(read.given.spans[multiple - 1]).toStrictEqual(made[multiple - 1].given);
+        }
+        // told to go on at each end, it reads the same there, and at its end of four times as many what a run made for them gives
+        const taker_ids = [...new Set(layouts[0].rows.flatMap(row => row.takers.map(taker => taker.inserter_id)))];
+        const alone = runAlone(under, taker_ids, windows, window_cycle_ticks, 4 * window_cycles, quiet, output_ids);
+        const read = ladderRunOf(under, lanes, layouts[0], windows, window_cycle_ticks, window_cycles, quiet, ends, null, () => true, () => alone);
+        expect(read.spans).toStrictEqual(made.map(it => it.given));
+        const { alone: four_alone, ...four } = read.four!;
+        expect(four_alone).toBe(alone);
+        expect(four).toStrictEqual(shortfallsSpanOf(under, lanes, layouts[0], alone, windows, window_cycle_ticks, 4 * window_cycles, quiet, ends));
     });
 });
 

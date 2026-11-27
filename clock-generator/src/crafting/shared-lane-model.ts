@@ -20,6 +20,7 @@ import { Logger } from "../common/logger";
 import { OpenRange } from "../data-types";
 import { SimulationContext } from "./sequence/simulation-context";
 import { runClockOnBuild } from "./trial";
+import type { RunOptions } from "./plan/unclocked-run";
 import { alongFlow } from "./shared-lane-lanes";
 import type { CopiesOnSharedLanes, DisturbanceTrialOptions, LossOutcome } from "./disturbance-trial";
 import { installOutputBelt, OutputBeltRun } from "./output-belt-run";
@@ -427,7 +428,7 @@ export function installSharedLanes(context: SimulationContext, config: Config, r
  * built (each with its own machines) and the rows' lanes shared by them (`installSharedLanes`). It judges nothing: it
  * gives what each taker of each copy put down, at the ticks of the run (the clock stands at 0 in its first tick), for a
  * reader to compare. `on_context` lets the reader put recorders of its own into the run's context before its first tick,
- * with the model as installed in it.
+ * with the model as installed in it; `go_on_at` lets it read the run at ends of its own and stop it there (`RunOptions`).
  *
  * With `disturbance_trial`, the trials of its loss follow the run (disturbance-trial.ts), on the copies: a supply stop
  * closes the entry of each lane of the rows that carries the item, and each copy's output is judged on its own.
@@ -441,6 +442,7 @@ export function runOnSharedLanes(
     logger: Logger,
     on_context?: (context: SimulationContext, model: SharedLaneRun) => void,
     disturbance_trial?: DisturbanceTrialOptions,
+    go_on_at?: RunOptions["go_on_at"],
 ): SharedLaneRun {
     let model: SharedLaneRun | undefined;
     const copies: CopiesOnSharedLanes = { lanes: [] };
@@ -450,6 +452,7 @@ export function runOnSharedLanes(
         simulate_window_cycles: window_cycles, record_histories: false, factorio_states: false, build_copies: layout.copies,
         shared_lanes: copies,
         ...(disturbance_trial !== undefined && { disturbance_trial: { ...disturbance_trial, copies } }),
+        ...(go_on_at !== undefined && { go_on_at }),
         on_context: context => {
             model = installSharedLanes(context, clocked, layout.rows);
             copies.lanes = model.rows.map((row, index) => ({ belt_entity_id: EntityId.forBelt(row.belt_id).id,

@@ -644,6 +644,15 @@ export interface RunOptions {
      * `provenRepeatBin`); any other run is never cut short.
      */
     detect_repeat?: boolean;
+    /**
+     * Ask `goOn` at the end of each of these counts of window cycles of the recorded run, all fewer than
+     * `simulate_window_cycles` and in rising order: once each, after the last tick that a run made for that many window
+     * cycles runs, the window cycles of its stability check's repeat (`checkOutput`) included. Up to there the run has
+     * run what that shorter run runs. Where it answers false the recorded run ends there; the stability check then runs
+     * its repeat on, so a reader reads the run in `goOn`, not after it. For a run something is put into (`on_context`),
+     * whose reader reads it at each end: no memo shares such a run.
+     */
+    go_on_at?: { window_cycles: readonly number[]; goOn: (window_cycles: number) => boolean };
     /** Detailed UI recording, requested separately from clock generation. */
     timeline_recording?: TimelineRecordingOptions;
     /**
@@ -828,7 +837,7 @@ function simulateBuild(config: Config, options: RunOptions): BuildRun {
     const warmup = warmUp(config, build, controlled, duration, warmup_window_cycle, shared_lanes, debug, debug_steps, logger, shadow, output_drops?.watch);
     const repeat_window_cycles = warmup.repeat_window_cycles;
     const repeat_bin = options.detect_repeat === true && (options.simulate_window_cycles ?? 1) > 1 ? provenRepeatBin(config, duration.ticks, duration.exact_ticks) : null;
-    const simulated = simulate(build, controlled, all_output_inserters, duration, options, debug, debug_steps, logger, repeat_bin, shadow);
+    const simulated = simulate(build, controlled, all_output_inserters, duration, options, debug, debug_steps, logger, repeat_bin, shadow, repeat_window_cycles);
     shadow?.finish();
     // what the output inserters had dropped when the recorded window cycle ended, before anything counts on from it
     const dropped_at_recorded_end = output_drops?.dropped();
@@ -1431,6 +1440,45 @@ interface SimulatedRun {
     timeline_recording?: TimelineRecording;
 }
 
+/**
+ * The window cycles that the stability check runs on after the recorded run (`checkOutput`): where the warm-up proved
+ * the state repeating over more than one window cycle and that many fit the budget, all of them but the one recorded
+ */
+function repeatCheckOf(duration: Duration, repeat_window_cycles: number | undefined): Duration | undefined {
+    return repeat_window_cycles !== undefined && repeat_window_cycles > 1 && duration.ticks * repeat_window_cycles < SIMULATION_BUDGET_TICKS
+        ? Duration.ofTicks(duration.ticks * (repeat_window_cycles - 1))
+        : undefined;
+}
+
+/**
+ * The stop of a run told to ask at ends of its own (`go_on_at`): after each tick, true once `goOn` answers false at the
+ * first end the run has reached and not asked at. Each end is where a run made for that many window cycles has run its
+ * last tick: its recorded run, as the run's own length is worked out, then the repeat of its stability check
+ * (`repeatCheckOf`). Each is a step of its own that runs while its tick is before its end, so each is rounded up on its own.
+ */
+function goOnStopOf(options: RunOptions, duration: Duration, repeat_window_cycles: number | undefined, first_tick: number, recorded_end: number,
+    now: () => number): () => boolean {
+    const { window_cycles, goOn } = options.go_on_at!;
+    const repeat_check = repeatCheckOf(duration, repeat_window_cycles);
+    const simulate_window_cycles = options.simulate_window_cycles ?? 1;
+    assert(options.on_context !== undefined, "A run told where to stop is one something is put into (on_context)");
+    assert(options.observation_ticks === undefined, "A run told where to stop runs its window cycles, not observation_ticks");
+    assert(window_cycles.every((count, at) => Number.isInteger(count) && count > 0 && count < simulate_window_cycles && (at === 0 || count > window_cycles[at - 1])),
+        `The counts to stop at (${window_cycles.join(", ")}) must be whole, rising and fewer than the run's ${simulate_window_cycles} window cycles`);
+    const ends = window_cycles.map(count => {
+        const recorded = Math.ceil(first_tick + Duration.ofTicks(duration.ticks * count).ticks);
+        return { count, end: repeat_check === undefined ? recorded : Math.ceil(recorded + repeat_check.ticks) };
+    });
+    assert(ends.every(it => it.end < recorded_end),
+        `The ends to stop at (ticks ${ends.map(it => it.end).join(", ")}, of ${window_cycles.join(", ")} window cycles of ${duration.ticks} ticks, the state `
+        + `repeating every ${repeat_window_cycles ?? "(none proved)"}) must come before the run's recorded end at tick ${recorded_end}`);
+    let next = 0;
+    return () => {
+        if (next >= ends.length || now() < ends[next].end) return false;
+        return !goOn(ends[next++].count);
+    };
+}
+
 /** Step 3: runs the build for the window cycles asked for, with its transfers and states recorded */
 function simulate(
     build: RecordedBuild,
@@ -1445,6 +1493,8 @@ function simulate(
     repeat_bin: { ticks: number; window_cycles: number } | null = null,
     /** The shadow of the warm-up, told what the recorded run's first window cycle gave */
     shadow?: ShadowWatch,
+    /** The window cycles over which the warm-up proved the state repeating, which the stability check runs on (`go_on_at`) */
+    repeat_window_cycles?: number,
 ): SimulatedRun {
     const { simulation_context, inventory_transfer_history, state_transition_history } = build;
     const { resettable_registry } = controlled;
@@ -1489,12 +1539,12 @@ function simulate(
         ? new TimelineRecorder(simulation_context, options.timeline_recording)
         : undefined;
     let state_repeat: StateRepeat | undefined;
-    let stop_early: (() => boolean) | undefined;
+    let repeat_stop: (() => boolean) | undefined;
     if (repeat_bin !== null && repeat_bin.ticks < recorded_duration.ticks) {
         const boundary_by_key = new Map<string, number>();
         const first_tick = simulation_context.tick_provider.getCurrentTick();
         boundary_by_key.set(simulationStateKey(simulation_context), 0);
-        stop_early = () => {
+        repeat_stop = () => {
             const ticks = simulation_context.tick_provider.getCurrentTick() - first_tick;
             if (ticks % repeat_bin.ticks !== 0) {
                 return false;
@@ -1512,6 +1562,11 @@ function simulate(
     }
     // the after-tick phase's recorders, in this order
     const first_tick_of_run = simulation_context.tick_provider.getCurrentTick();
+    const go_on_stop = options.go_on_at === undefined ? undefined
+        : goOnStopOf(options, duration, repeat_window_cycles, first_tick_of_run, first_tick_of_run + recorded_duration.ticks,
+            () => simulation_context.tick_provider.getCurrentTick());
+    const repeat = repeat_stop;
+    const stop_early = repeat === undefined ? go_on_stop : go_on_stop === undefined ? repeat : () => repeat() || go_on_stop();
     const judged_recorder = shadow?.judged(() => simulation_context.tick_provider.getCurrentTick() - first_tick_of_run);
     // The held series starts after this tick, so only the physical drop counter can account for its full delivery.
     let output_dropped_at_first_tick: number | undefined;
@@ -1645,9 +1700,10 @@ function checkOutput(
 
     // the simulated window cycle can hit the expected output while the window cycles it alternates with fall short
     let repeat_output_items: number | undefined;
-    if (repeat_window_cycles !== undefined && repeat_window_cycles > 1 && duration.ticks * repeat_window_cycles < SIMULATION_BUDGET_TICKS) {
+    const repeat_check = repeatCheckOf(duration, repeat_window_cycles);
+    if (repeat_check !== undefined) {
         state_transition_history.recording = false;
-        new SimulateStep(simulation_context, Duration.ofTicks(duration.ticks * (repeat_window_cycles - 1))).execute();
+        new SimulateStep(simulation_context, repeat_check).execute();
         repeat_output_items = 0;
         for (const [entity_id, transfers] of inventory_transfer_history.entries()) {
             if (output_inserter_ids.has(entity_id.id)) {
