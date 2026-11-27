@@ -1,6 +1,6 @@
 import factorioData from '../../../clock-generator/resources/data-filtered.json?raw';
 import { describe, expect, it, vi } from 'vitest';
-import { FactorioDataService } from 'clock-generator/browser';
+import { FactorioDataService, applyResearch } from 'clock-generator/browser';
 import { copyName, type StorageLike } from './buildLibrary';
 import { effectiveInserterStackSize } from './inserterMetadata';
 import {
@@ -14,9 +14,17 @@ import {
     type Bonuses,
 } from './researchProfiles';
 
-FactorioDataService.initialize(JSON.parse(factorioData));
+const DATA = JSON.parse(factorioData);
+FactorioDataService.initialize(DATA);
 
 const BACKUP_KEY = `${PROFILES_KEY}.backup`;
+/** The recipes that a recipe productivity research changes: the list the All template holds */
+const RESEARCHED_RECIPES = [
+    'carbonic-asteroid-crushing', 'oxide-asteroid-crushing', 'metallic-asteroid-crushing',
+    'advanced-carbonic-asteroid-crushing', 'advanced-oxide-asteroid-crushing', 'advanced-metallic-asteroid-crushing',
+    'processing-unit', 'scrap-recycling', 'steel-plate', 'casting-steel', 'low-density-structure', 'casting-low-density-structure',
+    'plastic-bar', 'bioplastic', 'rocket-fuel', 'rocket-fuel-from-jelly', 'ammonia-rocket-fuel', 'rocket-part',
+];
 const PROTOTYPES = ['stack-inserter', 'bulk-inserter', 'fast-inserter', 'long-handed-inserter', 'inserter'];
 
 /** A storage in memory, with every write counted */
@@ -379,12 +387,36 @@ describe('the templates', () => {
         expect(TEMPLATES[0].setYours).toEqual({ mining: false, recipes: false });
     });
 
-    it('give a mining productivity of 20 in percent, not 0.2, and no recipe', () => {
+    it('give a mining productivity of 20 in percent, not 0.2, and no recipe for No research', () => {
         const all = TEMPLATES[1];
         expect(all.bonuses.mining_drill_productivity_bonus).toBe(20);
-        expect(all.bonuses.recipes).toEqual({});
+        expect(all.bonuses.inserter_stack_size_bonus).toBe(3);
+        expect(all.bonuses.bulk_inserter_capacity_bonus).toBe(11);
         expect(all.bonuses.belt_stack_size_bonus).toBe(3);
         expect(all.setYours).toEqual({ mining: true, recipes: true });
+        expect(TEMPLATES[0].bonuses.recipes).toEqual({});
+    });
+
+    it('give the All template 300 for each of the 18 recipes that research changes', () => {
+        const { recipes } = TEMPLATES[1].bonuses;
+        expect(Object.keys(recipes).sort()).toEqual([...RESEARCHED_RECIPES].sort());
+        for (const recipe of RESEARCHED_RECIPES) expect(recipes[recipe]).toEqual({ productivity_bonus: 300 });
+    });
+
+    it.each(RESEARCHED_RECIPES)('keep %s in the game data, with a cap of 300 %', recipe => {
+        expect(DATA.recipe[recipe]).toBeDefined();
+        const maximum = DATA.recipe[recipe].maximum_productivity;
+        expect(maximum === undefined || maximum === 3).toBe(true);
+    });
+
+    it.each(RESEARCHED_RECIPES)('give a machine of %s a total of 300, at a base of 0 and of 50', recipe => {
+        const choice = { profile: 'All', template: TEMPLATES[1].id, bonuses: TEMPLATES[1].bonuses };
+        for (const base of [0, 50]) {
+            const build = { machines: [{ id: 1, recipe, productivity: 0, crafting_speed: 1 }], inserters: [], belts: [] };
+            const rows = { machines: [{ id: 1, recipe, productivity: base }], drills: [], silos: [], inserters: [], belts: [] };
+            const result = applyResearch(build as never, rows, choice as never, DATA);
+            expect((result.build.machines as unknown as { productivity: number }[])[0].productivity).toBe(300);
+        }
     });
 
     it('give the inserter bonuses the engine data gives with all research', () => {
