@@ -6,8 +6,8 @@ import type { StorageLike } from '../utils/buildLibrary';
 import { PROFILES_KEY, TEMPLATES, openProfileStore, type Bonuses } from '../utils/researchProfiles';
 import { ResearchProfilesDialog } from './ResearchProfilesDialog';
 
-const NAMES = { item: {}, recipe: { 'plastic-bar': 'Plastic bar', 'low-density-structure': 'Low density structure', 'steel-plate': 'Steel plate' } };
-const RECIPES = ['plastic-bar', 'low-density-structure', 'steel-plate'];
+const NAMES = { item: {}, recipe: { 'plastic-bar': 'Plastic bar', 'low-density-structure': 'Low density structure', 'steel-plate': 'Steel plate', 'iron-gear-wheel': 'Iron gear wheel' } };
+const RECIPES = ['plastic-bar', 'low-density-structure', 'steel-plate', 'iron-gear-wheel'];
 
 function memoryStorage() {
     const items = new Map<string, string>();
@@ -302,6 +302,15 @@ describe('the dialog', () => {
         await user.click(within(screen.getByRole('dialog', { name: /^Revert/ })).getByRole('button', { name: 'Revert' }));
         expect(section().getByText('Set yours')).toBeDefined();
         await user.click(button('Remove Plastic bar'));
+        expect(section().queryByText('Set yours')).toBeNull();
+        await user.click(button('Revert to template'));
+        await user.click(within(screen.getByRole('dialog', { name: /^Revert/ })).getByRole('button', { name: 'Revert' }));
+        expect(section().getByText('Set yours')).toBeDefined();
+        await user.click(button('Add a recipe'));
+        await user.click(screen.getByRole('button', { name: 'Recipe to add' }));
+        const picker = screen.getByRole('dialog', { name: 'Choose a recipe for Recipe to add' });
+        await user.click(within(picker).getByRole('button', { name: 'Iron gear wheel' }));
+        await user.click(within(picker).getByRole('button', { name: 'Apply' }));
         expect(section().queryByText('Set yours')).toBeNull();
         await user.click(button('Revert to template'));
         await user.click(within(screen.getByRole('dialog', { name: /^Revert/ })).getByRole('button', { name: 'Revert' }));
