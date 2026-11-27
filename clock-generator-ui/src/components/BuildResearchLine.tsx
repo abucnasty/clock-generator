@@ -74,19 +74,20 @@ interface BuildResearchLineProps {
 export function BuildResearchLine({ form, onApply, storage = pageStorage }: BuildResearchLineProps) {
     const [store] = useState(() => openProfileStore(storage));
     const block = form.research;
-    const build = useMemo(() => researchBuildOf(form), [form]);
-    const key = useMemo(() => block === undefined ? null : JSON.stringify({ build, block }), [build, block]);
+    // only a build with a block is read: a build typed by hand never goes through the engine's shape here
+    const build = useMemo(() => block === undefined ? null : researchBuildOf(form), [form, block]);
+    const key = useMemo(() => build === null ? null : JSON.stringify({ build, block }), [build, block]);
     const [differences, setDifferences] = useState<{ key: string; of: ResearchDifferences } | null>(null);
     const [asking, setAsking] = useState<{ name: string; next: { build: ResearchBuild; block: NonNullable<ConfigFormData['research']> }; edited: ResearchEdit[] } | null>(null);
 
     useEffect(() => {
-        if (key === null || block === undefined) return;
+        if (key === null || build === null || block === undefined) return;
         let live = true;
         askEngine({ kind: 'research-differences', build: { ...build, research: block } }).then(found => { if (live) setDifferences({ key, of: found }); }, () => {});
         return () => { live = false; };
     }, [key, build, block]);
 
-    if (block === undefined) {
+    if (block === undefined || build === null) {
         return <Box data-research-line="" sx={{ mb: 2 }}>
             <Typography variant="body2" color="text.secondary">{RESEARCH_LINE.notRecorded}</Typography>
         </Box>;
@@ -104,9 +105,15 @@ export function BuildResearchLine({ form, onApply, storage = pageStorage }: Buil
         const entry = store.find(id);
         if (!entry) return;
         store.select(id);
-        const next = await askEngine({ kind: 'apply-research', build, base: block.base, choice: researchChoiceOf(entry) });
-        if (edited.length === 0) onApply(withResearch(form, next.build, next.block, []), RESEARCH_LINE.undo(entry.name));
-        else setAsking({ name: entry.name, next, edited });
+        // the values changed by hand as the build is now, not as the line last showed them: a choice made before the
+        // line's answer came never writes over a value changed by hand without the question
+        const [next, now] = await Promise.all([
+            askEngine({ kind: 'apply-research', build, base: block.base, choice: researchChoiceOf(entry) }),
+            askEngine({ kind: 'research-differences', build: { ...build, research: block } }),
+        ]);
+        const changed = now.recorded ? now.edited : [];
+        if (changed.length === 0) onApply(withResearch(form, next.build, next.block, []), RESEARCH_LINE.undo(entry.name));
+        else setAsking({ name: entry.name, next, edited: changed });
     };
     const answer = (keepMine: boolean) => {
         if (!asking) return;

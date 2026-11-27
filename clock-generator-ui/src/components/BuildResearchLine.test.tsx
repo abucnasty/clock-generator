@@ -17,10 +17,18 @@ import { RESEARCH_LINE } from '../utils/researchLine';
 import { BuildResearchLine } from './BuildResearchLine';
 
 const data = JSON.parse(factorioData) as FactorioData;
+/** Set, the next research-differences answer waits on it: the worker is slow */
+const slow: { next: Promise<void> | null } = { next: null };
 // the worker, which alone holds the data
 vi.mock('../worker/engineClient', () => ({
-    askEngine: async (query: EngineQuery) => query.kind === 'apply-research' ? applyResearch(query.build, query.base, query.choice, data)
-        : query.kind === 'research-differences' ? researchDifferences(query.build, data) : null,
+    askEngine: async (query: EngineQuery) => {
+        if (query.kind === 'apply-research') return applyResearch(query.build, query.base, query.choice, data);
+        if (query.kind !== 'research-differences') return null;
+        const wait = slow.next;
+        slow.next = null;
+        if (wait) await wait;
+        return researchDifferences(query.build, data);
+    },
 }));
 
 const none = { mining_drill_productivity_bonus: 0, inserter_stack_size_bonus: 0, bulk_inserter_capacity_bonus: 0, belt_stack_size_bonus: 0, recipes: {} };
@@ -120,6 +128,20 @@ describe('the research line of an open build', () => {
         expect(next.research!.profile).toBe('All finite research');
         expect(next.drills!.configs[0].productivity).toBe(outcome === 'kept' ? drill.productivity + 5 : drill.productivity + 20);
         expect(next.belts[0].lanes[0].stack_size).toBe(4);
+    });
+
+    it('asks first where a value was changed by hand, also when the profile is chosen before the line shows the change', async () => {
+        const form = pastedIron();
+        const drill = form.drills!.configs[0];
+        form.drills = { configs: [{ ...drill, productivity: drill.productivity + 5 }, ...form.drills!.configs.slice(1)] };
+        slow.next = new Promise(() => {});
+        const { user } = show(<BuildResearchLine form={form} onApply={onApply} storage={memory().storage} />);
+        await settled();
+        expect(line().querySelector('[data-research-edited]')).toBeNull();
+        await user.click(screen.getByRole('combobox', { name: RESEARCH_LINE.label }));
+        await user.click(await screen.findByRole('option', { name: /All finite research/ }));
+        expect(await screen.findByRole('dialog', { name: RESEARCH_LINE.questionTitle })).toBeDefined();
+        expect(onApply).not.toHaveBeenCalled();
     });
 
     it('shows a profile that is not in the store by its name, with no choice, and writes nothing to the store', async () => {
