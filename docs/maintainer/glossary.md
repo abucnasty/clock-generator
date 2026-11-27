@@ -114,7 +114,7 @@ _Avoid_: research level, technology set, preset
 
 **Template**:
 A research profile that the page ships, with fixed numbers, that the user cannot change, rename or remove. There are two:
-**No research** (all numbers 0) and **All research** (the sum of every technology that has a last level: 20 %
+**No research** (all numbers 0) and **All research** (the finite bonuses: 20 %
 mining productivity, inserter capacity 3, bulk inserter capacity 11, belt stack size bonus 3; and 300 %, the most a
 recipe can have, for every recipe that productivity research changes). The user makes a profile from a template and uses
 **Revert** to set its numbers back to those of the template.
