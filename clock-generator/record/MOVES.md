@@ -8,7 +8,7 @@ a line that names the reason and lists the jobs. A pull request that moves no re
 CI checks this file: the "Record check" fails when a selected clock got worse than in the base and its job key is not in the lines the pull
 request adds to this file.
 
-## Old configurations and Sidecar exports are refused (#`<number>`)
+## Old configurations and Sidecar exports are refused (#921)
 7 jobs moved, no clock, verdict or results digest.
 - config-PROCESSING_UNIT_80_CIRCUIT_EXPORT, config-PRODUCTIVITY_MODULE_80_CHEST_CHAIN, config-ELECTROMAGNETIC_SCIENCE_240_RECYCLER_BELT_FED, config-LOGISTIC_SCIENCE_240, config-UTILITY_SCIENCE_320_METERED_TAKERS, config-LITHIUM_PLATE_80_SILO_CHEST, variants-PROCESSING_UNIT_80_CIRCUIT_EXPORT_BACKED_UP: `config_sha256` only: the Sidecar's version stamp leaves the configuration
 
