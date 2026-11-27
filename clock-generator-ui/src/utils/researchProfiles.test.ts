@@ -25,6 +25,7 @@ const RESEARCHED_RECIPES = [
     'processing-unit', 'scrap-recycling', 'steel-plate', 'casting-steel', 'low-density-structure', 'casting-low-density-structure',
     'plastic-bar', 'bioplastic', 'rocket-fuel', 'rocket-fuel-from-jelly', 'ammonia-rocket-fuel', 'rocket-part',
 ];
+type ResearchBuild = Parameters<typeof applyResearch>[0];
 const PROTOTYPES = ['stack-inserter', 'bulk-inserter', 'fast-inserter', 'long-handed-inserter', 'inserter'];
 
 /** A storage in memory, with every write counted */
@@ -414,7 +415,7 @@ describe('the templates', () => {
         for (const base of [0, 50]) {
             const build = { machines: [{ id: 1, recipe, productivity: 0, crafting_speed: 1 }], inserters: [], belts: [] };
             const rows = { machines: [{ id: 1, recipe, productivity: base }], drills: [], silos: [], inserters: [], belts: [] };
-            const result = applyResearch(build as never, rows, choice as never, DATA);
+            const result = applyResearch(build as unknown as ResearchBuild, rows, choice as never, DATA);
             expect((result.build.machines as unknown as { productivity: number }[])[0].productivity).toBe(300);
         }
     });
