@@ -89,12 +89,12 @@ describe('the research line of an open build', () => {
         const { user } = show(<BuildResearchLine form={form} onApply={onApply} storage={memory().storage} />);
         await settled();
         await user.click(screen.getByRole('combobox', { name: RESEARCH_LINE.label }));
-        await user.click(await screen.findByRole('option', { name: /All finite research/ }));
+        await user.click(await screen.findByRole('option', { name: /All research/ }));
         await settled();
         expect(onApply).toHaveBeenCalledOnce();
         const [next, message] = onApply.mock.calls[0];
-        expect(message).toBe('Research profile set to "All finite research".');
-        expect(next.research).toMatchObject({ profile: 'All finite research', template: 'all-finite-research', base: form.research!.base });
+        expect(message).toBe('Research profile set to "All research".');
+        expect(next.research).toMatchObject({ profile: 'All research', template: 'all-finite-research', base: form.research!.base });
         expect(next.drills!.configs.map(drill => drill.productivity)).toEqual(form.drills!.configs.map(drill => drill.productivity + 20));
         expect(next.belts.flatMap(belt => belt.lanes.map(lane => lane.stack_size))).toEqual(form.belts.flatMap(belt => belt.lanes.map(() => 4)));
         // each row keeps what only the form holds
@@ -113,9 +113,9 @@ describe('the research line of an open build', () => {
         const { user } = show(<BuildResearchLine form={form} onApply={onApply} storage={memory().storage} />);
         await settled();
         await user.click(screen.getByRole('combobox', { name: RESEARCH_LINE.label }));
-        await user.click(await screen.findByRole('option', { name: /All finite research/ }));
+        await user.click(await screen.findByRole('option', { name: /All research/ }));
         const dialog = await screen.findByRole('dialog', { name: RESEARCH_LINE.questionTitle });
-        expect(dialog.textContent).toContain('1 value was changed by hand. The profile "All finite research" gives:');
+        expect(dialog.textContent).toContain('1 value was changed by hand. The profile "All research" gives:');
         expect(dialog.textContent).toContain(`drill ${drill.id} productivity ${drill.productivity + 20} % (yours ${drill.productivity + 5} %)`);
         expect(onApply).not.toHaveBeenCalled();
         await user.click(within(dialog).getByRole('button', { name: button }));
@@ -125,7 +125,7 @@ describe('the research line of an open build', () => {
         }
         expect(onApply).toHaveBeenCalledOnce();
         const next = onApply.mock.calls[0][0];
-        expect(next.research!.profile).toBe('All finite research');
+        expect(next.research!.profile).toBe('All research');
         expect(next.drills!.configs[0].productivity).toBe(outcome === 'kept' ? drill.productivity + 5 : drill.productivity + 20);
         expect(next.belts[0].lanes[0].stack_size).toBe(4);
     });
@@ -139,7 +139,7 @@ describe('the research line of an open build', () => {
         await settled();
         expect(line().querySelector('[data-research-edited]')).toBeNull();
         await user.click(screen.getByRole('combobox', { name: RESEARCH_LINE.label }));
-        await user.click(await screen.findByRole('option', { name: /All finite research/ }));
+        await user.click(await screen.findByRole('option', { name: /All research/ }));
         expect(await screen.findByRole('dialog', { name: RESEARCH_LINE.questionTitle })).toBeDefined();
         expect(onApply).not.toHaveBeenCalled();
     });
@@ -151,7 +151,7 @@ describe('the research line of an open build', () => {
         show(<BuildResearchLine form={form} onApply={onApply} storage={storage} />);
         await settled();
         expect(line().textContent).toContain('"His megabase" is not one of your profiles.');
-        expect(screen.getByRole('combobox', { name: RESEARCH_LINE.label }).textContent).not.toMatch(/No research|All finite research|His megabase/);
+        expect(screen.getByRole('combobox', { name: RESEARCH_LINE.label }).textContent).not.toMatch(/No research|All research|His megabase/);
         expect(setItem).not.toHaveBeenCalled();
         expect(storage.getItem(PROFILES_KEY)).toBeNull();
     });

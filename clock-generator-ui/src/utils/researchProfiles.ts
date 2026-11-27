@@ -73,7 +73,7 @@ export const TEMPLATES: readonly Template[] = [
         // recipe that research changes, 300 %, the most a recipe can have. The id stays as first stored: a saved profile and
         // a saved build name it.
         id: 'all-finite-research',
-        name: 'All finite research',
+        name: 'All research',
         bonuses: {
             mining_drill_productivity_bonus: 20,
             inserter_stack_size_bonus: 3,

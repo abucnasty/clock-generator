@@ -59,7 +59,7 @@ const zero = (): Bonuses => ({
 describe('the store', () => {
     it('lists the two templates for empty storage and writes nothing', () => {
         const { store, setItem, items } = open();
-        expect(store.entries().map(entry => [entry.name, entry.isTemplate])).toEqual([['No research', true], ['All finite research', true]]);
+        expect(store.entries().map(entry => [entry.name, entry.isTemplate])).toEqual([['No research', true], ['All research', true]]);
         expect(store.snapshot().profiles).toEqual([]);
         expect(store.saved).toBe(true);
         expect(setItem).not.toHaveBeenCalled();
@@ -147,7 +147,7 @@ describe('the store', () => {
         ['a name in use', 'Taken', 'name-in-use'],
         ['a name in use in other letters', 'tAKEN', 'name-in-use'],
         ['the name of a template', 'No research', 'template-name'],
-        ['the name of a template in other letters', 'all FINITE research', 'template-name'],
+        ['the name of a template in other letters', 'all RESEARCH', 'template-name'],
     ] as const)('refuses New and Rename with %s', (_what, name, reason) => {
         const { store } = open();
         store.create('Taken', 'no-research');
@@ -383,7 +383,7 @@ describe('the lane rule', () => {
 
 describe('the templates', () => {
     it('are the two named, the first with no research', () => {
-        expect(TEMPLATES.map(template => template.name)).toEqual(['No research', 'All finite research']);
+        expect(TEMPLATES.map(template => template.name)).toEqual(['No research', 'All research']);
         expect(TEMPLATES[0].bonuses).toEqual(zero());
         expect(TEMPLATES[0].setYours).toEqual({ mining: false, recipes: false });
     });

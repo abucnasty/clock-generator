@@ -6,7 +6,7 @@ import { ResearchProfileSelect } from './ResearchProfileSelect';
 
 const entries = [
     { id: 'no-research', name: 'No research', isTemplate: true },
-    { id: 'all-finite-research', name: 'All finite research', isTemplate: true },
+    { id: 'all-finite-research', name: 'All research', isTemplate: true },
     { id: 'mine', name: 'My megabase', isTemplate: false },
 ];
 
@@ -18,7 +18,7 @@ it('lists the templates and the profiles, marks the templates, and says which it
     await user.click(box);
     const options = screen.getAllByRole('option');
     expect(options.map(option => option.textContent)).toEqual([
-        expect.stringContaining('No research'), expect.stringContaining('All finite research'), 'My megabase',
+        expect.stringContaining('No research'), expect.stringContaining('All research'), 'My megabase',
     ]);
     expect(options[0].textContent).toContain('Template');
     expect(options[2].textContent).not.toContain('Template');
