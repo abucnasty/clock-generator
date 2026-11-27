@@ -32,14 +32,15 @@ async function main() {
     const fixture = path.join(ROOT, "tests/game/mechanics/belt-pickup/fixtures", backedUp ? "different-items" : "same-item");
     const { loadConfigFromFile } = require("../dist/config/loader");
     const { withConfigFormat } = require("../dist/config/format");
+    const { withEveryLaneEnd } = require("../dist/entities/traits/lane-ends");
     const { recordInFactorio } = require("../dist/harness/factorio-harness");
-    const config = await loadConfigFromFile(path.join(fixture, !backedUp && values.geometry === "straight-belt" ? "straight-belt.json" : "config.json"));
+    let config = await loadConfigFromFile(path.join(fixture, !backedUp && values.geometry === "straight-belt" ? "straight-belt.json" : "config.json"));
     const input = config.inserters.find(inserter => inserter.source.type === "belt");
     input.source.pickup_length = values.geometry === "straight-belt" ? 1 : 0.5;
     input.source.pickup_layout = values.geometry === "straight-belt" ? "side-straight" : values.geometry === "underground-entrance" ? "side-entrance" : "side-exit";
     if (backedUp) {
         input.filters = [values.item];
-        config.overrides = { ...config.overrides, backed_up_belts: true };
+        config = withEveryLaneEnd(config, "dead_end");
     }
     const original = fs.readFileSync(path.join(fixture, `${values.geometry}.scaffold`), "utf8");
     const blueprint = backedUp ? makeInputBeltBackedUp(original) : original;

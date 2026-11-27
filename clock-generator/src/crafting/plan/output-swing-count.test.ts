@@ -19,16 +19,14 @@ describe("output swings each output cycle of a build on moving belts", () => {
     });
 
     it("counts whole swings as on backed-up belts", () => {
-        const backed_up: Config = { ...moving, overrides: { ...moving.overrides, backed_up_belts: true } };
+        const backed_up: Config = withEveryLaneEnd(moving, "dead_end");
         expect(validateConfig(backed_up, { logger: quiet }).output_swings_per_cycle).toBe(5);
         expect(validateConfig(moving, { logger: quiet }).output_swings_per_cycle).toBe(5);
         expect(validateConfig(moving, { logger: quiet }).counts).toBe("made");
     });
 
-    it("counts them so where the lanes state an infinite end, as where the switch says the belts move", () => {
-        const { backed_up_belts: _switch, ...overrides } = moving.overrides ?? {};
-        void _switch;
-        const stating_infinite: Config = { ...withEveryLaneEnd(moving, "infinite"), overrides };
+    it("counts them so where the lanes state an infinite end", () => {
+        const stating_infinite: Config = withEveryLaneEnd(moving, "infinite");
         expect(validateConfig(stating_infinite, { logger: quiet }).output_swings_per_cycle).toBe(5);
     });
 

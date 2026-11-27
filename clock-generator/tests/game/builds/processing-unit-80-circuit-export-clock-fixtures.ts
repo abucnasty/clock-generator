@@ -4,6 +4,7 @@ import {expect} from "vitest";
 import {Config} from "../../../src/config";
 import {ConfigPaths} from "../../../src/config/config-paths";
 import {loadConfigFromFile} from "../../../src/config/loader";
+import {withUnstatedLaneEnds} from "../../../src/entities/traits/lane-ends";
 import {Recording} from "../../../src/verification/recording";
 import {CLOCK_TEST_SPEEDS} from "../helpers/belt-speed-fixtures";
 import {PickupClockScenario} from "./pickup-clock-capture";
@@ -32,7 +33,7 @@ const SCAFFOLD_INSERTERS = 8;
 
 export interface ProcessingUnitCircuitExportClockCase {
     name: string;
-    /** Whether the config has its belts backed up (`overrides.backed_up_belts`) */
+    /** Whether the config has its belts backed up (a dead end on each lane of the config that states no end) */
     backed: boolean;
     /** The id of the alternative the case records */
     alternative: string;
@@ -65,7 +66,7 @@ export function assertProcessingUnitCircuitExportHardware(recording: Recording, 
 
 export async function processingUnitCircuitExportClockScenario(variant: ProcessingUnitCircuitExportClockCase): Promise<PickupClockScenario> {
     const loaded = await loadConfigFromFile(ConfigPaths.PROCESSING_UNIT_80_CIRCUIT_EXPORT);
-    const config = variant.backed ? {...loaded, overrides: {...loaded.overrides, backed_up_belts: true}} : loaded;
+    const config = variant.backed ? withUnstatedLaneEnds(loaded, "dead_end") : loaded;
     return {
         name: variant.name, speed: CLOCK_TEST_SPEEDS[0], backed: variant.backed,
         config: () => config,

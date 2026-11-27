@@ -40,5 +40,21 @@ export function withEveryLaneEnd<C extends Pick<Config, "belts">>(config: C, kin
     };
 }
 
-/** A lane of a belt as the config lists it, read by withEveryLaneEnd */
+/**
+ * `config` with `kind` stated on each lane that states no end and no consumption, for a build that is a config with all its
+ * belts backed up or all moving, such as a sample with its belts backed up: an end the lane states stays, and a lane with a
+ * consumption keeps its infinite end. Every other field, the overrides included, is left as it is.
+ */
+export function withUnstatedLaneEnds<C extends Pick<Config, "belts">>(config: C, kind: "dead_end" | "infinite"): C {
+    return {
+        ...config,
+        belts: config.belts.map(belt => ({
+            ...belt,
+            lanes: (belt.lanes as readonly LaneOfBelt[]).map(lane => lane.consumption_per_second !== undefined || lane.lane_end !== undefined
+                ? lane : { ...lane, lane_end: { kind } }),
+        })),
+    };
+}
+
+/** A lane of a belt as the config lists it, read by withEveryLaneEnd and withUnstatedLaneEnds */
 type LaneOfBelt = Config["belts"][number]["lanes"][number] & { consumption_per_second?: number };

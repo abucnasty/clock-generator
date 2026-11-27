@@ -7,8 +7,11 @@ import {EntityState} from "../../../../src/state";
 import {FixtureBeltSpeed} from "../../helpers/belt-speed-fixtures";
 import {SameItemPickupProbe} from "./same-item-pickup-probe";
 
-/** Initial full stock is observed while gated. Only arm arrival/drop times come from later samples. */
-export function compareContinuousSimulator(config: Config, report: SameItemPickupProbe, speed: FixtureBeltSpeed) {
+/**
+ * Initial full stock is observed while gated. Only arm arrival/drop times come from later samples. `backed`: the input belt is
+ * backed up, so no moving pickups are seeded.
+ */
+export function compareContinuousSimulator(config: Config, report: SameItemPickupProbe, speed: FixtureBeltSpeed, backed: boolean) {
     const seedIndex = report.samples.findIndex(sample => sample.tick === 64);
     if (seedIndex < 0 || report.samples[seedIndex].held !== 0) throw new Error("Pickup comparison needs an empty-hand closed-gate seed at tick 64");
     const initial = report.samples[seedIndex];
@@ -16,7 +19,7 @@ export function compareContinuousSimulator(config: Config, report: SameItemPicku
     const input = context.inserters.find(i => i.entity_id.number === 2)!.inserter_state;
     const source = context.state_registry.getStateByEntityIdOrThrow(input.inserter.source.entity_id);
     if (!EntityState.isBelt(source)) throw new Error("Expected belt source");
-    if (!config.overrides?.backed_up_belts) {
+    if (!backed) {
         source.seedPickups(input.entity_id.id, initial.lanes.map(lane => {
             const stacks = Object.values(lane.stacks);
             expect(stacks.length).toBe(initial.lanes[0].length * 4);

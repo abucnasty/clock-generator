@@ -1099,12 +1099,12 @@ state to the first loss, and the whole window cycles of the last minute after th
 | --- | --- | --- | --- | --- | --- | --- |
 | `AUTOMATION_SCIENCE_240_ONE_OUTPUT_SWING` (`automation-science-240-one-output-swing`) | Coordinated Sources (72, `37805909`) | 9 of 9 | 50 / 50 | 7,701 | 28,403 (gear wheel cut 18,159, output block 22,574, copper plate cut 28,403) | holds |
 | `AGRICULTURAL_SCIENCE_250` (`agricultural-science-250`) | Takt Batches Observed, 2 swings (960, `997b3c3c`) | 5 of 5 | 3 / 3 | 6,524 | 24,959 (bioflux cut 15,841, output block 19,572, nutrients cut 24,959) | holds |
-| `AGRICULTURAL_SCIENCE_250_BACKED_UP` (`agricultural-science-250-backed-up`) | the same clock | 5 of 5 | 3 / 3 | 6,524 | 24,959 | holds |
+| `AGRICULTURAL_SCIENCE_250` (`agricultural-science-250-backed-up`) | the same clock | 5 of 5 | 3 / 3 | 6,524 | 24,959 | holds |
 | `IRON_BACTERIA_380_CULTIVATION` | see "Loop builds and ruling 60's start" above | 1 of 1 | 2 / 2 each | 7,056 | 14,348 / 14,131 / 14,621 | holds |
 | `AUTOMATION_SCIENCE_240` (`automation-science-240`) | Coordinated Sources (72, `0bc638ab`) | 9 of 9 | 50 / 50 | 7,200 | 16,823 | holds: every copy, copy 2 over whole repeats; pinned |
 | `ELECTROMAGNETIC_SCIENCE_330` (`electromagnetic-science-330`) | Takt Batches Observed (2,112, `c3b310df`) | 11 of 11 | 1 / 1 | 5,712 | 37,644 | holds: every copy, copies 1 and 3 over whole repeats; pinned |
 
-- **Agricultural science.** The harness does not read `backed_up_belts`, so the build and its variant with belts under backpressure are the same run: the same clock, the same result to the tick (as their scaffold pins say). The scaffold's four loaders
+- **Agricultural science.** The sample states a dead end on each of its lanes, so its build with belts under backpressure is the sample itself, one record job: the same clock, the same result to the tick (as their scaffold pins say). The scaffold's four loaders
   drain the bioflux and nutrients belts and the packs go into infinity chests, so the case sets `block_sinks` (the output block fills those chests). All five copies make 800 in every window cycle judged.
 - **Automation science 240, copy 2.** In the case with three losses in a row the output block and the copper plate cut last 5 and 4 ticks (the gear wheel cut recovers over the target before it is over the baseline's lowest minute), and after them
   copy 2 settles into a cycle of five window cycles that makes 30 of 32 once and 34 once (a hand of 2 moves from one window cycle to the next); it makes 1,600 of 1,600 over the 50 window cycles of the last minute,

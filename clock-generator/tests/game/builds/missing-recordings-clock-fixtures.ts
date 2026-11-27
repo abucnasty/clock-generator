@@ -1,5 +1,6 @@
 import path from "path";
 import {Config} from "../../../src/config";
+import {withUnstatedLaneEnds} from "../../../src/entities/traits/lane-ends";
 import {ConfigPaths} from "../../../src/config/config-paths";
 import {productionScienceSharedPickup} from "../../../src/crafting/generate-blueprint-test-helpers";
 import {withJellyHandsOf15} from "../../configs/rocket-fuel-hands";
@@ -135,8 +136,7 @@ export const MISSING_RECORDING_CASES: MissingRecordingCase[] = [
         block_sinks: "the scaffold's loaders drain the bioflux and nutrients belts; the packs go into infinity chests",
     },
     {
-        name: "agricultural-science-250-backed-up", job: "variants-AGRICULTURAL_SCIENCE_250_BACKED_UP", config: "AGRICULTURAL_SCIENCE_250", copies: 5,
-        variant: config => ({...config, overrides: {...config.overrides, backed_up_belts: true}}),
+        name: "agricultural-science-250-backed-up", job: "config-AGRICULTURAL_SCIENCE_250", config: "AGRICULTURAL_SCIENCE_250", copies: 5,
         losses: [{kind: "cut", item: "bioflux"}, {kind: "block"}, {kind: "cut", item: "nutrients"}],
         start: "backpressure",
         block_sinks: "the scaffold's loaders drain the bioflux and nutrients belts; the packs go into infinity chests",
@@ -251,7 +251,7 @@ export const MISSING_RECORDING_CASES: MissingRecordingCase[] = [
     },
     {
         name: "advanced-circuit-240-backed-up", scaffold: "advanced-circuit.scaffold", job: "variants-ADVANCED_CIRCUIT_240_BACKED_UP", config: "ADVANCED_CIRCUIT_240", copies: 1,
-        variant: config => ({...config, overrides: {...config.overrides, backed_up_belts: true}}),
+        variant: config => withUnstatedLaneEnds(config, "dead_end"),
         losses: [{kind: "cut", item: "electronic-circuit"}, {kind: "block"}, {kind: "cut", item: "coal"}],
         limit: "the scaffold holds one copy of the job's three",
         start: "backpressure",
@@ -275,7 +275,7 @@ export const MISSING_RECORDING_CASES: MissingRecordingCase[] = [
         name: "rocket-fuel-60-jelly-hands-15-backed-up", job: "variants-ROCKET_FUEL_60_JELLY_HANDS_15_BACKED_UP", config: "ROCKET_FUEL_60", copies: 1,
         variant: config => {
             const hands = withJellyHandsOf15(config);
-            return {...hands, overrides: {...hands.overrides, backed_up_belts: true}};
+            return withUnstatedLaneEnds(hands, "dead_end");
         },
         losses: [{kind: "cut", item: "bioflux"}, {kind: "block"}, {kind: "cut", item: "nutrients"}],
         start: "backpressure",
@@ -287,7 +287,7 @@ export const MISSING_RECORDING_CASES: MissingRecordingCase[] = [
         name: "rocket-fuel-60-jelly-hands-15-backed-up-nutrients", job: "variants-ROCKET_FUEL_60_JELLY_HANDS_15_BACKED_UP", config: "ROCKET_FUEL_60", copies: 1,
         variant: config => {
             const hands = withJellyHandsOf15(config);
-            return {...hands, overrides: {...hands.overrides, backed_up_belts: true}};
+            return withUnstatedLaneEnds(hands, "dead_end");
         },
         losses: [{kind: "cut", item: "nutrients"}],
         start: "backpressure",
@@ -340,7 +340,7 @@ export const MISSING_RECORDING_CASES: MissingRecordingCase[] = [
     {
         name: "advanced-circuit-240-backed-up-from-every-start", scaffold: "advanced-circuit.scaffold", job: "variants-ADVANCED_CIRCUIT_240_BACKED_UP", config: "ADVANCED_CIRCUIT_240", copies: 1,
         from_every_start: true, start: "backpressure",
-        variant: config => ({...config, overrides: {...config.overrides, backed_up_belts: true}}),
+        variant: config => withUnstatedLaneEnds(config, "dead_end"),
         losses: [{kind: "cut", item: "electronic-circuit"}, {kind: "block"}, {kind: "cut", item: "coal"}],
         limit: "the scaffold holds one copy of the job's three",
     },
@@ -407,7 +407,7 @@ export const MISSING_RECORDING_CASES: MissingRecordingCase[] = [
     },
     {
         name: "chemical-science-240-shared-foundry-backed-up", job: "variants-CHEMICAL_SCIENCE_240_SHARED_FOUNDRY_BACKED_UP", config: "CHEMICAL_SCIENCE_240_SHARED_FOUNDRY", copies: 1,
-        variant: config => ({...config, overrides: {...config.overrides, backed_up_belts: true}}),
+        variant: config => withUnstatedLaneEnds(config, "dead_end"),
         losses: [{kind: "cut", item: "sulfur"}, {kind: "block"}, {kind: "cut", item: "advanced-circuit"}],
         limit: "the sample's scaffold holds one block, one of the job's 5.5 copies; abucnasty's whole build (5.5 copies) is not built from ruling 60's start: its staged start "
             + "refuses the build (\"The clock names inserters 2, 4, 6, 8, 10, 12, 14, 16, 18, 20 of the config, which match no inserter of the build in copy 6 of 6\": the partial copy "

@@ -22,6 +22,8 @@ export function overHoodClockCases(family: Family): OverHoodClockCase[] {
 export function overHoodClockConfig(variant: OverHoodClockCase): Config {
     const product = variant.family === "different-items" ? "electronic-circuit" : "iron-gear-wheel";
     const type = `${variant.speed.prefix}transport-belt`;
+    // every lane backed up, or every lane moving
+    const lane_end = {kind: variant.backed ? "dead_end" : "infinite"};
     return ConfigSchema.parse({
         setpoint: {item: product, items_per_second: 6, copies: 1},
         machines: [{id: 1, prototype: product === "iron-gear-wheel" ? "assembling-machine-3" : "electromagnetic-plant", recipe: product, crafting_speed: 70.765625, productivity: 0}],
@@ -31,11 +33,11 @@ export function overHoodClockConfig(variant: OverHoodClockCase): Config {
                 pickup_layout: "over-hood-exit", pickup_length: 0.5}, sink: {type: "machine", id: 1}, stack_size: 16},
         ],
         belts: [
-            {id: 1, type, lanes: [{ingredient: product, stack_size: 4}, {ingredient: "", stack_size: 4}]},
-            {id: 2, type, lanes: [{ingredient: "iron-plate", stack_size: 4},
-                {ingredient: variant.family === "different-items" ? "copper-cable" : "iron-plate", stack_size: 4}]},
+            {id: 1, type, lanes: [{ingredient: product, stack_size: 4, lane_end}, {ingredient: "", stack_size: 4, lane_end}]},
+            {id: 2, type, lanes: [{ingredient: "iron-plate", stack_size: 4, lane_end},
+                {ingredient: variant.family === "different-items" ? "copper-cable" : "iron-plate", stack_size: 4, lane_end}]},
         ],
-        chests: [], overrides: {backed_up_belts: variant.backed},
+        chests: [],
     });
 }
 

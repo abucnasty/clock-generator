@@ -3,6 +3,7 @@ import path from "path";
 import {beforeAll, expect, test} from "vitest";
 import {Config} from "../../config";
 import {loadConfigFromFile} from "../../config/loader";
+import {withEveryLaneEnd} from "../../entities/traits/lane-ends";
 import {BELT_SPEEDS, configAtSpeed} from "../../../tests/game/helpers/belt-speed-fixtures";
 import {GameFixturePaths} from "../../../tests/game/helpers/fixture-paths";
 import {compareContinuousSimulator} from "../../../tests/game/mechanics/belt-pickup/ordinary-pickup-comparison";
@@ -19,10 +20,9 @@ beforeAll(async () => {base = await loadConfigFromFile(path.join(GameFixturePath
 // Initial full stock and native first arrival are supplied. Later item, quantity and stock are predicted;
 // these clips do not establish absolute arm arrival or generated-clock throughput.
 for (const clip of fixture.clips) test(`production over-the-hood pickup matches native clip: ${clip.name}`, () => {
-    const config = structuredClone(base);
+    const config = withEveryLaneEnd(structuredClone(base), clip.backed ? "dead_end" : "infinite");
     const speed = BELT_SPEEDS.find(speed => speed.units / 32 === clip.belt_speed)!;
     configAtSpeed(config, speed);
-    config.overrides = {...config.overrides, backed_up_belts: clip.backed};
     config.setpoint.item = clip.recipe;
     config.machines[0] = {...config.machines[0], recipe: clip.recipe, crafting_speed: clip.crafting_speed, productivity: 0};
     config.belts.find(belt => belt.id === 1)!.lanes[0].ingredient = clip.recipe;
@@ -37,5 +37,5 @@ for (const clip of fixture.clips) test(`production over-the-hood pickup matches 
         lanes: lanes.map((stock, lane) => ({length: 0.5,
             stacks: stock.map(([position, count]) => ({at: position / 256, count, item: clip.lane_items[lane]}))})),
     }))};
-    expect(compareContinuousSimulator(config, report, speed)).toEqual([]);
+    expect(compareContinuousSimulator(config, report, speed, clip.backed)).toEqual([]);
 });

@@ -49,11 +49,13 @@
       "lanes": [
         {
           "ingredient": "iron-plate",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {"kind": "infinite"}
         },
         {
           "ingredient": "iron-plate",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {"kind": "infinite"}
         }
       ]
     }
@@ -65,6 +67,5 @@
       "item_filter": [],
       "remove_unfiltered_items": true
     }
-  ],
-  "overrides": {"backed_up_belts": false}
+  ]
 }

@@ -312,7 +312,7 @@ def main(commit, out_path):
             version=(versions_of(text) or [None])[-1] if len(versions_of(text)) == 1 else None,
             file_versions=pin_versions, copies=float(copies_match.group(1)) if copies_match else 1.0, losses=[],
             holds=None, result="asserted by the test in every window cycle (no stored result)", stem=None,
-            config=pin["config"], backed_up=pin["backed_up_belts"], ties={})
+            config=pin["config"], ties={})
 
     # ------------------------------------------------------------------ per job
     rows = []

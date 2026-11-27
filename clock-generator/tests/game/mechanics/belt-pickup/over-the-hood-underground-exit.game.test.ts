@@ -4,6 +4,7 @@ import {expect, test} from "vitest";
 import {compareContinuousSimulator} from "./ordinary-pickup-comparison";
 import {Config} from "../../../../src/config";
 import {loadConfigFromFile} from "../../../../src/config/loader";
+import {withEveryLaneEnd} from "../../../../src/entities/traits/lane-ends";
 import {recordInFactorio} from "../../../../src/harness/factorio-harness";
 import {BELT_SPEEDS, configAtSpeed, speedCapture} from "../../helpers/belt-speed-fixtures";
 import {GameFixturePaths} from "../../helpers/fixture-paths";
@@ -44,9 +45,8 @@ for (const compact of [false, true]) for (const speed of BELT_SPEEDS) for (const
             try {
                 const source = fs.readFileSync(path.join(fixture, "scaffold.scaffold"), "utf8");
                 const blueprint = overTheHoodExitAtSpeed(source, speed, {compactDestination: compact, mirrored, backedUp: backed, content, gated: true});
-                const config = await loadConfigFromFile(path.join(GameFixturePaths.FRONT_UNDERGROUND_EXIT, "config.json"));
+                const config = withEveryLaneEnd(await loadConfigFromFile(path.join(GameFixturePaths.FRONT_UNDERGROUND_EXIT, "config.json")), backed ? "dead_end" : "infinite");
                 configAtSpeed(config, speed);
-                config.overrides = {...config.overrides, backed_up_belts: backed};
                 const lanes = config.belts.find(belt => belt.id === 2)!.lanes;
                 if (content === "swapped") lanes.reverse();
                 if (content === "same-item") lanes.forEach(lane => {lane.ingredient = "accumulator";});
@@ -153,7 +153,7 @@ for (const compact of [false, true]) for (const speed of BELT_SPEEDS) for (const
                         pickup_capture: {status: "supported", model: "belt", model_version: 2, entity_type: "underground-belt"}});
                     expect(recording.config.pickup_warnings).toBeUndefined();
                 }
-                expect(compareContinuousSimulator(config, {endpoint: "output", stack_size: 16, samples}, speed)).toEqual([]);
+                expect(compareContinuousSimulator(config, {endpoint: "output", stack_size: 16, samples}, speed, backed)).toEqual([]);
                 const summary = {crafting_speed: report.crafting_speed,
                     internal_stock_seen: report.samples.some(sample => sample.lines.slice(2).some(line => stock(line).length > 0)), first_grab: grabs[0].tick, item, preferred, selected,
                     offsets: grabs.map(sample => sample.tick - grabs[0].tick),

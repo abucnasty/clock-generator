@@ -4,6 +4,7 @@ import {beforeAll, expect, test} from "vitest";
 import {BackpressurePickupLane} from "./backpressure-pickup-lane";
 import {Config} from "../config";
 import {loadConfigFromFile} from "../config/loader";
+import {withEveryLaneEnd} from "../entities/traits/lane-ends";
 import {SimulationContext} from "../crafting/sequence/simulation-context";
 import {bindHandPorts} from "../simulation/components/hand-ports";
 import {EntityState} from "./entity-state";
@@ -27,8 +28,7 @@ const cases = fixture.clips.flatMap(clip => clip.lane_items[0] === clip.lane_ite
     ? [{clip, filters: [clip.item] as string[] | undefined}]
     : [{clip, filters: [clip.item] as string[] | undefined}, {clip, filters: undefined}]);
 for (const {clip, filters} of cases) test(`the pickup at a belt end matches native clip: ${clip.name} (${clip.layout}${filters ? "" : ", no filter"})`, () => {
-    const copy = structuredClone(config);
-    copy.overrides = {...copy.overrides, backed_up_belts: true};
+    const copy = withEveryLaneEnd(structuredClone(config), "dead_end");
     const input = copy.inserters.find(i => i.source.type === "belt")!;
     if (input.source.type !== "belt") throw Error("Expected a belt source");
     input.source.pickup_length = 1;

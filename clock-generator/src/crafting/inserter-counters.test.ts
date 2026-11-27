@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import path from "path";
 import { loadConfigFromFile } from "../config/loader";
+import { withEveryLaneEnd } from "../entities/traits/lane-ends";
 import { GameFixturePaths } from "../../tests/game/helpers/fixture-paths";
 import { CountedInserter, countedInserters, countersOfStock, withNetwork } from "./inserter-counters";
 import { StockRecording } from "./machine-stock";
@@ -153,7 +154,7 @@ describe("inserter counters", () => {
 describe("countedInserters", () => {
     it("asks the lanes of a belt pickup whether they have backpressure, and leaves other pickups out", async () => {
         const config = await loadConfigFromFile(path.join(GameFixturePaths.FRONT_UNDERGROUND_EXIT, "config.json"));
-        const pickups = (backed_up_belts: boolean) => countedInserters({ ...config, overrides: { ...config.overrides, backed_up_belts } })
+        const pickups = (backed: boolean) => countedInserters(withEveryLaneEnd(config, backed ? "dead_end" : "infinite"))
             .map(inserter => [inserter.pickup_kind, inserter.pickup_has_backpressure] as const);
         const moving = pickups(false);
         const backed_up = pickups(true);

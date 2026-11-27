@@ -6,6 +6,7 @@ import { assessSameItemPickups } from "./same-item-pickup-probe";
 import { expect, test } from "vitest";
 import { Config } from "../../../../src/config";
 import { loadConfigFromFile } from "../../../../src/config/loader";
+import { withEveryLaneEnd } from "../../../../src/entities/traits/lane-ends";
 import { bindHandPorts } from "../../../../src/simulation/components/hand-ports";
 import { SimulationContext } from "../../../../src/crafting/sequence/simulation-context";
 import { recordInFactorio } from "../../../../src/harness/factorio-harness";
@@ -52,7 +53,7 @@ for (const compactDestination of [false, true]) for (const speed of BELT_SPEEDS)
         const capture = speedCapture(`front-entrance-${compactDestination ? "compact" : "plant"}-${speed.name}-${backedUp}-${mirrored}-${swapped}-release-${releaseDelay}`);
         const scratch = capture.directory;
         try {
-            const config = await loadConfigFromFile(path.join(fixture, "config.json"));
+            const config = withEveryLaneEnd(await loadConfigFromFile(path.join(fixture, "config.json")), backedUp ? "dead_end" : "infinite");
             configAtSpeed(config, speed);
             if (swapped) config.belts.find(belt => belt.id === 2)!.lanes.reverse();
             if (compactDestination) {
@@ -61,7 +62,6 @@ for (const compactDestination of [false, true]) for (const speed of BELT_SPEEDS)
                 config.machines[0] = {...config.machines[0], recipe: "electronic-circuit", productivity: 0, crafting_speed: 1.25};
                 for (const lane of config.belts.find(belt => belt.id === 2)!.lanes) lane.ingredient = lane.ingredient === "accumulator" ? "iron-plate" : "copper-cable";
             }
-            config.overrides = { ...config.overrides, backed_up_belts: backedUp };
             const source = config.inserters[1].source;
             if (source.type !== "belt") throw new Error("expected belt input");
             source.near_lane = preferred;

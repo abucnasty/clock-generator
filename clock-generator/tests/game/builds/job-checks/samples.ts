@@ -21,6 +21,7 @@ import { runOnSharedLanes } from '../../../../src/crafting/shared-lane-model';
 import { OpenRange } from '../../../../src/data-types';
 import { judgedStartOf, type Config } from '../../../../src/config/schema';
 import { lithiumSiloCases } from '../lithium-plate-80-silo-chest-clock-fixtures';
+import { agriculturalBackedUp } from './variants';
 
 const quiet = { log() { }, info() { }, warn() { }, error() { }, debug() { } };
 const selectedOf = (generated: ClockAlternativesResult): ClockAlternative => generated.alternatives[generated.selected_index];
@@ -907,7 +908,7 @@ const automation240: JobCheck[] = [
 
 export const SAMPLE_CHECKS: Record<string, JobCheck[]> = {
     'config-PRODUCTIVITY_MODULE_80_CHEST_CHAIN': productivityChain,
-    'config-AGRICULTURAL_SCIENCE_250': agriculturalScience,
+    'config-AGRICULTURAL_SCIENCE_250': [...agriculturalScience, ...agriculturalBackedUp],
     'config-PROCESSING_UNIT_80_CIRCUIT_EXPORT': circuitExport,
     'config-STEEL_PLATE_26_WAGON_CHEST': steelWagon,
     'config-UTILITY_SCIENCE_480_LDS_FOUNDRY_CHAIN': utility480,

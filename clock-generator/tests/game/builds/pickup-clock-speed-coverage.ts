@@ -4,6 +4,7 @@ import zlib from "zlib";
 import {expect} from "vitest";
 import {Config} from "../../../src/config";
 import {loadConfigFromFile} from "../../../src/config/loader";
+import {withEveryLaneEnd} from "../../../src/entities/traits/lane-ends";
 import {FactorioBlueprintFile} from "../../../src/blueprints/blueprint";
 import {encodeBlueprintFile} from "../../../src/blueprints/serde";
 import {GameFixturePaths} from "../helpers/fixture-paths";
@@ -61,11 +62,11 @@ function gearAtSpeed(text: string, speed: FixtureBeltSpeed, backed: boolean) {
 }
 
 export async function pickupClockConfig(variant: ClockCase): Promise<Config> {
-    const config = await loadConfigFromFile(variant.family === "electromagnetic"
+    const config = withEveryLaneEnd(await loadConfigFromFile(variant.family === "electromagnetic"
         ? path.join(GameFixturePaths.DIFFERENT_ITEMS, "config.json")
-        : variant.geometry === "straight-belt" ? GameFixturePaths.SAME_ITEM_STRAIGHT_CONFIG : GameFixturePaths.SAME_ITEM_CONFIG);
+        : variant.geometry === "straight-belt" ? GameFixturePaths.SAME_ITEM_STRAIGHT_CONFIG : GameFixturePaths.SAME_ITEM_CONFIG),
+        variant.backed ? "dead_end" : "infinite");
     configAtSpeed(config, variant.speed);
-    config.overrides = {...config.overrides, backed_up_belts: variant.backed};
     if (variant.family === "electromagnetic") config.setpoint.items_per_second = 30 * variant.speed.units / 4;
     for (const inserter of config.inserters) if (inserter.source.type === "belt") {
         inserter.source.pickup_length = variant.geometry === "straight-belt" ? 1 : 0.5;

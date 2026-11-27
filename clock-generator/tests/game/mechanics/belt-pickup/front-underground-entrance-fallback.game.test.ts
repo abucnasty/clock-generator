@@ -5,6 +5,7 @@ import { compactFrontEntranceAtSpeed, compactFrontUndergroundRouting, connectFro
 import { expect, test } from "vitest";
 import { Config } from "../../../../src/config";
 import { loadConfigFromFile } from "../../../../src/config/loader";
+import { withEveryLaneEnd } from "../../../../src/entities/traits/lane-ends";
 import { bindHandPorts } from "../../../../src/simulation/components/hand-ports";
 import { SimulationContext } from "../../../../src/crafting/sequence/simulation-context";
 import { recordInFactorio } from "../../../../src/harness/factorio-harness";
@@ -58,7 +59,7 @@ for (const compactDestination of [false, true]) for (const speed of BELT_SPEEDS)
     const capture = speedCapture(`front-entrance-same-${compactDestination ? "compact" : "plant"}-${speed.name}-${backedUp}-${mirrored}-release-${releaseDelay}`);
     const scratch = capture.directory;
     try {
-        const config = await loadConfigFromFile(GameFixturePaths.FRONT_UNDERGROUND_ENTRANCE_SAME_ITEM_CONFIG);
+        const config = withEveryLaneEnd(await loadConfigFromFile(GameFixturePaths.FRONT_UNDERGROUND_ENTRANCE_SAME_ITEM_CONFIG), backedUp ? "dead_end" : "infinite");
         configAtSpeed(config, speed);
         if (compactDestination) {
             config.setpoint.item = "electronic-circuit";
@@ -66,7 +67,6 @@ for (const compactDestination of [false, true]) for (const speed of BELT_SPEEDS)
             config.machines[0] = {...config.machines[0], recipe: "electronic-circuit", productivity: 0, crafting_speed: 1.25};
             for (const lane of config.belts.find(belt => belt.id === 2)!.lanes) lane.ingredient = "iron-plate";
         }
-        config.overrides = { ...config.overrides, backed_up_belts: backedUp };
         const source = config.inserters[1].source;
         if (source.type !== "belt") throw new Error("expected belt input");
         source.near_lane = preferred;

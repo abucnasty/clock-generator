@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import {expect, test} from "vitest";
 import {loadConfigFromFile} from "../../../../src/config/loader";
+import {withEveryLaneEnd} from "../../../../src/entities/traits/lane-ends";
 import {recordInFactorio} from "../../../../src/harness/factorio-harness";
 import {SimulationContext} from "../../../../src/crafting/sequence/simulation-context";
 import {EntityState} from "../../../../src/state";
@@ -21,9 +22,8 @@ for (const speed of BELT_SPEEDS) for (const [swapped, nearCount] of [[false, 13]
         const capture = replay ? {directory: path.resolve(replay, name), cleanup() {}} : speedCapture(name);
         try {
             const fixture = GameFixturePaths.DIFFERENT_ITEMS;
-            const config = await loadConfigFromFile(path.join(fixture, "config.json"));
+            const config = withEveryLaneEnd(await loadConfigFromFile(path.join(fixture, "config.json")), "dead_end");
             configAtSpeed(config, speed);
-            config.overrides = {...config.overrides, backed_up_belts: true};
             const configured = config.inserters.find(i => i.source.type === "belt")!;
             if (configured.source.type !== "belt") throw new Error("Expected belt input");
             configured.source.pickup_length = 1;
