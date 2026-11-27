@@ -16,7 +16,7 @@ const buildFrom = (source: Source) => build({ inserters: [inserter(1, { source, 
 const reloaded = (config: Config) => configToFormData(JSON.parse(JSON.stringify(config)));
 /** Sidecar's capture of a straight belt pickup it supports */
 const supported = (model_version: Supported['model_version'], fields: Partial<Supported> = {}): Supported =>
-    ({ status: 'supported', model: 'belt', model_version, entity_type: 'transport-belt', sidecar_version: '0.11.0', ...fields });
+    ({ status: 'supported', model: 'belt', model_version, entity_type: 'transport-belt', ...fields });
 
 describe('pickup type edits and saved assumptions', () => {
     const source: Source = { type: 'belt', id: 1, near_lane: 2 };
@@ -41,7 +41,7 @@ describe('pickup type edits and saved assumptions', () => {
         ['splitter', 'splitter', 'turbo-splitter'],
         ['side-loaded', 'transport-belt', 'turbo-transport-belt'],
     ] as const)('keeps a %s pickup capture as out of scope across import, save and reload, independently of default geometry', (reason, entity_type, entity_name) => {
-        const capture = { status: 'unsupported' as const, entity_type, entity_name, sidecar_version: '0.11.0', reason };
+        const capture = { status: 'unsupported' as const, entity_type, entity_name, reason };
         const config = formDataToConfig(buildFrom({ ...source, pickup_capture: capture }));
         const restored = reloaded(config).inserters[0].source;
         expect(restored.pickup_capture).toEqual(capture);

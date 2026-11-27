@@ -1,4 +1,3 @@
-import { renameSetpointRecipeToItem, renameTargetOutputToSetpoint } from 'clock-generator/light';
 import { exampleTitle } from './exampleBuilds';
 
 /**
@@ -111,8 +110,7 @@ export function readIndex(text: string | null): IndexRead {
 function recipeOfSavedText(text: string | null): string {
     if (text === null) return '';
     try {
-        // a build saved before the setpoint named its item holds `recipe`, one saved before it was named so `target_output`
-        const parsed = renameSetpointRecipeToItem(renameTargetOutputToSetpoint(JSON.parse(text))) as { setpoint?: { item?: unknown } } | null;
+        const parsed = JSON.parse(text) as { setpoint?: { item?: unknown } } | null;
         const item = parsed?.setpoint?.item;
         return typeof item === 'string' ? item : '';
     } catch {
@@ -356,6 +354,29 @@ export const LOADED_OTHER_TAB_MESSAGE = 'Loaded the version from the other tab.'
 export const DELETED_ELSEWHERE_MESSAGE = 'This build was deleted in another tab. It is still open here, and your next edit saves it again.';
 export const STORAGE_FULL_MESSAGE = "This browser's storage is full, so your latest changes are not saved. Delete builds you no longer need, or save this one to a file.";
 export const NEW_BUILD_ANNOUNCEMENT = 'New build made.';
+
+/** A saved build the site does not read for its format, as Your configurations lists it */
+export const REFUSED_BUILD_LABELS = {
+    old: 'no longer supported (made before 0.33.0)',
+    newer: 'made by a newer version of the site',
+} as const;
+export const REFUSED_BUILD_DOWNLOAD = 'Download';
+export const REFUSED_BUILD_REMOVE = 'Remove';
+
+/** The one notice when the build the page would open first is not read: a new build is open in its place */
+export function refusedStartNotice(problem: keyof typeof REFUSED_BUILD_LABELS): string {
+    const why = problem === 'old'
+        ? 'was made by a version of the clock generator before 0.33.0 and is no longer supported, so a new build is open'
+        : 'was made by a newer version of the site, so this page cannot open it. A new build is open';
+    return `Your last build ${why}. It stays in ${BUILDS_HEADING}, where you can download or remove it.`;
+}
+
+/** The notice when a listed build that is not read is asked to open */
+export function refusedOpenNotice(problem: keyof typeof REFUSED_BUILD_LABELS): string {
+    return problem === 'old'
+        ? `That build was made before 0.33.0 and is no longer supported. ${BUILDS_HEADING} lets you download or remove it.`
+        : `That build was made by a newer version of the site. Reload the page to open it, or download it from ${BUILDS_HEADING}.`;
+}
 
 export function otherTabProblemMessage(problem: string): string {
     return `The other tab's version could not be loaded, so nothing changed: ${problem}`;

@@ -1,7 +1,7 @@
 import { rateDecimal } from "../config/setpoint-rate";
 import { describe, it, expect, beforeAll } from "vitest";
 import { generateClockForConfig, generateClockAlternatives, type BlueprintGenerationResult, type ClockAlternative } from "./generate-blueprint";
-import { loadConfigFromFile, parseConfig } from "../config/loader";
+import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
 import { EntityId } from "../entities";
 import { OpenRange } from "../data-types";
@@ -37,18 +37,6 @@ describe("generateClockForConfig", () => {
 
             it("does not have cycle_multiplier defined", () => {
                 expect(result.output_cycle_plan.cycle_multiplier).toBeUndefined();
-            });
-
-            // configs saved when the switch existed carry use_fractional_swings: true, which is read and dropped
-            it("is the clock a config that carries the former use_fractional_swings override gets", async () => {
-                const saved = await parseConfig(JSON.stringify({ ...config, overrides: { ...config.overrides, use_fractional_swings: true } }));
-                // the config has no overrides, the saved one has none left of the one it carried
-                expect(saved.overrides).toEqual({});
-                expect({ ...saved, overrides: undefined }).toEqual(await parseConfig(JSON.stringify(config)));
-                const again = generateClockForConfig(saved);
-                expect(again.output_cycle_plan.fractional_swings_enabled).toBe(false);
-                expect(again.clock_windows).toEqual(result.clock_windows);
-                expect(again.simulation_duration.ticks).toBe(result.simulation_duration.ticks);
             });
         });
 

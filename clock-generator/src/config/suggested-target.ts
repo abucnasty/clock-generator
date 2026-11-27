@@ -5,8 +5,7 @@ import { RecipeMetadata } from "../entities/machine/recipe/recipe-metadata";
 import { computeMachineFacts } from "../entities/traits/machine-facts-of";
 import { targetRateMaxOf } from "../crafting/feasibility/max-rate";
 import { dropLanesOf, lanesCapacityOf } from "./lane-capacity-validator";
-import { outputItemOf as mainProductOf } from "./migrate-recipe-setpoint";
-import { renameRecipeToItem } from "./migrate-setpoint";
+import { outputItemOf as mainProductOf, renameRecipeToItem } from "./setpoint-item";
 import { BeltConfig, ChestConfig, Config, ConfigSchema, InserterConfig, MachineConfiguration, MiningDrillConfig, TargetProductionRateConfig, TargetProductionRateConfigSchema } from "./schema";
 
 /**

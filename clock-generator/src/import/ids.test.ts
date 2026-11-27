@@ -12,6 +12,7 @@ import { BuildWorld, PrototypeRow, WorldData, WorldEntity, worldOf } from "./wor
 const ENGINE = path.resolve(__dirname, "../..");
 const FIXTURES = path.join(__dirname, "fixtures", "ids");
 const SAMPLES = path.join(ENGINE, "resources", "config-samples");
+const READS = path.join(__dirname, "fixtures", "assemble", "reads");
 const read = (file: string) => fs.readFileSync(file, "utf8");
 
 // ---------------------------------------------------------------- the crafting machines of the game data
@@ -938,7 +939,7 @@ type BuildRun = { name: string; entities: BlueprintEntityRead[]; file: ReadFile;
 
 function runBuild(build: (typeof BUILDS)[number]): BuildRun {
     const entities = decoded(path.join(SAMPLES, build.stem + ".scaffold"));
-    const file = JSON.parse(read(path.join(SAMPLES, build.stem + build.ext))) as ReadFile;
+    const file = JSON.parse(read(build.ext === ".sidecar-export.json" ? path.join(READS, `${build.name}.json`) : path.join(SAMPLES, build.stem + build.ext))) as ReadFile;
     const config = JSON.parse(read(path.join(SAMPLES, build.stem + ".json"))) as ReadFile;
     const setpoint = config.setpoint?.item;
     const candidates = candidateFrames(entities, frameReadsOf(file));

@@ -1,8 +1,5 @@
-import path from "path";
 import {describe, expect, it} from "vitest";
-import {loadConfigFromFile} from "./loader";
 import {ConfigSchema} from "./schema";
-import {sidecarPickupInserters} from "./pickup-capture";
 import {SimulationContext} from "../crafting/sequence/simulation-context";
 
 const base = () => ({
@@ -15,7 +12,7 @@ const base = () => ({
     belts: [{id: 1, type: "turbo-transport-belt", lanes: [{ingredient: "iron-plate", stack_size: 4, lane_end: {kind: "infinite"}}]}],
     chests: [{id: 1, type: "infinity-chest", item_filter: [], remove_unfiltered_items: true}],
 });
-const supported = {status: "supported", model: "belt", model_version: 1, entity_type: "transport-belt", sidecar_version: "0.11.0"};
+const supported = {status: "supported", model: "belt", model_version: 1, entity_type: "transport-belt"};
 const withSource = (fields: object) => {
     const config = base();
     return {...config, inserters: [{...config.inserters[0], source: {...config.inserters[0].source, ...fields}}, config.inserters[1]]};
@@ -32,41 +29,6 @@ describe("persistent pickup capture boundary", () => {
         const config = ConfigSchema.parse(withSource({pickup_length: 1, near_lane: 1, pickup_capture: supported}));
         expect(() => SimulationContext.fromConfig(config)).not.toThrow();
         expect(config.inserters[0].source).toMatchObject({pickup_capture: supported});
-    });
-
-    it.each(["0.9.1", "0.11.0", "99.0.0"])("preserves an unsupported splitter from %s across save/reload", version => {
-        let config = ConfigSchema.parse({...base(), sidecar_version: version, pickup_warnings: [{inserter_id: 1, reason: "splitter"}]});
-        for (let reload = 0; reload < 3; reload++) {
-            config = ConfigSchema.parse(JSON.parse(JSON.stringify(config)));
-            expect(config.inserters[0].source).toMatchObject({pickup_capture: {
-                status: "unsupported", entity_type: "splitter", reason: "splitter", sidecar_version: version,
-            }});
-            // Parsing fills manual defaults, but they can never turn this capture into a supported pickup.
-            expect(() => SimulationContext.fromConfig(config)).toThrow(/Inserter 1: Pickup captured as unsupported \(splitter\)/);
-        }
-    });
-
-    it("does not treat geometry or even the current mod version as a positive capture declaration", () => {
-        const raw = withSource({pickup_length: 0.5, near_lane: 2});
-        const config = ConfigSchema.parse({...raw, sidecar_version: "0.11.0"});
-        expect(config.inserters[0].source).toMatchObject({pickup_length: 0.5, pickup_capture: {status: "unclassified", reason: "legacy"}});
-        expect(() => SimulationContext.fromConfig(config)).toThrow(/Update Sidecar and recapture/);
-    });
-
-    it("marks the legacy fixture's captures: none from an older Sidecar, and an underground one without its layout", async () => {
-        const config = await loadConfigFromFile(path.join(__dirname, "fixtures/legacy/pickup-without-capture.json"));
-        expect(config.inserters.map(inserter => inserter.source)).toMatchObject([
-            {pickup_length: 1, pickup_capture: {status: "unclassified", reason: "legacy", sidecar_version: "0.10.0"}},
-            {pickup_length: 0.5, pickup_layout: "side-entrance", pickup_capture: {status: "unclassified", reason: "layout-not-captured"}},
-        ]);
-    });
-
-    it("migrates pasted entries before defaults and gives an explicit warning precedence", () => {
-        const entries = [{source: {type: "belt", id: 1, near_lane: 1, pickup_capture: supported}}];
-        expect(sidecarPickupInserters(entries, "0.11.0", [{inserter_id: 1, reason: "side-loaded"}])).toMatchObject([
-            {source: {pickup_capture: {status: "unsupported", reason: "side-loaded"}}},
-        ]);
-        expect(sidecarPickupInserters(entries, "0.11.0", [])).toEqual(entries);
     });
 
     it.each([

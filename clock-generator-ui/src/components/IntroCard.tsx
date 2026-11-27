@@ -1,5 +1,5 @@
 import { Close, ContentPaste, ExpandMore } from '@mui/icons-material';
-import { Box, Button, IconButton, Link, Typography } from '@mui/material';
+import { Box, Button, IconButton, Typography } from '@mui/material';
 import { useId, useLayoutEffect, useRef, useState } from 'react';
 import { focusSetpointHeading } from '../utils/introCard';
 import {
@@ -7,35 +7,9 @@ import {
     INTRO_HEADING,
     INTRO_SENTENCE,
     INTRO_STEPS,
-    NEW_TAB_CUE,
-    SIDECAR_COPY_STEPS,
-    SIDECAR_MOD_NAME,
-    SIDECAR_MOD_URL,
-    SIDECAR_NEEDS,
 } from '../utils/sidecarGuide';
 import { Panel } from './Panel';
 import { BLUEPRINT_COPY_STEPS, BLUEPRINT_WAY_IN } from '../utils/blueprintPaste';
-
-/** The link to the Sidecar mod's page, which opens in a new tab and says so */
-export function SidecarModLink() {
-    return (
-        // padded to a target of 24px or more (WCAG 2.5.8); still inline, so it wraps with the sentence
-        <Link href={SIDECAR_MOD_URL} target="_blank" rel="noopener noreferrer" underline="always" sx={{ py: '2px' }}>
-            {SIDECAR_MOD_NAME} mod {NEW_TAB_CUE}
-        </Link>
-    );
-}
-
-/** The Sidecar mod's copy steps, as a numbered list */
-export function SidecarCopySteps() {
-    return (
-        <Box component="ol" sx={{ my: 0.5, pl: 3 }}>
-            {SIDECAR_COPY_STEPS.map((step) => (
-                <li key={step}>{step}</li>
-            ))}
-        </Box>
-    );
-}
 
 /** How to copy a blueprint in the game, as a numbered list */
 export function BlueprintCopySteps() {
@@ -56,7 +30,7 @@ interface IntroCardProps {
 }
 
 /**
- * Above Target Output on a first visit: what the tool does and the ways in, with the full Sidecar guide on demand.
+ * Above Target Output on a first visit: what the tool does and the ways in, with the full guide on demand.
  * Paste from Factorio is the next step; an example and building by hand are the others.
  */
 export function IntroCard({ onPaste, onTryExample, onBuildByHand, onDismiss }: IntroCardProps) {
@@ -118,12 +92,6 @@ export function IntroCard({ onPaste, onTryExample, onBuildByHand, onDismiss }: I
                         {BLUEPRINT_WAY_IN.lead}
                         <BlueprintCopySteps />
                         {BLUEPRINT_WAY_IN.then}
-                    </li>
-                    <li>
-                        {INTRO_STEPS.getBuildIn}
-                        <SidecarCopySteps />
-                        {INTRO_STEPS.getBuildInLast}{' '}
-                        Get the <SidecarModLink />. {SIDECAR_NEEDS}
                     </li>
                     <li>{INTRO_STEPS.generate}</li>
                     <li>{INTRO_STEPS.copy}</li>

@@ -2,11 +2,10 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { Option } from 'clock-generator/light';
+import { configFormatProblem, Option } from 'clock-generator/light';
 import { ConfigImportExport, type BuildEntryHandle } from './ConfigImportExport';
 import { createDefaultConfig } from '../utils/configForm/formData';
-import { inserterDetailLines } from '../utils/pasteText';
-import type { EngineQuery, PastedEntities } from '../worker/types';
+import { REFUSED_CONFIG_ERRORS, type EngineQuery, type PastedEntities } from '../worker/types';
 import factorioData from '../../../clock-generator/resources/data-filtered.json?raw';
 import ironScaffold from '../../../clock-generator/resources/config-samples/smelting/iron-plate/iron-plate-80-car-chest.scaffold?raw';
 import { encodeBlueprintFileBrowser, FactorioDataService, importBlueprint, type FactorioData } from 'clock-generator/browser';
@@ -26,17 +25,9 @@ function Render() {
     const rerender = (next: Partial<Props>) => { props = { ...props, ...next }; view.rerender(<ConfigImportExport {...props} />); };
     return { user: userEvent.setup(), rerender };
 }
-const ACKNOWLEDGMENT = 'I understand these parts will be combined using their entity numbers.';
 const apply = () => screen.getByRole<HTMLButtonElement>('button', { name: 'Import Selected' });
 // a disabled Apply takes no pointer events; a click dispatched on it still must not import
 const tryApply = () => fireEvent.click(apply());
-const category = (name: string) => screen.getByRole('checkbox', { name: new RegExp(`^${name} \\(`) });
-/** Copies an export in the game and pastes it from the intro card, which waits for the preview of this paste */
-async function paste(exported: object = { sidecar_version: '0.7.1', machines: incoming.machines, inserters: [], belts: [], chests: [], drills: { configs: [], mining_productivity_level: 0 } }) {
-    await navigator.clipboard.writeText(JSON.stringify(exported));
-    act(() => entry.current!.pasteFromFactorio());
-    await screen.findByRole('checkbox', { name: /^Machines \(/ });
-}
 beforeEach(() => {
     vi.clearAllMocks(); entry = { current: null };
     const currentForm = createDefaultConfig();
@@ -46,149 +37,6 @@ beforeEach(() => {
     validate.mockResolvedValue(incoming);
     props = { ref: entry, config: null, currentForm, target: currentForm.setpoint, onImport: vi.fn(), onApplyPaste: vi.fn(), onReset: vi.fn(), onBuildReplaced: vi.fn(), onUndoable: vi.fn(), onShowIntro: vi.fn(),
         pasteIsNextStep: false, buildName: null, buildTitle: 'Test build' };
-});
-
-it('shows capture diagnostics alongside prospective pickup coverage, only while importing those inserters', async () => {
-    incoming.inserters = [{ source: { type: 'belt', id: 1 }, sink: { type: 'machine', id: 1 } }];
-    incoming.belts = [{ id: 1, type: 'turbo-transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 4 }, { ingredient: 'iron-plate', stack_size: 4 }] }];
-    const { user } = Render();
-    await paste({ machines: incoming.machines, inserters: incoming.inserters, belts: incoming.belts, pickup_warnings: [{ inserter_id: 1, reason: 'bend' }] });
-    expect(screen.getByText(/^Straight belt is the default/)).toBeDefined();
-    expect(screen.getByText(/pickup is on a belt bend/)).toBeDefined();
-    await user.click(category('Inserters'));
-    expect(screen.queryByText(/pickup is on a belt bend/)).toBeNull();
-});
-
-it('says in the paste preview that a side-loaded pickup is out of scope', async () => {
-    incoming.inserters = [{ source: { type: 'belt', id: 1 }, sink: { type: 'machine', id: 1 } }];
-    incoming.belts = [{ id: 1, type: 'turbo-transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 4 }, { ingredient: 'iron-plate', stack_size: 4 }] }];
-    Render();
-    await paste({ machines: incoming.machines, inserters: incoming.inserters, belts: incoming.belts, pickup_warnings: [{ inserter_id: 1, reason: 'side-loaded' }] });
-    expect(screen.getByText(/another belt side-loads onto the pickup tile.*out of scope/)).toBeDefined();
-    expect(screen.queryByText(/has not been calibrated/)).toBeNull();
-});
-
-it('says in the paste preview which drop side-loads onto another belt, in the approved wording, only while importing those inserters', async () => {
-    incoming.inserters = [{ source: { type: 'machine', id: 1 }, sink: { type: 'belt', id: 1, drop_capture: { status: 'side-loaded', tiles: 3, sidecar_version: '0.13.0' } } }];
-    incoming.belts = [{ id: 1, type: 'turbo-transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 4 }, { ingredient: 'iron-plate', stack_size: 4 }] }];
-    const { user } = Render();
-    await paste({ machines: incoming.machines, inserters: incoming.inserters, belts: incoming.belts });
-    expect(screen.getByText('Captured Inserter 1: drops onto a 3 tile belt buffer that side-loads onto another belt. Imported as an ordinary drop: '
-        + 'where the other belt is busy, the game has less room than the clock generator assumes.')).toBeDefined();
-    await user.click(category('Inserters'));
-    expect(screen.queryByText(/3 tile belt buffer/)).toBeNull();
-});
-
-it.each([false, true])('shows the current fraction and applies the numeric suggestion only when checked (%s)', async checked => {
-    props.currentForm.inserters = [];
-    props.currentForm.setpoint = { item: 'iron-gear-wheel', items_per_second: { numerator: 16, denominator: 7 }, copies: 1 };
-    props.target = props.currentForm.setpoint;
-    incoming.suggested_target = Option.some({ source: 'mod', target: { item: 'iron-gear-wheel', items_per_second: 3.75, copies: 1 } });
-    const { user } = Render();
-    await paste();
-    expect(screen.getByText(/16\/7\/s/)).toBeDefined();
-    const field = screen.getByRole<HTMLInputElement>('checkbox', { name: /^Setpoint:/ });
-    expect(field.checked).toBe(false);
-    if (checked) await user.click(field);
-    await user.click(apply());
-    expect(vi.mocked(props.onApplyPaste).mock.calls[0][0].setpoint.items_per_second).toEqual(checked ? 3.75 : { numerator: 16, denominator: 7 });
-});
-
-describe('Paste acknowledgment bound to the actual preview', () => {
-    it('guards Apply until the current mixed preview is deliberately acknowledged, then applies once with one Undo', async () => {
-        const { user } = Render();
-        await paste(); expect(apply().disabled).toBe(true); tryApply();
-        expect(props.onApplyPaste).not.toHaveBeenCalled(); expect(props.onUndoable).not.toHaveBeenCalled();
-        await user.click(screen.getByRole('checkbox', { name: ACKNOWLEDGMENT })); expect(apply().disabled).toBe(false); await user.click(apply());
-        expect(props.onApplyPaste).toHaveBeenCalledOnce();
-        const next = vi.mocked(props.onApplyPaste).mock.calls[0][0];
-        expect(next.machines).toEqual(incoming.machines.map(row => ({ ...row, _prototype_source: 'sidecar', _uuid: expect.any(String) })));
-        expect(next.inserters).toBe(props.currentForm.inserters);
-        expect(props.onUndoable).toHaveBeenCalledExactlyOnceWith('Imported 1 machine from Factorio.');
-        expect(props.onBuildReplaced).toHaveBeenCalledOnce();
-        expect(vi.mocked(props.onUndoable).mock.invocationCallOrder[0]).toBeLessThan(vi.mocked(props.onApplyPaste).mock.invocationCallOrder[0]);
-        expect(vi.mocked(props.onApplyPaste).mock.invocationCallOrder[0]).toBeLessThan(vi.mocked(props.onBuildReplaced).mock.invocationCallOrder[0]);
-    });
-    it('commits several selected categories together with one Undo and one result invalidation', async () => {
-        incoming.inserters = [{ source: { type: 'machine', id: 1 }, sink: { type: 'chest', id: 7 } }];
-        incoming.chests = [{ id: 7, type: 'infinity-chest', item_filter: [], remove_unfiltered_items: true }];
-        const { user } = Render();
-        await paste();
-        expect(apply().disabled).toBe(false);
-        await user.click(apply());
-        expect(props.onApplyPaste).toHaveBeenCalledOnce();
-        const next = vi.mocked(props.onApplyPaste).mock.calls[0][0];
-        expect(next.machines[0]).toMatchObject(incoming.machines[0]);
-        expect(next.inserters[0]).toMatchObject({ ...incoming.inserters[0], id: 1 });
-        expect(next.chests[0]).toMatchObject(incoming.chests[0]);
-        expect(next.belts).toBe(props.currentForm.belts);
-        expect(props.onUndoable).toHaveBeenCalledExactlyOnceWith('Imported 1 machine, 1 inserter, 1 chest from Factorio.');
-        expect(props.onBuildReplaced).toHaveBeenCalledOnce();
-    });
-    it('resets selection consent even when the player returns to the same selections', async () => {
-        const { user } = Render();
-        await paste(); await user.click(screen.getByRole('checkbox', { name: ACKNOWLEDGMENT })); expect(apply().disabled).toBe(false);
-        await user.click(category('Machines')); expect(apply().disabled).toBe(true);
-        expect(screen.queryByRole('checkbox', { name: ACKNOWLEDGMENT })).toBeNull();
-        await user.click(category('Machines')); expect(apply().disabled).toBe(true); tryApply();
-        expect(props.onApplyPaste).not.toHaveBeenCalled();
-    });
-    it('invalidates consent immediately on a raw current-form object change, even if that object is later restored', async () => {
-        const { user, rerender } = Render();
-        await paste(); await user.click(screen.getByRole('checkbox', { name: ACKNOWLEDGMENT })); const original = props.currentForm;
-        rerender({ currentForm: { ...original, machines: [...original.machines, { ...original.machines[0], id: 2, _uuid: 'second-machine' }] } });
-        expect(apply().disabled).toBe(true); tryApply(); expect(props.onUndoable).not.toHaveBeenCalled();
-        rerender({ currentForm: original }); expect(apply().disabled).toBe(true);
-    });
-    it('a fresh incoming paste cannot use the old incoming consent', async () => {
-        const { user } = Render();
-        await paste(); await user.click(screen.getByRole('checkbox', { name: ACKNOWLEDGMENT })); expect(apply().disabled).toBe(false);
-        await paste(); expect(apply().disabled).toBe(true); tryApply(); expect(props.onUndoable).not.toHaveBeenCalled();
-    });
-    it('Cancel and no selected work keep the destination and its callbacks untouched', async () => {
-        const { user } = Render();
-        await paste(); const before = structuredClone(props.currentForm);
-        await user.click(category('Machines')); expect(apply().disabled).toBe(true); tryApply();
-        await user.click(screen.getByRole('button', { name: 'Cancel' })); expect(props.currentForm).toEqual(before);
-        expect(props.onApplyPaste).not.toHaveBeenCalled(); expect(props.onUndoable).not.toHaveBeenCalled(); expect(props.onBuildReplaced).not.toHaveBeenCalled();
-    });
-});
-
-
-describe('prospective import assumptions', () => {
-    it('summarizes the actual retained/incoming inserters as selections and current drafts change', async () => {
-        incoming.inserters = [{ id: 1, prototype: 'fast-inserter', quality: 'normal', stack_size: 4,
-            source: { type: 'machine', id: 1 }, sink: { type: 'chest', id: 0 } }];
-        const { user, rerender } = Render();
-        await paste();
-        const assumptions = () => within(screen.getByText('Import details').closest('details')!).getAllByText(/^Inserters? /).map(line => line.textContent);
-        const retained = props.currentForm.inserters, changed = [{ ...retained[0], stack_size: 16 }];
-        const [incomingLines, retainedLines, changedLines] = [incoming.inserters, retained, changed].map(inserters => inserterDetailLines(inserters, id => id));
-        expect(new Set([incomingLines, retainedLines, changedLines].map(String)).size).toBe(3);
-        expect(assumptions()).toEqual(incomingLines);
-        await user.click(category('Inserters'));
-        expect(assumptions()).toEqual(retainedLines);
-        rerender({ currentForm: { ...props.currentForm, inserters: changed } });
-        expect(assumptions()).toEqual(changedLines);
-        expect(props.onApplyPaste).not.toHaveBeenCalled();
-        expect(props.onUndoable).not.toHaveBeenCalled();
-    });
-});
-
-describe('the chest row', () => {
-    it('names the chests by type, in the order the export lists them, beside the counts', async () => {
-        incoming.chests = [{ id: 1, type: 'car' }, { id: 2, type: 'infinity-chest' }, { id: 3, type: 'infinity-chest' }] as PastedEntities['chests'];
-        const { user } = Render();
-        await paste();
-        expect(screen.getByRole('checkbox', { name: 'Chests (3)', description: /1 car and 2 infinity chests\. 0 in your build → 3 after import\./ })).toBeDefined();
-        await user.click(category('Chests'));
-        expect(screen.getByRole('checkbox', { name: 'Chests (3)', description: /1 car and 2 infinity chests\. Not selected\./ })).toBeDefined();
-    });
-    it('has no line of types when the export has no chests', async () => {
-        Render();
-        await paste();
-        expect(screen.getByRole('checkbox', { name: 'Chests (0)', description: /None in this export\./ })).toBeDefined();
-    });
 });
 
 it('shows no Research profiles item in the menu without its prop, as on the site', async () => {
@@ -247,12 +95,11 @@ describe('a pasted blueprint', () => {
         expect(validate).not.toHaveBeenCalled();
     });
 
-    it.each(['{', '['])('sends a text that opens with %s the Sidecar way', async opening => {
+    it.each(['{', '['])('says Sidecar exports are no longer supported for JSON that opens with %s and is no build file, and asks the worker nothing', async opening => {
         Render();
         await pasteText(` ${opening === '{' ? JSON.stringify({ machines: incoming.machines }) : '[]'}`);
-        await (opening === '{' ? screen.findByRole('checkbox', { name: /^Machines \(/ }) : pastePrompt());
-        expect(asked('pasted-entities').length).toBe(opening === '{' ? 1 : 0);
-        expect(asked('pasted-blueprint')).toEqual([]);
+        expect(await screen.findByRole('dialog', { name: 'Sidecar exports are no longer supported' })).toBeDefined();
+        expect(validate).not.toHaveBeenCalled();
     });
 
     it('sends any other text to the import, with the research of No research and no answer', async () => {
@@ -263,7 +110,6 @@ describe('a pasted blueprint', () => {
         expect(query.text).toBe(iron);
         expect(query.inputs.answers).toEqual({});
         expect(query.inputs.research).toMatchObject({ profile: 'No research', template: 'no-research', bonuses: { mining_drill_productivity_bonus: 0 } });
-        expect(asked('pasted-entities')).toEqual([]);
     });
 
     it.each(Object.keys(BLUEPRINT_PROMPTS) as (keyof typeof BLUEPRINT_PROMPTS)[])('says its own prompt for the problem %s', async problem => {
@@ -573,8 +419,73 @@ describe('a pasted blueprint', () => {
     it('opens a build file as before', async () => {
         const { container } = render(<ConfigImportExport {...props} />);
         const input = container.querySelector<HTMLInputElement>('input[type="file"]')!;
-        fireEvent.change(input, { target: { files: [new File([JSON.stringify({ setpoint: { item: 'iron-plate', items_per_second: 1, copies: 1 }, machines: [] })], 'build.json')] } });
+        fireEvent.change(input, { target: { files: [new File([JSON.stringify({ format: 1, setpoint: { item: 'iron-plate', items_per_second: 1, copies: 1 }, machines: [] })], 'build.json')] } });
         await vi.waitFor(() => expect(asked('config-file').length).toBe(1));
         expect(asked('pasted-blueprint')).toEqual([]);
+    });
+});
+
+describe('a configuration of another format', () => {
+    const old = { setpoint: { item: 'iron-plate', items_per_second: 1, copies: 1 }, machines: [] };
+    // the worker refuses it at its door, before any check, with the message its answer carries
+    const refusing = (problem: 'old' | 'newer') => validate.mockImplementation(async (request: EngineQuery) => {
+        if (request.kind === 'config-file') throw new Error(REFUSED_CONFIG_ERRORS[problem]);
+        return incoming;
+    });
+
+    it.each(['old', 'newer'] as const)('opened as a file (%s), says so in place of the build, with Paste a blueprint', async problem => {
+        refusing(problem);
+        const { container } = render(<ConfigImportExport {...props} />);
+        const input = container.querySelector<HTMLInputElement>('input[type="file"]')!;
+        fireEvent.change(input, { target: { files: [new File([JSON.stringify(old)], 'build.json')] } });
+        const dialog = await screen.findByRole('dialog', { name: problem === 'old' ? 'This configuration is no longer supported' : 'This configuration was made by a newer version of the site' });
+        expect(within(dialog).getByRole('button', { name: 'Paste a blueprint' })).toBeDefined();
+        expect(props.onImport).not.toHaveBeenCalled();
+        expect(props.onBuildReplaced).not.toHaveBeenCalled();
+    });
+
+    it('opened as a file, an export of the Sidecar mod gets its message and opens nothing', async () => {
+        const { container } = render(<ConfigImportExport {...props} />);
+        const input = container.querySelector<HTMLInputElement>('input[type="file"]')!;
+        fireEvent.change(input, { target: { files: [new File([JSON.stringify({ sidecar_version: '0.16.0', machines: [] })], 'export.json')] } });
+        const dialog = await screen.findByRole('dialog', { name: 'Sidecar exports are no longer supported' });
+        expect(within(dialog).getByRole('button', { name: 'Paste a blueprint' })).toBeDefined();
+        expect(validate).not.toHaveBeenCalled();
+        expect(props.onImport).not.toHaveBeenCalled();
+    });
+
+    it('pasted, is refused for its format without asking the engine', async () => {
+        Render();
+        await navigator.clipboard.writeText(JSON.stringify(old));
+        act(() => entry.current!.pasteFromFactorio());
+        expect(await screen.findByRole('dialog', { name: 'This configuration is no longer supported' })).toBeDefined();
+        expect(validate).not.toHaveBeenCalled();
+    });
+
+    it('is what Save configuration file writes: the format first, and the file opens again', async () => {
+        const blobs: Blob[] = [];
+        vi.stubGlobal('URL', Object.assign(Object.create(URL), { createObjectURL: (blob: Blob) => { blobs.push(blob); return 'blob:saved'; }, revokeObjectURL: vi.fn() }));
+        try {
+            const build = { setpoint: { item: 'iron-plate', items_per_second: 1, copies: 1 }, machines: [], inserters: [], belts: [], chests: [] };
+            props = { ...props, config: build as never };
+            const { user } = Render();
+            await user.click(screen.getByRole('button', { name: 'More options' }));
+            await user.click(screen.getByRole('menuitem', { name: 'Save configuration file' }));
+            expect(blobs).toHaveLength(1);
+            const saved = JSON.parse(await blobs[0].text()) as Record<string, unknown>;
+            expect(Object.keys(saved)[0]).toBe('format');
+            expect(saved.format).toBe(1);
+            expect(configFormatProblem(saved)).toBeNull();
+        } finally {
+            vi.unstubAllGlobals();
+        }
+    });
+
+    it('pasted with this format, is a build file to open, as before', async () => {
+        Render();
+        await navigator.clipboard.writeText(JSON.stringify({ format: 1, ...old }));
+        act(() => entry.current!.pasteFromFactorio());
+        expect(await screen.findByText(PASTE_PROMPTS['build-file'].text)).toBeDefined();
+        expect(screen.queryByRole('dialog', { name: 'This configuration is no longer supported' })).toBeNull();
     });
 });

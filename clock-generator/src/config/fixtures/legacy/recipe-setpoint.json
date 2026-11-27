@@ -1,6 +1,0 @@
-{
-  "setpoint": { "recipe": "jellynut-processing", "items_per_second": 1, "copies": 1 },
-  "machines": [{ "id": 1, "recipe": "jellynut-processing", "productivity": 0, "crafting_speed": 2, "prototype": "biochamber" }],
-  "inserters": [],
-  "belts": []
-}

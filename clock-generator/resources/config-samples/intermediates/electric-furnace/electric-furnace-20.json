@@ -1,4 +1,5 @@
 {
+  "format": 1,
   "setpoint": {
     "item": "electric-furnace",
     "items_per_second": 20,

@@ -3,7 +3,7 @@
   "job": "config-PRODUCTIVITY_MODULE_80_CHEST_CHAIN",
   "group": "config",
   "name": "PRODUCTIVITY_MODULE_80_CHEST_CHAIN",
-  "config_sha256": "18fdf7c75a3540c12314fdd47b0bb129a6d3fd58cd2d87ccb996180c157cfc7e",
+  "config_sha256": "8df69f4309e3065838afb53c674017fd1d4f1b92245747c243246ae494369669",
   "job_results_sha256": "2794e56ff0e265dc54acb85cbb94cc8b83bb2cbcf1db7931e0d447a669861921",
   "selected": "coordinated_sources",
   "selected_windows": {

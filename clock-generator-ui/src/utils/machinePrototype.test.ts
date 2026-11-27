@@ -45,8 +45,8 @@ describe('a machine row and its machine', () => {
     });
 
     it("names the machine, its quality and its source on the row icon", () => {
-        expect(machineIconText(row({ prototype: 'cryogenic-plant', quality: 'legendary', _prototype_source: 'sidecar' }), name))
-            .toBe('Cryogenic plant (Legendary), from Sidecar');
+        expect(machineIconText(row({ prototype: 'cryogenic-plant', quality: 'legendary', _prototype_source: 'blueprint' }), name))
+            .toBe('Cryogenic plant (Legendary), from the blueprint');
         expect(machineIconText(row({ prototype: 'cryogenic-plant', _prototype_source: 'hand' }), name)).toBe('Cryogenic plant, chosen by hand');
         expect(machineIconText(row({ prototype: 'cryogenic-plant', _prototype_source: 'recipe' }), name)).toBe('Cryogenic plant, picked for its recipe');
         expect(machineIconText(row({ prototype: 'cryogenic-plant' }), name)).toBe('Cryogenic plant, from the configuration');
@@ -69,13 +69,6 @@ describe('where a machine came from', () => {
         expect(sample.machines.map(machine => machine._prototype_source)).toEqual(['sample', undefined]);
         expect(configToFormData(imported).machines[0]._prototype_source).toBeUndefined();
         expect(formDataToConfig(sample).machines[0]).not.toHaveProperty('_prototype_source');
-    });
-
-    it("is Sidecar's for a paste, and picked for its recipe where an older Sidecar named only its kind", () => {
-        const selections = { target: false, machines: true, drills: false, inserters: false, belts: false, chests: false };
-        const incoming = { machines: imported.machines, drills: [], inserters: [], belts: [], chests: [], guidance: Option.none, suggested_target: Option.none };
-        expect(applyPaste(createDefaultConfig(), incoming, selections).machines.map(machine => machine._prototype_source)).toEqual(['sidecar', undefined]);
-        expect(applyPaste(createDefaultConfig(), { ...incoming, picked_machines: [1] }, selections).machines[0]._prototype_source).toBe('recipe');
     });
 
     it("is the blueprint's for a pasted blueprint", () => {

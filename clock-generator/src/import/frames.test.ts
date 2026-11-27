@@ -6,6 +6,7 @@ import { FrameBlueprintEntity, FrameRead, TRANSFORMS, TransformName, candidateFr
 
 const ENGINE = path.resolve(__dirname, "../..");
 const SAMPLES = path.join(ENGINE, "resources", "config-samples");
+const READS = path.join(__dirname, "fixtures", "assemble", "reads");
 const read = (file: string) => fs.readFileSync(file, "utf8");
 
 type FixtureRow = {
@@ -52,7 +53,7 @@ describe("the frame of each of the 10 repository builds", () => {
     for (const row of FIXTURE.rows) {
         it(`gives ${row.build} the fixture's transform, translation, placed count, tie count and mirror`, () => {
             const blueprint = blueprintOf(path.join(SAMPLES, row.scaffold));
-            const reads = readsOf(JSON.parse(read(path.join(SAMPLES, row.read))) as ReadFile);
+            const reads = readsOf(JSON.parse(read(row.read.endsWith(".sidecar-export.json") ? path.join(READS, `${row.build}.json`) : path.join(SAMPLES, row.read))) as ReadFile);
             const frame = frameOf(blueprint, reads);
             expect(frame).not.toBeNull();
             expect({ transform: frame!.transform, translation: frame!.translation, placed: frame!.placed, reads: frame!.reads, tie_count: frame!.tie_count, mirrored: frame!.mirrored }).toEqual({

@@ -9,7 +9,7 @@ import { missingDataSections, type InternalError } from '../utils/internalError'
  */
 
 import type { z } from 'zod';
-import { renameSetpointRecipeToItem, renameTargetOutputToSetpoint, type LaneRole, type SetpointReason } from 'clock-generator/light';
+import type { LaneRole, SetpointReason } from 'clock-generator/light';
 import type { ClockAlternativeRun, Config, DebugSteps, FactorioData, LogMessage, Logger, MachineToName, NotMadeClock, SearchRangeEdge } from 'clock-generator/browser';
 import { parseFormConfig } from './formConfig';
 import { laneRolesAnswer } from './laneRoles';
@@ -18,7 +18,8 @@ import { laneTakersOf } from '../utils/laneTakers';
 import { installFactsOf } from './installFacts';
 import { createReadyGate } from './requestGate';
 import { NO_NAMES, hiddenRecipeIds, type GameNames } from '../utils/gameNames';
-import type { CheckedRepeatedUnitConversion, RepeatedUnitsRecovery, CheckedShiftRow, ClockAlternativeRunView, ClockAlternativeView, EngineAnswers, EngineQuery, FactorioLookups, FuelViewData, PastedEntities, ShiftOptionsView, ShiftRangeEdge, WorkerRequest, WorkerResponse } from './types';
+import type { CheckedRepeatedUnitConversion, RepeatedUnitsRecovery, CheckedShiftRow, ClockAlternativeRunView, ClockAlternativeView, EngineAnswers, EngineQuery, FactorioLookups, FuelViewData, ShiftOptionsView, ShiftRangeEdge, WorkerRequest, WorkerResponse } from './types';
+import { REFUSED_CONFIG_ERRORS } from './types';
 
 type ClockGenerator = typeof import('clock-generator/browser');
 
@@ -399,33 +400,9 @@ function validateEntries<T>(schema: z.ZodType<T>, entries: unknown, label: strin
     });
 }
 
-function pastedEntities(pasted: Extract<EngineQuery, { kind: 'pasted-entities' }>): PastedEntities {
-    // IDs are already assigned by the mod
-    const machines = validateEntries(clockGenerator.MachineConfigurationSchema, pasted.machines, 'machine');
-    // in this order, so that the error names the first entry the schema rejects
-    const drills = validateEntries(clockGenerator.MiningDrillConfigSchema, pasted.drills, 'drill');
-    const inserters = validateEntries(clockGenerator.InserterConfigSchema, clockGenerator.sidecarPickupInserters(pasted.inserters, pasted.sidecar_version, pasted.pickup_warnings), 'inserter');
-    const belts = validateEntries(clockGenerator.BeltConfigSchema, pasted.belts, 'belt');
-    const chests = validateEntries(clockGenerator.ChestConfigSchema, pasted.chests, 'chest');
-    return {
-        machines,
-        picked_machines: machines.filter((machine, index) => machine.prototype !== undefined && !hasPrototype(Array.isArray(pasted.machines) ? pasted.machines[index] : undefined))
-            .map(machine => machine.id),
-        drills,
-        inserters,
-        belts,
-        chests,
-        guidance: clockGenerator.checkSidecarImport(pasted.sidecar_version, machines, undefined,
-            Array.isArray(pasted.chests) ? pasted.chests : [], Array.isArray(pasted.inserters) ? pasted.inserters : [],
-            Array.isArray(pasted.drills) ? pasted.drills : []),
-        // held to the belt the product is put on and to the engine's most for the whole build, where they are lower
-        suggested_target: clockGenerator.suggestedTargetOf(pasted.suggested_target, machines, { inserters, belts }, { chests, drills }),
-    };
-}
-
 /**
- * A pasted blueprint, through the import: each list checked against its schema on every call, as a Sidecar paste's are.
- * Neither the Sidecar's version check nor its pickup marks are used: the import writes each pickup's capture itself.
+ * A pasted blueprint, through the import: each list checked against its schema on every call. The import writes each
+ * pickup's capture itself.
  */
 function pastedBlueprint(pasted: Extract<EngineQuery, { kind: 'pasted-blueprint' }>): EngineAnswers['pasted-blueprint'] {
     const outcome = clockGenerator.importBlueprint(pasted.text, pasted.inputs, gameData);
@@ -481,37 +458,35 @@ function withoutBeltSetting<C>(config: C): C {
     return (convertBeltSetting(config as never, rolesForConversion(config)) as C | null) ?? config;
 }
 
-const hasPrototype = (machine: unknown): boolean => typeof machine === 'object' && machine !== null && 'prototype' in machine && machine.prototype !== undefined;
-
-/**
- * The saved form state with each machine's former type read as its machine (a row given one so is marked as picked for
- * its recipe), and why it cannot be loaded, or null when it can
- */
+/** The saved form state, and why it cannot be loaded, or null when it can */
 function savedConfig(config: unknown): EngineAnswers['saved-config'] {
-    const form = clockGenerator.migrateMachineTypes(renameSetpointRecipeToItem(config));
-    const before = typeof config === 'object' && config !== null && 'machines' in config && Array.isArray(config.machines) ? config.machines : [];
-    const marked = typeof form === 'object' && form !== null && 'machines' in form && Array.isArray(form.machines)
-        ? { ...form, machines: form.machines.map((machine: unknown, index: number) => hasPrototype(machine) && !hasPrototype(before[index])
-            ? { ...(machine as object), _prototype_source: 'recipe' } : machine) }
-        : form;
-    const result = parseFormConfig(clockGenerator.ConfigSchema, marked);
-    return result.success ? { problem: null, form: withoutBeltSetting(canonicalRate(marked)) } : { problem: result.error.message, form: marked };
+    const refused = clockGenerator.configFormatProblem(config);
+    if (refused !== null) return { problem: refused === 'old' ? 'made before this format' : 'made by a newer version of the site', form: config, refused };
+    // the format is of the saved text; the form state loaded has none
+    const { format: _format, ...form } = config as Record<string, unknown>;
+    void _format;
+    const result = parseFormConfig(clockGenerator.ConfigSchema, form);
+    return result.success ? { problem: null, form: withoutBeltSetting(canonicalRate(form)) } : { problem: result.error.message, form };
 }
 
-/** An imported config file, which can hold what the form exports, e.g. an inserter end left unset; a former type is read as the machine */
+/**
+ * An imported config file, which can hold what the form exports, e.g. an inserter end left unset. A file without this
+ * format's `format` key, or with a newer one, is refused before any check.
+ */
 function configFile(config: unknown): EngineAnswers['config-file'] {
-    const form = clockGenerator.migrateMachineTypes(renameSetpointRecipeToItem(config));
-    const result = parseFormConfig(clockGenerator.ConfigSchema, form);
+    const refused = clockGenerator.configFormatProblem(config);
+    if (refused !== null) throw new Error(REFUSED_CONFIG_ERRORS[refused]);
+    const result = parseFormConfig(clockGenerator.ConfigSchema, config);
     if (!result.success) {
         throw new clockGenerator.ConfigValidationError(result.error);
     }
-    return withoutBeltSetting(withSetpointNameOf(result.data, form));
+    return withoutBeltSetting(withSetpointNameOf(result.data, config));
 }
 
 /** The setpoint of an imported file as the file names it: the schema reads a recipe's name as its item, and the form keeps the name */
 function withSetpointNameOf(read: Config, file: unknown): Config {
     const record = (value: unknown): Record<string, unknown> | undefined => typeof value === 'object' && value !== null ? value as Record<string, unknown> : undefined;
-    const given = record(renameSetpointRecipeToItem(renameTargetOutputToSetpoint(file)));
+    const given = record(file);
     const name = record(given?.setpoint)?.item;
     return typeof name === 'string' ? { ...read, setpoint: { ...read.setpoint, item: name } } : read;
 }
@@ -578,8 +553,6 @@ function answer(asked: EngineQuery): EngineAnswers[EngineQuery['kind']] {
             return savedConfig(query.config);
         case 'config-file':
             return configFile(query.config);
-        case 'pasted-entities':
-            return pastedEntities(query);
         case 'pasted-blueprint':
             return pastedBlueprint(query);
         case 'apply-research':

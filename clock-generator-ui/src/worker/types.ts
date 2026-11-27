@@ -1,7 +1,7 @@
 import type { InternalError } from '../utils/internalError';
 import type { ValidationDiagnostic } from '../utils/buildValidation';
 import type { z } from 'zod';
-import type { SetpointOutput } from 'clock-generator/light';
+import type { ConfigFormatProblem, SetpointOutput } from 'clock-generator/light';
 import type {
     CoordinatedSourcesInput,
     RegionLayerInput,
@@ -482,26 +482,24 @@ export type InserterConfiguration = Config['inserters'][number];
 export type BeltConfiguration = z.infer<typeof BeltConfigSchema>;
 export type ChestConfiguration = z.infer<typeof ChestConfigSchema>;
 
-/** The entities pasted from the sidecar mod, each list checked against its schema */
+/** The entities of a paste, each list checked against its schema */
 export interface PastedEntities {
     machines: MachineConfiguration[];
     drills: MiningDrillConfiguration[];
     inserters: InserterConfiguration[];
     belts: BeltConfiguration[];
     chests: ChestConfiguration[];
-    /** Guidance for the user from the import pipeline, e.g. that the sidecar mod is too old to export something */
+    /** Guidance for the user on the paste; a pasted blueprint gives none */
     guidance: Option.Option<string>;
-    /** The target output the paste suggests: the mod's own, else worked out from the machines */
+    /** The target output the paste suggests, worked out from the machines */
     suggested_target: Option.Option<SuggestedTarget>;
-    /** The ids of the machines an older Sidecar named only by kind, which got a machine picked for their recipe */
-    picked_machines?: number[];
 }
 
 /**
- * A pasted blueprint as the import reads it: the five lists, each checked against its schema as a Sidecar paste's are,
- * and what the dialog asks and shows. It gives no guidance and picks no machine: the blueprint names each one.
+ * A pasted blueprint as the import reads it: the five lists, each checked against its schema, and what the dialog asks
+ * and shows. It gives no guidance and picks no machine: the blueprint names each one.
  */
-export type PastedBlueprint = Omit<PastedEntities, 'picked_machines'>
+export type PastedBlueprint = PastedEntities
     & Pick<ImportBuild, 'questions' | 'notes' | 'read' | 'ignored' | 'research' | 'copy_offset' | 'layout' | 'entities' | 'speeds'>;
 
 /**
@@ -528,17 +526,6 @@ export type EngineQuery =
      * hold values out of bounds, which the form shows
      */
     | { kind: 'config-file'; config: unknown }
-    | {
-        kind: 'pasted-entities';
-        machines: unknown;
-        drills: unknown;
-        inserters: unknown;
-        belts: unknown;
-        chests: unknown;
-        sidecar_version: unknown;
-        pickup_warnings?: unknown;
-        suggested_target: unknown;
-    }
     /** A pasted text that is not JSON, read by the blueprint import, again after each answer and each change of the inputs */
     | { kind: 'pasted-blueprint'; text: string; inputs: ImportInputs }
     /** Another research profile put on a build, from the base its research block holds */
@@ -600,12 +587,12 @@ export interface EngineAnswers {
     'lane-roles': LaneRoleOfLane[];
     /** Why the saved config cannot be used; null when it can */
     /**
-     * The saved form state with each machine's former type read as its machine, to load in its place, and why it cannot
-     * be loaded, or null when it can
+     * The saved form state, to load in its place, and why it cannot be loaded, or null when it can; `refused` when its
+     * format is not read, and then nothing else is checked
      */
-    'saved-config': { problem: string | null; form: unknown };
+    'saved-config': { problem: string | null; form: unknown; refused?: ConfigFormatProblem };
+    /** The checked build of a file or share link; one whose format is not read fails with `REFUSED_CONFIG_ERRORS`' message */
     'config-file': Config;
-    'pasted-entities': PastedEntities;
     'pasted-blueprint': { kind: 'problem'; problem: ImportProblem } | ({ kind: 'build' } & PastedBlueprint);
     'apply-research': { build: ResearchBuild; block: ResearchBlock };
     'research-differences': ResearchDifferences;
@@ -616,4 +603,16 @@ export interface QueryRequest {
     type: 'query';
     requestId: number;
     query: EngineQuery;
+}
+
+/** The message a `config-file` query fails with when the file's format is not read: the worker's errors carry a message only */
+export const REFUSED_CONFIG_ERRORS: Readonly<Record<ConfigFormatProblem, string>> = {
+    old: 'The configuration has no format key: it was made before this format.',
+    newer: 'The configuration has a format newer than this site reads.',
+};
+
+/** Why a failed `config-file` query was refused for the file's format; null when it failed for another reason */
+export function refusedConfigOf(error: unknown): ConfigFormatProblem | null {
+    const message = error instanceof Error ? error.message : null;
+    return (Object.keys(REFUSED_CONFIG_ERRORS) as ConfigFormatProblem[]).find(problem => REFUSED_CONFIG_ERRORS[problem] === message) ?? null;
 }

@@ -44,7 +44,7 @@ function frontEntranceClockConfig(variant: FrontClockCase): Config {
     const type = `${variant.speed.prefix}transport-belt`;
     return ConfigSchema.parse({
         setpoint: {item: product, items_per_second: 6, copies: 1},
-        machines: [{id: 1, type: "machine", recipe: product, crafting_speed: COMPACT_CRAFTING_SPEED, productivity: 0}],
+        machines: [{id: 1, prototype: product === "iron-gear-wheel" ? "assembling-machine-3" : "electromagnetic-plant", recipe: product, crafting_speed: COMPACT_CRAFTING_SPEED, productivity: 0}],
         inserters: [
             {id: 1, source: {type: "machine", id: 1}, sink: {type: "belt", id: 1}, stack_size: 16},
             {id: 2, source: {type: "belt", id: 2, near_lane: variant.mirrored ? 2 : 1,
