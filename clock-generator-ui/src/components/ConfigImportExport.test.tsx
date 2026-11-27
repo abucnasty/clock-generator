@@ -183,3 +183,23 @@ describe('the chest row', () => {
         expect(screen.getByRole('checkbox', { name: 'Chests (0)', description: /None in this export\./ })).toBeDefined();
     });
 });
+
+it('shows no Research profiles item in the menu without its prop, as on the site', async () => {
+    const { user } = Render();
+    await user.click(screen.getByRole('button', { name: 'More options' }));
+    const names = screen.getAllByRole('menuitem').map(item => item.textContent);
+    expect(names).toContain('Copy share link');
+    expect(names.some(name => name?.includes('Research profiles'))).toBe(false);
+});
+
+it('shows the Research profiles item after Copy share link when given its prop, and calls it', async () => {
+    const onOpenResearchProfiles = vi.fn();
+    props = { ...props, onOpenResearchProfiles };
+    const { user } = Render();
+    await user.click(screen.getByRole('button', { name: 'More options' }));
+    const names = screen.getAllByRole('menuitem').map(item => item.textContent);
+    expect(names.indexOf('Research profiles…')).toBe(names.indexOf('Copy share link') + 1);
+    await user.click(screen.getByRole('menuitem', { name: 'Research profiles…' }));
+    expect(onOpenResearchProfiles).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('menu')).toBeNull();
+});

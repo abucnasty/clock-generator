@@ -104,6 +104,22 @@ Assemble a build. Install a clock on a build: the whole procedure, put the bluep
 world; STE does not approve place (v).
 _Avoid_: build (v), place (v)
 
+**Research profile**:
+A name and the final research numbers of one game, kept in the browser of the user: mining productivity in percent, the
+inserter and bulk inserter capacity bonuses and the belt stack size bonus in items, and the productivity of each recipe
+that has research, in percent. The keys have the game's names for the force's fields; the units are those of a
+configuration, so 0.2 in the game is 20. A profile holds numbers, not technologies and levels. The user can change the
+numbers of a profile and a machine can override them. A profile is made from a **Template** or from another profile.
+_Avoid_: research level, technology set, preset
+
+**Template**:
+A research profile that the page ships, with fixed numbers, that the user cannot change, rename or remove. There are two:
+**No research** (all numbers 0) and **All finite research** (the sum of every technology that has a last level: 20 %
+mining productivity, inserter capacity 3, bulk inserter capacity 11, belt stack size bonus 3, and no recipe, because
+every recipe productivity technology has no last level). The user makes a profile from a template and uses **Revert** to
+set its numbers back to those of the template.
+_Avoid_: default (for a template), preset
+
 ## Lanes
 
 A lane is the game's transport line: each belt has two. The facts of a lane are stated on it in the configuration

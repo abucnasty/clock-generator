@@ -1,6 +1,6 @@
 import { canonicalRate } from 'clock-generator/light';
 import { pickupCaptureWarningMessage, sideLoadedDropMessage } from "../utils/sidecarExport";
-import { Check, Download, Upload, ContentPaste, MoreVert, RestartAlt, Science, MenuBook, Link, DarkModeOutlined, LightModeOutlined, BrightnessAutoOutlined } from '@mui/icons-material';
+import { Check, Download, Upload, ContentPaste, MoreVert, RestartAlt, Science, MenuBook, Link, DarkModeOutlined, LightModeOutlined, BrightnessAutoOutlined, Tune } from '@mui/icons-material';
 import { Box, Button, Alert, Tooltip, FormControlLabel, Checkbox, Typography, IconButton, Menu, MenuItem, ListItemIcon, ListItemText, Divider, TextField, useMediaQuery, useTheme } from '@mui/material';
 import { useRef, useState, useCallback, useImperativeHandle, type ReactNode, type Ref } from 'react';
 import type { Config, SuggestedTarget } from 'clock-generator/browser';
@@ -122,6 +122,8 @@ interface ConfigImportExportProps {
     onInstall?: () => void;
     onCheckOnly?: () => void;
     checkDisabled?: boolean;
+    /** Opens the research profiles; the menu shows its item only when this is given */
+    onOpenResearchProfiles?: () => void;
 }
 
 /** A share link made when the ⋮ menu opens, so a click can copy it at once; tagged with the build it was made for */
@@ -155,7 +157,7 @@ export function ConfigImportExport({
     buildName,
     buildTitle,
     toolsMenuItems = [],
-    renderControls, onInstall, onCheckOnly, checkDisabled,
+    renderControls, onInstall, onCheckOnly, checkDisabled, onOpenResearchProfiles,
 }: ConfigImportExportProps) {
     const fileInputRef = useRef<HTMLInputElement>(null);
     // below 600px the app bar's Paste button says only "Paste", so the title keeps its room
@@ -524,6 +526,11 @@ export function ConfigImportExport({
         handleCopyShareLink();
     }, [handleMenuClose, handleCopyShareLink]);
 
+    const handleMenuResearchProfiles = useCallback(() => {
+        handleMenuClose();
+        onOpenResearchProfiles?.();
+    }, [handleMenuClose, onOpenResearchProfiles]);
+
     const handleMenuExamples = useCallback(() => {
         handleMenuClose();
         openExamples();
@@ -619,6 +626,12 @@ export function ConfigImportExport({
                     </ListItemIcon>
                     <ListItemText>Copy share link</ListItemText>
                 </MenuItem>
+                {onOpenResearchProfiles && <MenuItem onClick={handleMenuResearchProfiles}>
+                    <ListItemIcon>
+                        <Tune fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText>Research profiles…</ListItemText>
+                </MenuItem>}
                 <Divider />
                 <MenuItem onClick={handleMenuExamples}>
                     <ListItemIcon>
