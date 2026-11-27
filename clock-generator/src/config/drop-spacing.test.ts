@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { Config } from "./index";
 import { ConfigPaths } from "./config-paths";
 import { loadConfigFromFile } from "./loader";
-import { copyGapNeededNote, describeDropRoom, describeDropSpacing, DROP_SPACING_UNCHECKED, dropLines, dropRoom, dropSpacing, dropSpacingTable, dropTieBreak, uncheckedDrops } from "./drop-spacing";
+import { copyGapNeededNote, describeDropRoom, describeDropSpacing, DROP_SPACING_STATED_LANES, DROP_SPACING_STRAIGHT_BELT, DROP_SPACING_UNCHECKED, dropLines, dropRoom, dropSpacing, dropSpacingTable, dropTieBreak, partUncheckedText, uncheckedDrops, uncheckedPartDrops } from "./drop-spacing";
 import { LaneTraffic } from "../state/lane-traffic";
 import { partCopiesOf } from "../harness/factorio-harness";
 import { dropRoomNote } from "../crafting/drop-room-note";
@@ -280,6 +280,26 @@ describe("the drops that the output belt states", () => {
         expect(logistic.collisions(new Map([[2, [0, 48]]]))).toBe(16);
     });
 
+    it("close with what was judged, not with a straight belt or a move of an inserter by a tile, which do not hold for them", async () => {
+        // fit: automation's two lines of one hand
+        const fit = describeDropSpacing(dropSpacing(await automation(), starts({ 2: 30 }), 120)!);
+        expect(fit.what).toContain("so none waits for another of these hands.");
+        expect(fit.explanation).toMatch(/^This holds for these start ticks\. Starting one group of inserters at another tick can put hands on top of each other\. /);
+        expect(fit.explanation).not.toContain(DROP_SPACING_STRAIGHT_BELT);
+        expect(fit.explanation).not.toMatch(/Moving one inserter by a tile/);
+        expect(fit.explanation).toContain(DROP_SPACING_STATED_LANES);
+        expect(DROP_SPACING_STATED_LANES).toMatch(/stretch and lane.*judged on its own.*from the output belt.*upstream are not counted/);
+        // not fit: logistic's stretches
+        const meeting = describeDropSpacing(dropSpacing(await sample(ConfigPaths.LOGISTIC_SCIENCE_240), new Map([[2, [0, 48]]]), 96)!, undefined, true);
+        expect(meeting.title).toBe("Drops onto belt 1 land on each other");
+        expect(meeting.explanation).not.toContain(DROP_SPACING_STRAIGHT_BELT);
+        expect(meeting.explanation).toContain(DROP_SPACING_STATED_LANES);
+        // a build of the config's own lines keeps its sentences, and says nothing of stretches
+        const own = describeDropSpacing(dropSpacing(await grenade(), BY_LINE, 112)!);
+        expect(own.explanation).toContain(DROP_SPACING_STRAIGHT_BELT);
+        expect(own.explanation).not.toContain(DROP_SPACING_STATED_LANES);
+    });
+
     it("say before Generate that the side-loaded drops are not checked, on the lines the check reads", async () => {
         const note = dropRoomNote(await automation());
         expect(note).toContain(DROP_SPACING_UNCHECKED);
@@ -319,6 +339,39 @@ describe("a part copy", () => {
     });
 });
 
+describe("a part copy whose inserters the model does not give", () => {
+    // the grenade build takes its items from no lane the copies share, so the model of the shared lanes lays out no part copy
+    const fractional = () => grenade(it => { it.setpoint.copies = 7.5; });
+
+    it("is named as not checked, where the base judged the line with 8 copies", async () => {
+        const config = await fractional();
+        expect(partCopiesOf(config)).toEqual([]);
+        expect(dropSpacing(config, BY_LINE, 112)).toBeNull();
+        expect(uncheckedPartDrops(config)).toEqual([1, 2, 7, 8]);
+        // whole copies have no part copy to ask for
+        expect(uncheckedPartDrops(await grenade())).toEqual([]);
+        const text = partUncheckedText([1, 2, 7, 8]);
+        expect(text).toBe("The drops of inserters 1, 2, 7 and 8 are not checked here: the copies have a fraction, and the model of the lanes they share gives no partial copy for this build, "
+            + "so the check cannot tell which inserters the partial copy holds.");
+        // the note of the clock, where no line is checked, says so
+        const result = { serializable_state_transition_history: { total_duration_ticks: 112, entities: [] } } as unknown as Parameters<typeof dropSpacingInsights>[0];
+        const insights = dropSpacingInsights(result, config);
+        expect(insights.map(insight => [insight.id, insight.title, insight.table])).toEqual([["drop-spacing", "Drops of a partial copy are not checked", undefined]]);
+        expect(insights[0].what).toContain("The drops of ");
+        expect(insights[0].what).toContain("are not checked here: the copies have a fraction");
+        // the note of the editor says so too, rather than say nothing
+        expect(dropRoomNote(config)).toContain("are not checked here: the copies have a fraction");
+    });
+
+    it("is named in the explanation of the lines that are checked", async () => {
+        const spacing = dropSpacing(await grenade(), BY_PLACE, 112)!;
+        expect(spacing.unchecked_part).toEqual([]);
+        expect(describeDropSpacing(spacing).explanation).not.toContain("partial copy");
+        const text = describeDropSpacing({ ...spacing, unchecked_part: [3] });
+        expect(text.explanation).toContain(partUncheckedText([3]));
+    });
+});
+
 describe("what the result says of the wait it shows", () => {
     it("says the simulator does not count waits between copies for drops at spots of the config (sink.drop)", async () => {
         const text = describeDropSpacing(dropSpacing(await grenade(), BY_PLACE, 112)!);
@@ -331,12 +384,21 @@ describe("what the result says of the wait it shows", () => {
         expect(text.explanation).toMatch(/^The simulator does not count this wait: it drops each inserter's hand on a belt of its own, so the rate and stability shown for this clock were worked out without it\. /);
     });
 
-    it("says the simulator counts the wait for the drops the output belt states", async () => {
+    it("says the simulator counts the wait for the drops the output belt states, where its run of the copies was made", async () => {
         const meeting = dropSpacing(await sample(ConfigPaths.LOGISTIC_SCIENCE_240), new Map([[2, [0, 48]]]), 96)!;
-        const text = describeDropSpacing(meeting);
+        expect(meeting.lines[0].run_counts).toBe("counted_with_copies");
+        const text = describeDropSpacing(meeting, undefined, true);
         expect(text.title).toBe("Drops onto belt 1 land on each other");
         expect(text.explanation).not.toMatch(/does not count/);
         expect(text.explanation).toMatch(/^The simulator counts this wait: it puts these hands on one lane too\. /);
+    });
+
+    it("says the copies were not run on the output belt where the run of the copies was not made (or is not known)", async () => {
+        const meeting = dropSpacing(await sample(ConfigPaths.LOGISTIC_SCIENCE_240), new Map([[2, [0, 48]]]), 96)!;
+        for (const text of [describeDropSpacing(meeting), describeDropSpacing(meeting, undefined, false)]) {
+            expect(text.explanation).toMatch(/^The simulator did not run the copies of this clock on the output belt, so the rate and stability shown for it were worked out without the waits between copies\. /);
+            expect(text.explanation).not.toMatch(/counts this wait/);
+        }
     });
 });
 

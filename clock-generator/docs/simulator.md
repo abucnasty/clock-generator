@@ -277,19 +277,23 @@ inserter takes from, the way the belt runs from Sidecar 0.14.0 (without it the c
 the gap between copies from the repeated-unit conversion or from the user. A drop marked as side-loading onto another belt is left to the
 merge, and the belt is taken to run straight past the inserters.
 
-Where the config states its output belt (`output_belt`), the check reads the output inserters' drops from it, by their numbers in the
-section. A copy whose output inserter side-loads is left to the merge, which the run of the copies moves on the output belt; the result
-names such an inserter as not checked when its own copy's drop side-loads. Each drop the section states is a hand of its copy, once, on
-the line of the other drops of its stretch and lane, at the tile the section gives it (measured along that lane): those lines are not
+Where the config states its output belt (`output_belt`), the check reads the output inserters' drops from it, by their numbers in
+its list. A copy whose output inserter side-loads is left to the merge, which the run of the copies moves on the output belt; the result
+names such an inserter as not checked when its own copy's drop side-loads. Each drop the output belt states is a hand of its copy, once, on
+the line of the other drops of its stretch and lane, at the tile it gives (measured along that lane): those lines are not
 repeated by `copy_offset`, and the spacings of the copies are not listed for them. The inserters still need a position and a facing.
-A part copy (copies with a fraction) drops the hands of the inserters it holds in the shared-lane model, as the run of the copies has
-it (`sharedLaneRunsOf`); where the model lays out more than one part copy, a line fits only when it fits with each, and where it lays
-out none, a line with hands of the part copy is not checked.
+A partial copy (copies with a fraction) drops the hands of the inserters it holds in the shared-lane model, as the run of the copies has
+it (`sharedLaneRunsOf`); where the model lays out more than one partial copy, a line fits only when it fits with each, and where it lays
+out none, a line with hands of the partial copy is not checked, and the result names its inserters as not checked.
 
 The result says the simulator does not count a wait only where its run does not put the hands on one lane. A hand with a drop spot of
 the config (`sink.drop`) shares its lane with the other such hands of its copy, and each copy has belts of its own, so the run counts
 the waits between the hands of one copy and not those between copies. A hand without one drops on a tile of its own. The run of the
-copies puts the drops that `output_belt` states on the output belt, so it counts their waits.
+copies puts the drops that `output_belt` states on the output belt, so it counts their waits, but that run is made only for a clock that
+holds on one copy, and for a partial copy only where the copies share a lane. The result says the simulator counts the wait of those drops only
+for a clock whose run of the copies was made and ran the output belt; for any other clock it says the simulator did not run the copies on
+the output belt, so the rate and stability shown for it were worked out without the waits between copies. A line of the drops `output_belt` states is judged stretch by stretch on its lane, and the result says
+that items from stretches upstream are not counted.
 
 The result also lists the spacings of the copies (from the width of a copy for one loop of the tiles the belt moves in a window cycle, and the same list at any of these plus a loop; where no spacing can fit, because the hands of a lane outnumber those tiles, it says so instead) and the distances between a copy's two inserters at which the hands fit, and the editor says it before Generate for the time one output hand takes at the setpoint (`src/crafting/drop-room-note.ts`). The idea, the arithmetic of pitches and offsets and the evidence are in [drop spacing](../tests/game/mechanics/drop-spacing/README.md).
 

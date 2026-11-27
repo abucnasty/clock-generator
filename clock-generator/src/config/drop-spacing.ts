@@ -38,6 +38,13 @@ export const DROP_SPACING_STRAIGHT_BELT = "The belt is taken to run straight pas
 /** The text said where drops are left out of the check: the ones marked as side-loaded (Sidecar 0.13.0) */
 export const DROP_SPACING_UNCHECKED = "Drops that are side-loaded or go through a splitter are not checked here.";
 
+/**
+ * The text added to the insight for lines of the drops `output_belt` states, in place of the one about a straight belt: what was judged,
+ * which is the hands of each stretch and lane on their own
+ */
+export const DROP_SPACING_STATED_LANES = "Each stretch and lane of the output belt is judged on its own, with the place of each hand measured along its lane from the output belt: "
+    + "items that come from stretches upstream are not counted.";
+
 /** The text said wherever copies share a belt: the config describes one copy and the check repeats it */
 export const DROP_SPACING_COPIES_ALIKE = "This assumes every copy drops onto the belt the way this one does.";
 
@@ -251,6 +258,37 @@ export function uncheckedDrops(config: Config): number[] {
 }
 
 /**
+ * The output inserters of lines the check cannot judge because the copies have a fraction and the shared-lane model gives no part
+ * copy: it cannot tell which inserters the part copy holds. Rounding the copies up is barred, so these lines are not checked.
+ */
+function partUncheckedOf(config: Config, lines: readonly DropLine[]): number[] {
+    const copies = config.setpoint.copies;
+    if (Number.isInteger(copies)) return [];
+    const ids = lines.flatMap(line => {
+        const step = copyStepOf(config, line);
+        if (copies > 1 && step === null && !line.stated) return [];
+        return partsFor(config, line, step).length === 0 ? line.inserters.map(inserter => inserter.id) : [];
+    });
+    return [...new Set(ids)].sort(pair);
+}
+
+/** The text said of those lines: "The drops of inserters 1 and 3 are not checked here: ..." */
+export function partUncheckedText(ids: readonly number[], names: DropNames = NO_NAMES): string {
+    return `The drops of ${inserterWords(ids, names)} are not checked here: the copies have a fraction, and the model of the lanes they share gives no partial copy for this build, `
+        + "so the check cannot tell which inserters the partial copy holds.";
+}
+
+/** The same, for a config: the numbers of the output inserters of those lines */
+export function uncheckedPartDrops(config: Config): number[] {
+    if (Number.isInteger(config.setpoint.copies)) return [];
+    try {
+        return partUncheckedOf(config, dropLines(config));
+    } catch {
+        return [];
+    }
+}
+
+/**
  * The part copies of a config: for each, the output inserters it holds, by their numbers in the config. A part copy holds
  * the entities the shared-lane model gives it (`sharedLaneRunsOf`, each later copy that is not whole), one for each
  * different part; null where the copies have no fraction. An empty list where the model gives no part copy: then the
@@ -415,10 +453,11 @@ export interface DropSpacingLine {
     part?: number[];
     /**
      * Whether the run that gives the rate and stability counts the waits of these hands: "counted" where it puts them on one lane
-     * (stated drops, or one copy's drops at spots of the config), "between_copies" where it puts each copy's hands on a belt of its
+     * (one copy's drops at spots of the config), "counted_with_copies" where it does so in the run of the copies (the drops `output_belt`
+     * states: that run is made only for some clocks), "between_copies" where it puts each copy's hands on a belt of its
      * own (drops at spots of the config), "none" where it puts each inserter's hand on a belt of its own
      */
-    run_counts: "counted" | "between_copies" | "none";
+    run_counts: "counted" | "counted_with_copies" | "between_copies" | "none";
 }
 
 export interface DropSpacing {
@@ -434,6 +473,8 @@ export interface DropSpacing {
     lines: DropSpacingLine[];
     /** Output inserters whose drops are marked as side-loaded and so left out of the lines */
     unchecked: number[];
+    /** Output inserters of lines that are not judged because the copies have a fraction and the shared-lane model gives no part copy */
+    unchecked_part: number[];
     /** The spacings of the copies, and the offsets between a copy's inserters, at which the lines fit; none when the gap is not given or the lines are not all shared */
     room?: DropRoom;
     /** For the first line that does not fit: the inserter to start at another tick, the ticks that fit nearest to its own, and the inserter whose tick it could share */
@@ -459,7 +500,7 @@ function checkLine(config: Config, line: DropLine, starts: ReadonlyMap<number, r
 function runCountsOf(line: DropLine, hands: readonly Hand[]): DropSpacingLine["run_counts"] {
     const ids = new Set(hands.map(hand => hand.inserter_id));
     const inserters = line.inserters.filter(inserter => ids.has(inserter.id));
-    if (line.stated && inserters.every(inserter => !inserter.at_spot)) return "counted";
+    if (line.stated && inserters.every(inserter => !inserter.at_spot)) return "counted_with_copies";
     if (!inserters.every(inserter => inserter.at_spot)) return "none";
     return new Set(hands.map(hand => hand.copy)).size > 1 ? "between_copies" : "counted";
 }
@@ -473,12 +514,13 @@ export function dropSpacing(config: Config, starts: ReadonlyMap<number, readonly
     if (!(window_cycle_ticks > 0)) return null;
     const copies = config.setpoint.copies;
     const results: { line: DropLine; step: CopyStep | null; sense: 1 | -1; result: DropSpacingLine }[] = [];
-    for (const line of dropLines(config)) {
+    const all_lines = dropLines(config);
+    for (const line of all_lines) {
         const step = copyStepOf(config, line);
         if (copies > 1 && step === null && !line.stated) continue;
         const ticks = line.inserters.map(inserter => starts.get(inserter.id) ?? []).filter(it => it.length > 0);
         if (ticks.length === 0) continue;
-        // a line with hands of a part copy is judged with each part copy the model gives, and not at all where it gives none
+        // a line with hands of a part copy is judged with each part copy the model gives, and not at all where it gives none (the result names it)
         const parts = partsFor(config, line, step);
         if (parts.length === 0) continue;
         const senses: (1 | -1)[] = line.flow === null ? [1, -1] : [line.flow];
@@ -518,6 +560,7 @@ export function dropSpacing(config: Config, starts: ReadonlyMap<number, readonly
         hand: first.line.hand, lane_stack: first.line.lane_stack,
         lines: results.map(it => it.result),
         unchecked: uncheckedDrops(config),
+        unchecked_part: partUncheckedOf(config, all_lines),
     };
     if (shared) spacing.room = dropRoom(config, results.map(it => it.line), window_cycle_ticks) ?? undefined;
     if (!results.every(it => it.result.fits)) {
@@ -742,15 +785,19 @@ const whoOf = (line: DropSpacingLine, copies: number, names: DropNames) =>
 
 /**
  * What the explanation says of the wait, by what the run counts of the lines that do not fit (`run_counts`): it does not count
- * it only for a line whose hands the run does not put on one lane. Where the lines differ, the sentence names those it is about.
+ * it only for a line whose hands the run does not put on one lane. The drops `output_belt` states are on one lane in the run of the copies
+ * (`run_with_copies`: it was made for this clock, and it ran the output belt); the sentence says no more of a clock without it than that
+ * the copies were not run on the output belt. Where the lines differ, the sentence names those it is about.
  */
-function waitSentence(spacing: DropSpacing, names: DropNames): string {
+function waitSentence(spacing: DropSpacing, names: DropNames, run_with_copies: boolean): string {
     const failing = spacing.lines.filter(line => !line.fits);
-    const kind = failing.some(line => line.run_counts === "none") ? "none" : failing.some(line => line.run_counts === "between_copies") ? "between_copies" : "counted";
-    const about = failing.filter(line => line.run_counts === kind);
+    const effective = (line: DropSpacingLine) => line.run_counts === "counted_with_copies" ? (run_with_copies ? "counted" : "not_run") : line.run_counts;
+    const kind = (["none", "between_copies", "not_run"] as const).find(each => failing.some(line => effective(line) === each)) ?? "counted";
+    const about = failing.filter(line => effective(line) === kind);
     const whose = about.length < failing.length ? ` of ${inserterWords([...new Set(about.flatMap(line => line.inserter_ids))].sort(pair), names)}` : "";
     if (kind === "none") return `The simulator does not count this wait${whose}: it drops each inserter's hand on a belt of its own, so the rate and stability shown for this clock were worked out without it.`;
     if (kind === "between_copies") return `The simulator does not count the waits between copies${whose}: it drops each copy's hands on a belt of its own, so the rate and stability shown for this clock were worked out without them.`;
+    if (kind === "not_run") return `The simulator did not run the copies of this clock on the output belt${whose}, so the rate and stability shown for it were worked out without the waits between copies.`;
     return "The simulator counts this wait: it puts these hands on one lane too.";
 }
 
@@ -787,8 +834,12 @@ export function describeDropRoom(room: DropRoom, names: DropNames = NO_NAMES): s
     return `${lead} ${stand}, ${clauses.join("; ")}.${plus}${later}`;
 }
 
-/** The text a result gives of the drops onto the shared belt, as an insight's pieces */
-export function describeDropSpacing(spacing: DropSpacing, names: DropNames = NO_NAMES): { fits: boolean; title: string; what: string; why: string; explanation: string } {
+/**
+ * The text a result gives of the drops onto the shared belt, as an insight's pieces. `run_with_copies`: whether the run of the copies
+ * was made for the clock and ran the output belt (a clock that holds on one copy, and not a part copy on the output belt alone);
+ * where it is not known, it is taken as not made.
+ */
+export function describeDropSpacing(spacing: DropSpacing, names: DropNames = NO_NAMES, run_with_copies = false): { fits: boolean; title: string; what: string; why: string; explanation: string } {
     const fits = spacing.lines.every(line => line.fits);
     const belts = [...new Set(spacing.lines.map(line => line.belt_id))];
     const belt = beltWords(belts, names);
@@ -798,7 +849,7 @@ export function describeDropSpacing(spacing: DropSpacing, names: DropNames = NO_
         const first = spacing.lines[0];
         if (line.fits) {
             if (index === 0) {
-                sentences.push(`${window_cycle}, ${whoOf(line, spacing.copies, names)} drop ${handsWord(line.hands)} onto ${belt}, and each hand lands on a stretch of belt of its own, so none waits.`);
+                sentences.push(`${window_cycle}, ${whoOf(line, spacing.copies, names)} drop ${handsWord(line.hands)} onto ${belt}, and each hand lands on a stretch of belt of its own, so none waits${line.copies !== undefined ? " for another of these hands" : ""}.`);
             } else if (first.fits && line.hands === first.hands && line.copies === undefined && first.copies === undefined) {
                 sentences.push(`${capital(inserterWords(line.inserter_ids, names))} do the same${line.facing === (first.facing + 8) % 16 ? " on the other side of the belt" : ""}.`);
             } else {
@@ -818,13 +869,19 @@ export function describeDropSpacing(spacing: DropSpacing, names: DropNames = NO_
     const tile = hand_tiles === 1 ? `A tile of a belt lane holds one hand of ${spacing.hand} at stack size ${spacing.lane_stack}.`
         : `A tile of a belt lane holds ${4 * spacing.lane_stack} items at stack size ${spacing.lane_stack}, and a hand of ${spacing.hand} takes ${tiles(hand_tiles)} of a tile.`;
     const why = `${tile} A hand dropped where items already lie waits until they have moved on, so the hands of all the copies have to land in the gaps the others leave.`;
-    const uncheckedText = `${spacing.gap !== null ? ` ${DROP_SPACING_COPIES_ALIKE}` : ""}${spacing.unchecked.length > 0 ? ` ${DROP_SPACING_UNCHECKED}` : ""}`;
+    const uncheckedText = `${spacing.gap !== null ? ` ${DROP_SPACING_COPIES_ALIKE}` : ""}${spacing.unchecked.length > 0 ? ` ${DROP_SPACING_UNCHECKED}` : ""}`
+        + `${spacing.unchecked_part.length > 0 ? ` ${partUncheckedText(spacing.unchecked_part, names)}` : ""}`;
+    // lines of stated drops are judged stretch by stretch along their lane, not on a belt taken to run straight past the inserters
+    const some_stated = spacing.lines.some(line => line.copies !== undefined);
+    const all_stated = some_stated && spacing.lines.every(line => line.copies !== undefined);
+    const belt_text = `${all_stated ? "" : ` ${DROP_SPACING_STRAIGHT_BELT}`}${some_stated ? ` ${DROP_SPACING_STATED_LANES}` : ""}`;
     const roomText = spacing.room === undefined ? "" : ` ${describeDropRoom(spacing.room, names)}`;
     if (fits) {
         return {
             fits, title: `Drops onto ${belt} fit between each other`, what: `${sentences.join(" ")} ${closing}`, why,
-            explanation: "This holds for this spacing and these start ticks. Moving one inserter by a tile, or starting one group of inserters at another tick, "
-                + `puts hands on top of each other.${roomText} ${DROP_SPACING_STRAIGHT_BELT}${uncheckedText}`,
+            explanation: (all_stated ? "This holds for these start ticks. Starting one group of inserters at another tick can put hands on top of each other."
+                : "This holds for this spacing and these start ticks. Moving one inserter by a tile, or starting one group of inserters at another tick, puts hands on top of each other.")
+                + `${roomText}${belt_text}${uncheckedText}`,
         };
     }
     const parts: string[] = [];
@@ -837,7 +894,7 @@ export function describeDropSpacing(spacing: DropSpacing, names: DropNames = NO_
     const fit = parts.length > 0 ? ` The hands would fit with ${parts.join(", or with ")}.` : "";
     return {
         fits, title: `Drops onto ${belt} land on each other`, what: `${sentences.join(" ")} ${closing}`, why,
-        explanation: `${waitSentence(spacing, names)}${fit}${roomText} ${DROP_SPACING_STRAIGHT_BELT}${uncheckedText}`,
+        explanation: `${waitSentence(spacing, names, run_with_copies)}${fit}${roomText}${belt_text}${uncheckedText}`,
     };
 }
 
