@@ -361,3 +361,34 @@ after the engine reads the file: a field with a default is required, but a confi
 | `output_belt.splitter` | object | no | The splitter of the output belt, with its priorities. Its inputs and outputs are the points that name them. |
 | `output_belt.splitter.input_priority` | one of `left`, `right` | yes | The input priority of the splitter: "left" or "right". The generator does not accept "none". |
 | `output_belt.splitter.output_priority` | one of `left`, `right` | yes | The output priority of the splitter: "left" or "right". The generator does not accept "none". |
+
+## research
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `research` | object | no | The research that the values of the build were made with. Nothing reads it when the clock is made. |
+| `research.profile` | string, not empty | yes | The name of the research profile, for labels only. |
+| `research.template` | one of `no-research`, `all-finite-research` or null | yes | The template that the profile was made from, or null. |
+| `research.bonuses` | object | yes | The research numbers that the values of the build were made with. |
+| `research.bonuses.mining_drill_productivity_bonus` | number ≥ 0 | yes | The mining productivity that research gives every mining drill, in percent. |
+| `research.bonuses.inserter_stack_size_bonus` | integer ≥ 0 | yes | The items that research adds to the hand of an inserter that is not a bulk inserter. |
+| `research.bonuses.bulk_inserter_capacity_bonus` | integer 0 to 254 | yes | The items that research adds to the hand of a bulk inserter and of a stack inserter, 0 to 254. |
+| `research.bonuses.belt_stack_size_bonus` | integer ≥ 0 | yes | The items that research adds to a stack on a belt lane. A stack holds at most 4 whatever it is. |
+| `research.bonuses.recipes` | object of object by key | yes | The productivity that research gives each recipe, by the name of the recipe. A recipe that is not here has 0. |
+| `research.base` | object | yes | The values of the build without research, by entity number. |
+| `research.base.machines` | array of objects | yes | The machines that research gives productivity. |
+| `research.base.machines[].id` | integer > 0 | yes | The number of the machine. |
+| `research.base.machines[].recipe` | string | yes | The recipe that the machine made when the base was taken. |
+| `research.base.machines[].productivity` | number ≥ 0 | yes | The productivity of the machine without research, in percent. |
+| `research.base.drills` | array of objects | yes | The mining drills that research gives productivity. |
+| `research.base.drills[].id` | integer > 0 | yes | The number of the drill. |
+| `research.base.drills[].productivity` | number ≥ 0 | yes | The productivity of the drill without research, in percent. |
+| `research.base.silos` | array of objects | yes | The rocket silos that research gives productivity. |
+| `research.base.silos[].id` | integer > 0 | yes | The number of the rocket silo. |
+| `research.base.silos[].recipe` | string | yes | The recipe of the rocket silo. |
+| `research.base.silos[].productivity` | number ≥ 0 | yes | The productivity of the rocket silo without research, in percent. |
+| `research.base.inserters` | array of objects | yes | The inserters that research gives a hand. |
+| `research.base.inserters[].id` | integer > 0 | yes | The number of the inserter. |
+| `research.base.inserters[].stack_size` | integer > 0 | no | The hand that the blueprint sets for the inserter. Research does not change it. |
+| `research.base.belts` | array of objects | yes | The belts whose lanes research gives a stack size. |
+| `research.base.belts[].id` | integer > 0 | yes | The number of the belt. |
