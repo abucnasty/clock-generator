@@ -6,7 +6,12 @@ import { Option } from 'clock-generator/light';
 import { ConfigImportExport, type BuildEntryHandle } from './ConfigImportExport';
 import { createDefaultConfig } from '../utils/configForm/formData';
 import { inserterDetailLines } from '../utils/pasteText';
-import type { PastedEntities } from '../worker/types';
+import type { EngineQuery, PastedEntities } from '../worker/types';
+import factorioData from '../../../clock-generator/resources/data-filtered.json?raw';
+import ironScaffold from '../../../clock-generator/resources/config-samples/smelting/iron-plate/iron-plate-80-car-chest.scaffold?raw';
+import { encodeBlueprintFileBrowser, FactorioDataService, importBlueprint, type FactorioData } from 'clock-generator/browser';
+import { BLUEPRINT_FAILED_PROMPT, BLUEPRINT_PROMPTS } from '../utils/blueprintPaste';
+import { PASTE_PROMPTS } from '../utils/sidecarGuide';
 
 const validate = vi.hoisted(() => vi.fn());
 vi.mock('../hooks/useDisplayPreferences', () => ({ useDisplayPreferences: () => ({ scheme: 'dark', setScheme: vi.fn() }) }));
@@ -202,4 +207,177 @@ it('shows the Research profiles item after Copy share link when given its prop, 
     await user.click(screen.getByRole('menuitem', { name: 'Research profiles…' }));
     expect(onOpenResearchProfiles).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole('menu')).toBeNull();
+});
+
+// ---------------------------------------------------------------- a pasted blueprint
+
+describe('a pasted blueprint', () => {
+    const data = JSON.parse(factorioData) as FactorioData;
+    const iron = ironScaffold.trim();
+    /** The worker's answer to a blueprint query, from the import itself */
+    const blueprintAnswer = (query: Extract<EngineQuery, { kind: 'pasted-blueprint' }>) => {
+        const outcome = importBlueprint(query.text, query.inputs, data);
+        return outcome.kind === 'problem' ? outcome : { ...outcome, guidance: Option.none, suggested_target: Option.fromNullable(outcome.suggested_target) };
+    };
+    const asked = (kind: string) => validate.mock.calls.map(([query]) => query as EngineQuery).filter(query => query.kind === kind);
+    const lastBlueprintQuery = () => asked('pasted-blueprint').at(-1) as Extract<EngineQuery, { kind: 'pasted-blueprint' }>;
+    beforeEach(() => {
+        // as the worker loads it: the suggested setpoint reads the data service
+        FactorioDataService.initialize(data);
+        window.localStorage.clear();
+        validate.mockImplementation(async (query: EngineQuery) => query.kind === 'pasted-blueprint' ? blueprintAnswer(query) : incoming);
+        props.currentForm = createDefaultConfig();
+        props.target = props.currentForm.setpoint;
+        props.itemNames = ['iron-ore', 'iron-plate', 'copper-ore', 'stone'];
+    });
+    /** Copies the text in the game and pastes it from the intro card */
+    async function pasteText(text: string) {
+        await navigator.clipboard.writeText(text);
+        act(() => entry.current!.pasteFromFactorio());
+    }
+    const dialogOpen = () => screen.findByRole('dialog', { name: 'Confirm Import from Factorio' });
+    const pastePrompt = () => screen.findByRole('dialog', { name: 'Paste from Factorio' });
+
+    it('keeps the empty prompt for a blank text and asks nothing', async () => {
+        Render();
+        await pasteText('  \n ');
+        expect((await pastePrompt()).textContent).toContain(PASTE_PROMPTS.empty.text);
+        expect(validate).not.toHaveBeenCalled();
+    });
+
+    it.each(['{', '['])('sends a text that opens with %s the Sidecar way', async opening => {
+        Render();
+        await pasteText(` ${opening === '{' ? JSON.stringify({ machines: incoming.machines }) : '[]'}`);
+        await (opening === '{' ? screen.findByRole('checkbox', { name: /^Machines \(/ }) : pastePrompt());
+        expect(asked('pasted-entities').length).toBe(opening === '{' ? 1 : 0);
+        expect(asked('pasted-blueprint')).toEqual([]);
+    });
+
+    it('sends any other text to the import, with the research of No research and no answer', async () => {
+        Render();
+        await pasteText(`  ${iron}\n`);
+        await dialogOpen();
+        const query = asked('pasted-blueprint')[0] as Extract<EngineQuery, { kind: 'pasted-blueprint' }>;
+        expect(query.text).toBe(iron);
+        expect(query.inputs.answers).toEqual({});
+        expect(query.inputs.research).toMatchObject({ profile: 'No research', template: 'no-research', bonuses: { mining_drill_productivity_bonus: 0 } });
+        expect(asked('pasted-entities')).toEqual([]);
+    });
+
+    it.each(Object.keys(BLUEPRINT_PROMPTS) as (keyof typeof BLUEPRINT_PROMPTS)[])('says its own prompt for the problem %s', async problem => {
+        validate.mockResolvedValue({ kind: 'problem', problem });
+        Render();
+        await pasteText('0eNqsomething');
+        expect((await pastePrompt()).textContent).toContain(BLUEPRINT_PROMPTS[problem].text);
+    });
+
+    it('says a book is to be pasted one blueprint at a time, from the real import', async () => {
+        Render();
+        await pasteText(encodeBlueprintFileBrowser({ blueprint_book: { item: 'blueprint-book', blueprints: [], version: 562949954076673 } } as never));
+        expect((await pastePrompt()).textContent).toMatch(/copy one blueprint of it/);
+    });
+
+    it('gives its own prompt, not the Sidecar\'s, where the worker throws', async () => {
+        validate.mockRejectedValue(new Error('Invalid machine at index 0: bad'));
+        Render();
+        await pasteText(iron);
+        const prompt = await pastePrompt();
+        expect(prompt.textContent).toContain(BLUEPRINT_FAILED_PROMPT.text);
+        expect(prompt.textContent).not.toMatch(/update the Sidecar mod/);
+    });
+
+    it('shows the chooser, the counts, the question, the setpoint, the machines and the notes, and imports nothing while the question is open', async () => {
+        const { user } = Render();
+        await pasteText(iron);
+        const dialog = await dialogOpen();
+        expect(within(dialog).getByRole('combobox', { name: 'Research profile' })).toBeDefined();
+        expect(dialog.textContent).toMatch(/Numbers used: mining \+0 %, stack inserter 5, bulk inserter 1, inserter 1, belt stacks 1/);
+        expect(dialog.textContent).toMatch(/Read: \d+ machines?, .*\d+ inserters?/);
+        const direct = importBlueprint(iron, lastBlueprintQuery().inputs, data);
+        if (direct.kind !== 'build') throw new Error('no build');
+        expect(dialog.textContent?.includes('Not read: ')).toBe(direct.ignored.length > 0);
+        expect(within(dialog).getByRole('combobox', { name: 'Drill 1 mines' })).toBeDefined();
+        // the candidates as item icons, each an answer
+        expect(within(dialog).getByRole('button', { name: /iron.ore/i })).toBeDefined();
+        expect(within(dialog).getByRole('group', { name: 'Setpoint' })).toBeDefined();
+        expect(within(dialog).queryByRole('region', { name: 'Notes' }) !== null).toBe(direct.notes.some(note => note.code !== 'world:unknown-name'));
+        expect(apply().disabled).toBe(true);
+        tryApply();
+        expect(props.onApplyPaste).not.toHaveBeenCalled();
+
+        await user.click(within(dialog).getByRole('button', { name: /iron.ore/i }));
+        await screen.findByRole('checkbox', { name: /^Drills \(1\)/ });
+        // the machines wait on the ore their recipe comes from; once answered, each shows what its values are made of
+        const values = within(dialog).getByRole('group', { name: 'Machine values' });
+        expect(values.textContent).toMatch(/speed [\d.]+ \(\d+ beacons?, \d+ modules?\); productivity [\d.]+ % = base [\d.]+ \+ modules [\d.]+ \+ research [\d.]+, at most \d+/);
+        expect(lastBlueprintQuery().inputs.answers).toEqual({ 'drill-ore:1': 'iron-ore' });
+        expect(within(dialog).queryByRole('combobox', { name: 'Drill 1 mines' })).toBeNull();
+        expect(apply().disabled).toBe(false);
+        await user.click(apply());
+        const next = vi.mocked(props.onApplyPaste).mock.calls[0][0];
+        expect(next.drills!.configs.map(drill => drill.mined_item_name)).toEqual(['iron-ore']);
+        expect(next.research).toMatchObject({ profile: 'No research', template: 'no-research' });
+        expect(next.machines.every(machine => machine._prototype_source === 'blueprint')).toBe(true);
+        expect(next.setpoint.item).toBe('iron-plate');
+    });
+
+    it('marks a value that rests on no read of the game "please check", beside the entity it is about', async () => {
+        const { user } = Render();
+        await pasteText(iron);
+        const dialog = await dialogOpen();
+        await user.click(within(dialog).getByRole('button', { name: /iron.ore/i }));
+        const notes = await within(dialog).findByRole('region', { name: 'Notes' });
+        const direct = importBlueprint(iron, lastBlueprintQuery().inputs, data);
+        if (direct.kind !== 'build') throw new Error('no build');
+        const checked = direct.notes.filter(note => note.please_check);
+        expect(checked.length).toBeGreaterThan(0);
+        expect(notes.querySelectorAll('[data-note]').length).toBe(direct.notes.filter(note => note.code !== 'world:unknown-name').length);
+        expect(within(notes).getAllByText('please check').length).toBe(checked.length);
+        expect(notes.textContent).toMatch(/Belt \d+: [^.]+: its lane is not checked in the game yet\./);
+    });
+
+    it('asks the worker again with another profile\'s numbers, and remembers the choice', async () => {
+        const { user } = Render();
+        await pasteText(iron);
+        const dialog = await dialogOpen();
+        const before = asked('pasted-blueprint').length;
+        await user.click(within(dialog).getByRole('combobox', { name: 'Research profile' }));
+        await user.click(await screen.findByRole('option', { name: /All finite research/ }));
+        await screen.findByText(/Numbers used: mining \+20 %/);
+        expect(asked('pasted-blueprint').length).toBe(before + 1);
+        expect(lastBlueprintQuery().inputs.research).toMatchObject({ profile: 'All finite research', template: 'all-finite-research', bonuses: { mining_drill_productivity_bonus: 20 } });
+        expect(JSON.parse(window.localStorage.getItem('clock-generator-research-profiles')!).lastUsed).toBe('all-finite-research');
+    });
+
+    it('asks the worker again when the copies change, and with the setpoint item it was given', async () => {
+        const { user } = Render();
+        await pasteText(iron);
+        const dialog = await dialogOpen();
+        // the suggestion follows the answer that settles the drill, and is asked again with its item
+        await user.click(within(dialog).getByRole('button', { name: /iron.ore/i }));
+        await vi.waitFor(() => expect(lastBlueprintQuery().inputs.setpoint).toEqual({ item: 'iron-plate', copies: 1 }));
+        const copies = within(within(dialog).getByRole('group', { name: 'Setpoint' })).getByRole('textbox', { name: 'Copies' });
+        await user.clear(copies);
+        await user.type(copies, '3');
+        await user.tab();
+        expect(lastBlueprintQuery().inputs.setpoint).toEqual({ item: 'iron-plate', copies: 3 });
+    });
+
+    it('opens a blueprint saved as a text file, and a build file as before', async () => {
+        const { container } = render(<ConfigImportExport {...props} />);
+        const input = container.querySelector<HTMLInputElement>('input[type="file"]')!;
+        expect(input.accept).toMatch(/\.txt/);
+        fireEvent.change(input, { target: { files: [new File([iron], 'iron.txt', { type: 'text/plain' })] } });
+        await dialogOpen();
+        expect(asked('pasted-blueprint').length).toBeGreaterThan(0);
+        expect(asked('config-file')).toEqual([]);
+    });
+
+    it('opens a build file as before', async () => {
+        const { container } = render(<ConfigImportExport {...props} />);
+        const input = container.querySelector<HTMLInputElement>('input[type="file"]')!;
+        fireEvent.change(input, { target: { files: [new File([JSON.stringify({ setpoint: { item: 'iron-plate', items_per_second: 1, copies: 1 }, machines: [] })], 'build.json')] } });
+        await vi.waitFor(() => expect(asked('config-file').length).toBe(1));
+        expect(asked('pasted-blueprint')).toEqual([]);
+    });
 });

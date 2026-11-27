@@ -47,12 +47,46 @@ import { importReduction, type ImportReduction } from '../utils/importReduction'
 import { formDataToConfig } from '../utils/configForm/configMapping';
 import { PickupGeometrySummary } from './PickupGeometrySummary';
 import type { PickupCaptureWarning } from '../utils/sidecarExport';
+import { BlueprintImportPanel, type MachineOverrides } from './BlueprintImportPanel';
+import { BLUEPRINT_FAILED_PROMPT, BLUEPRINT_PROMPTS, isJsonText } from '../utils/blueprintPaste';
+import { openProfileStore, TEMPLATES } from '../utils/researchProfiles';
+import type { StorageLike } from '../utils/buildLibrary';
+import type { ImportInputs } from 'clock-generator/browser';
+import type { PastedBlueprint } from '../worker/types';
 
 const SAVED_MESSAGE = 'Build saved to a file.';
 const TARGET_CAPTION_ID = 'paste-target-caption';
 const TARGET_MAXIMUM_ID = 'paste-target-maximum';
 const EXAMPLE_FAILED_MESSAGE = 'Could not load the example. Check your connection and try again.';
 const freshImportSelections = (): ImportSelections => ({ target: false, machines: true, drills: true, inserters: true, belts: true, chests: true });
+
+/** The page's localStorage, reached only inside the calls: in some browsers merely reading `localStorage` throws */
+const pageStorage: StorageLike = {
+    getItem: key => window.localStorage.getItem(key),
+    setItem: (key, value) => window.localStorage.setItem(key, value),
+    removeItem: key => window.localStorage.removeItem(key),
+    key: i => window.localStorage.key(i),
+    get length() {
+        return window.localStorage.length;
+    },
+};
+
+/**
+ * A pasted blueprint while the confirm dialog is open: the text, what the user chose and typed, and the import's last
+ * answer for them. The import is asked again after each answer and each change of the profile, the setpoint item or copies.
+ */
+interface BlueprintSession {
+    text: string;
+    answers: Readonly<Record<string, string>>;
+    profileId: string;
+    setpoint: TargetValues;
+    overrides: MachineOverrides;
+    /** The setpoint is the import's suggestion, which follows each answer, until the user types one */
+    suggested: boolean;
+    pasted: PastedBlueprint;
+    /** The last ask failed: the dialog says so and imports nothing */
+    failed: boolean;
+}
 const THEME_CHOICES = [
     { scheme: 'dark', label: 'Theme: Dark', icon: DarkModeOutlined },
     { scheme: 'light', label: 'Theme: Light', icon: LightModeOutlined },
@@ -69,6 +103,8 @@ function crossingText(warning: PasteReferenceWarning): string {
 
 interface PendingImport extends PastedEntities {
     pickupWarnings?: PickupCaptureWarning[];
+    /** Set for a pasted blueprint */
+    blueprint?: BlueprintSession;
     original?: PendingImport;
     reduction?: ImportReduction;
     repeatedSourceKey?: string;
@@ -124,6 +160,8 @@ interface ConfigImportExportProps {
     checkDisabled?: boolean;
     /** Opens the research profiles; the menu shows its item only when this is given */
     onOpenResearchProfiles?: () => void;
+    /** The items a question of a pasted blueprint and its setpoint can name */
+    itemNames?: string[];
 }
 
 /** A share link made when the ⋮ menu opens, so a click can copy it at once; tagged with the build it was made for */
@@ -157,7 +195,7 @@ export function ConfigImportExport({
     buildName,
     buildTitle,
     toolsMenuItems = [],
-    renderControls, onInstall, onCheckOnly, checkDisabled, onOpenResearchProfiles,
+    renderControls, onInstall, onCheckOnly, checkDisabled, onOpenResearchProfiles, itemNames = [],
 }: ConfigImportExportProps) {
     const fileInputRef = useRef<HTMLInputElement>(null);
     // below 600px the app bar's Paste button says only "Paste", so the title keeps its room
@@ -197,7 +235,9 @@ export function ConfigImportExport({
         && acknowledged?.selections === importSelections;
     if (acknowledged && !acknowledgedCurrent) setAcknowledged(null);
     const hasImportWork = (importSelections.target && pendingImport?.fill != null) || preview?.counts.some(row => row.replacing) === true;
-    const canImport = hasImportWork && !preview?.geometryProblem && (!preview?.crossings.length || acknowledgedCurrent);
+    // a pasted blueprint imports nothing while a question is open, or after its last ask failed
+    const blueprintOpen = pendingImport?.blueprint !== undefined && (pendingImport.blueprint.pasted.questions.length > 0 || pendingImport.blueprint.failed);
+    const canImport = hasImportWork && !blueprintOpen && !preview?.geometryProblem && (!preview?.crossings.length || acknowledgedCurrent);
 
     // Simplification can replace a complete import, never a category the user chose to retain.
     const canSimplify = pendingImport && !pendingImport.reduction && canImport && pendingImport.fill && prospectiveTarget.item !== ''
@@ -321,12 +361,109 @@ export function ConfigImportExport({
         onBuildReplaced();
     }, [onImport, onBuildReplaced, onUndoable]);
 
+    // the research profiles, for the chooser of a pasted blueprint; the choice is remembered
+    const [profileStore] = useState(() => openProfileStore(pageStorage));
+    const blueprintAskRef = useRef(0);
+    const askBlueprint = useCallback((session: Pick<BlueprintSession, 'text' | 'answers' | 'profileId' | 'setpoint'>) => {
+        const entry = profileStore.find(session.profileId) ?? profileStore.find(TEMPLATES[0].id)!;
+        const research: ImportInputs['research'] = { profile: entry.name, template: entry.isTemplate ? entry.id as typeof TEMPLATES[number]['id'] : entry.template, bonuses: entry.bonuses };
+        return askEngine({ kind: 'pasted-blueprint', text: session.text, inputs: {
+            research, answers: session.answers, setpoint: { ...(session.setpoint.item !== '' && { item: session.setpoint.item }), copies: session.setpoint.copies },
+        } });
+    }, [profileStore]);
+
+    /** What the confirm dialog shows of a pasted blueprint: its lists, with the values the user typed over */
+    const pendingOf = useCallback((session: BlueprintSession): PendingImport => {
+        const { pasted } = session;
+        const numberOf = new Map(pasted.entities.flatMap(entity => entity.row?.list === 'machines' ? [[entity.row.id, entity.entity_number] as const] : []));
+        const machines = pasted.machines.map(machine => {
+            const typed = session.overrides[numberOf.get(machine.id) ?? -1];
+            return typed ? { ...machine, ...typed } : machine;
+        });
+        const suggestion = Option.toNullable(pasted.suggested_target);
+        const values: TargetValues = { ...session.setpoint, ...(pasted.copy_offset !== null && { copy_offset: { ...pasted.copy_offset } }) };
+        return {
+            ...pasted, machines, blueprint: session,
+            fill: session.setpoint.item === '' ? null : { values, source: suggestion?.source ?? 'inferred',
+                ...(suggestion?.belt_limit !== undefined && { beltLimit: suggestion.belt_limit }),
+                ...(suggestion?.build_limit !== undefined && { buildLimit: suggestion.build_limit }) },
+        };
+    }, []);
+
     /**
-     * Reads an export of the Sidecar mod and opens the confirm dialog for it. Returns why it could not, for the Paste
-     * from Factorio dialog to say, or null once the confirm dialog is open.
+     * Asks the import for the session's inputs. While the setpoint is the import's suggestion (the user's build had none and
+     * the user typed none), it follows the suggestion, which an answer can change, and the import is asked once more with
+     * its item, which can settle a drill's ore.
+     */
+    const settle = useCallback(async (session: Omit<BlueprintSession, 'pasted' | 'failed'>): Promise<{ session: Omit<BlueprintSession, 'pasted' | 'failed'>; answer: Awaited<ReturnType<typeof askBlueprint>> }> => {
+        const answer = await askBlueprint(session);
+        if (answer.kind !== 'build' || !session.suggested) return { session, answer };
+        const suggestion = Option.toNullable(answer.suggested_target);
+        if (suggestion === null) return { session, answer };
+        const filled = targetToFill(suggestion);
+        const setpoint = { item: filled.item, items_per_second: filled.items_per_second, copies: session.setpoint.copies };
+        const moved = { ...session, setpoint };
+        return setpoint.item === session.setpoint.item ? { session: moved, answer } : { session: moved, answer: await askBlueprint(moved) };
+    }, [askBlueprint]);
+
+    /** Reads a pasted blueprint through the import and opens the confirm dialog for it, or says why it could not */
+    const startBlueprintPaste = useCallback(async (text: string, request: number): Promise<PastePrompt | null> => {
+        const lastUsed = profileStore.snapshot().lastUsed;
+        const profileId = lastUsed !== null && profileStore.find(lastUsed) ? lastUsed : TEMPLATES[0].id;
+        const suggested = currentTarget.item === '';
+        const asked = { text, answers: {}, profileId, overrides: {}, suggested,
+            setpoint: { item: currentTarget.item, items_per_second: currentTarget.items_per_second, copies: currentTarget.copies } };
+        const ask = ++blueprintAskRef.current;
+        let settled: Awaited<ReturnType<typeof settle>>;
+        try {
+            settled = await settle(asked);
+        } catch (error) {
+            if (request !== pasteRequestRef.current) return null;
+            console.error('Blueprint paste error:', error);
+            return BLUEPRINT_FAILED_PROMPT;
+        }
+        if (request !== pasteRequestRef.current || ask !== blueprintAskRef.current) return null;
+        const { answer } = settled;
+        if (answer.kind === 'problem') return BLUEPRINT_PROMPTS[answer.problem];
+        confirmOpenerRef.current = document.activeElement;
+        setPendingImport(pendingOf({ ...settled.session, pasted: answer, failed: false }));
+        // everything there is; the setpoint only where the user's build has none
+        setImportSelections({ target: suggested, machines: true, drills: true, inserters: true, belts: true, chests: true });
+        return null;
+    }, [settle, currentTarget, pendingOf, profileStore]);
+
+    /** A change in the dialog of a pasted blueprint; the import is asked again where the change can move what it gives */
+    const changeBlueprint = useCallback((change: Partial<Pick<BlueprintSession, 'answers' | 'profileId' | 'setpoint' | 'overrides'>>) => {
+        const current = pendingImport?.blueprint;
+        if (!current) return;
+        // a setpoint the user typed is theirs: it no longer follows the suggestion
+        const next: BlueprintSession = { ...current, ...change, ...(change.setpoint && { suggested: false }) };
+        if (change.setpoint) setImportSelections(selections => selections.target ? selections : { ...selections, target: true });
+        const asks = change.answers !== undefined || change.profileId !== undefined
+            || (change.setpoint !== undefined && (change.setpoint.item !== current.setpoint.item || change.setpoint.copies !== current.setpoint.copies));
+        setPendingImport(pendingOf(next));
+        if (!asks) return;
+        const ask = ++blueprintAskRef.current;
+        const request = pasteRequestRef.current;
+        settle(next).then(({ session, answer }) => {
+            if (ask !== blueprintAskRef.current || request !== pasteRequestRef.current) return;
+            setPendingImport(answer.kind === 'build' ? pendingOf({ ...session, pasted: answer, failed: false }) : pendingOf({ ...next, failed: true }));
+        }, error => {
+            if (ask !== blueprintAskRef.current || request !== pasteRequestRef.current) return;
+            console.error('Blueprint paste error:', error);
+            setPendingImport(pendingOf({ ...next, failed: true }));
+        });
+    }, [pendingImport, pendingOf, settle]);
+
+    /**
+     * Reads a paste and opens the confirm dialog for it: a blueprint goes through the import, JSON is read as an export of
+     * the Sidecar mod. Returns why it could not, for the Paste from Factorio dialog to say, or null once the confirm dialog
+     * is open.
      */
     const startPaste = useCallback(async (text: string, request = ++pasteRequestRef.current): Promise<PastePrompt | null> => {
         if (request !== pasteRequestRef.current) return null;
+        if (text.trim() === '') return PASTE_PROMPTS.empty;
+        if (!isJsonText(text)) return startBlueprintPaste(text.trim(), request);
         const read = readSidecarExport(text);
         if (read.kind === 'problem') {
             return PASTE_PROMPTS[read.problem];
@@ -367,7 +504,7 @@ export function ConfigImportExport({
             chests: !read.legacy && validated.chests.length > 0,
         });
         return null;
-    }, [currentTarget.item]);
+    }, [currentTarget.item, startBlueprintPaste]);
 
     const handleFileChange = useCallback(
         async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -378,8 +515,8 @@ export function ConfigImportExport({
 
             try {
                 const content = await file.text();
-                if (looksLikeSidecarExport(content)) {
-                    // an export of the mod saved to a file goes to the paste
+                if (looksLikeSidecarExport(content) || !isJsonText(content)) {
+                    // an export of the mod or a blueprint saved to a file goes to the paste
                     const prompt = await startPaste(content);
                     if (prompt) {
                         showPastePrompt(prompt);
@@ -467,7 +604,10 @@ export function ConfigImportExport({
         const parts = currentPreview.counts.filter(row => row.replacing)
             .map(row => countOf(row.incoming, row.category.slice(0, -1), row.category));
         if (fill !== null) parts.unshift('Setpoint');
-        const next = applyPaste(currentForm, pendingImport, importSelections, fill?.values);
+        const blueprint = pendingImport.blueprint;
+        if (blueprint && (blueprint.pasted.questions.length > 0 || blueprint.failed)) return;
+        const next = applyPaste(currentForm, pendingImport, importSelections, fill?.values,
+            blueprint ? { research: blueprint.pasted.research, copy_offset: blueprint.pasted.copy_offset } : undefined);
 
         resetPasteFlow();
 
@@ -694,7 +834,7 @@ export function ConfigImportExport({
             <input
                 ref={fileInputRef}
                 type="file"
-                accept=".json"
+                accept=".json,.txt,application/json,text/plain"
                 style={{ display: 'none' }}
                 onChange={handleFileChange}
             />
@@ -746,13 +886,24 @@ export function ConfigImportExport({
                         // The explicit simplify action also accepts its displayed Copies change.
                         setImportSelections(current => ({ ...current, target: true }));
                     }} />}
+                {pendingImport?.blueprint?.failed && <Alert severity="error" sx={{ mb: 2 }}>{BLUEPRINT_FAILED_PROMPT.text}</Alert>}
+                {pendingImport?.blueprint && !pendingImport.reduction && (
+                    <BlueprintImportPanel pasted={pendingImport.blueprint.pasted} machines={pendingImport.machines}
+                        profiles={profileStore.entries()} profileId={pendingImport.blueprint.profileId}
+                        onProfileChange={id => { profileStore.select(id); changeBlueprint({ profileId: id }); }}
+                        answers={pendingImport.blueprint.answers}
+                        onAnswer={(key, value) => changeBlueprint({ answers: { ...pendingImport.blueprint!.answers, [key]: value } })}
+                        itemNames={itemNames} setpoint={pendingImport.blueprint.setpoint} onSetpointChange={setpoint => changeBlueprint({ setpoint })}
+                        onOverride={(number, field, value) => changeBlueprint({ overrides: { ...pendingImport.blueprint!.overrides,
+                            [number]: { ...pendingImport.blueprint!.overrides[number], [field]: value } } })} />
+                )}
                 {pendingImport && !pendingImport.reduction && (
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                         <PickupGeometrySummary build={{ inserters: prospectiveInserters }} backedUp={null} />
                         {importSelections.inserters && pendingImport.pickupWarnings?.map(warning => <Typography key={warning.inserter_id} variant="body2" color="text.secondary">
                             Captured Inserter {warning.inserter_id}: {pickupCaptureWarningMessage(warning.reason)}
                         </Typography>)}
-                        {importSelections.inserters && pendingImport.inserters.flatMap((inserter, i) => inserter.sink.type === 'belt' && inserter.sink.drop_capture
+                        {importSelections.inserters && !pendingImport.blueprint && pendingImport.inserters.flatMap((inserter, i) => inserter.sink.type === 'belt' && inserter.sink.drop_capture
                             ? [<Typography key={`side-loaded-${i}`} variant="body2" color="text.secondary">
                                 Captured Inserter {inserter.id ?? i + 1}: {sideLoadedDropMessage(inserter.sink.drop_capture.tiles)}
                             </Typography>] : [])}

@@ -66,6 +66,7 @@ type PrototypeSource = NonNullable<MachineFormData['_prototype_source']>;
 export function prototypeSourceText(source: PrototypeSource | undefined): string {
     switch (source) {
         case 'sidecar': return 'from Sidecar';
+        case 'blueprint': return 'from the blueprint';
         case 'sample': return 'from the sample';
         case 'hand': return 'chosen by hand';
         case 'recipe': return 'picked for its recipe';

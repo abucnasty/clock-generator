@@ -1155,6 +1155,7 @@ function App() {
                             onCheckOnly={handleCheckOnly}
                             checkDisabled={busy || invalid_rate}
                             onOpenResearchProfiles={SHOW_RESEARCH_PROFILES ? () => setResearchProfilesOpen(true) : undefined}
+                            itemNames={itemNamesComposite}
                             renderControls={(paste, menu) => (
                                 <WorkflowBar
                                     entryAction={paste}

@@ -5,9 +5,8 @@ import grenadeSample from '../../../clock-generator/resources/config-samples/int
 import militarySample from '../../../clock-generator/resources/config-samples/science/military/military-240.json?raw';
 import ironScaffold from '../../../clock-generator/resources/config-samples/smelting/iron-plate/iron-plate-80-car-chest.scaffold?raw';
 import chestChainScaffold from '../../../clock-generator/resources/config-samples/intermediates/productivity-module/productivity-module-80-chest-chain.scaffold?raw';
-import { deflateSync, inflateSync } from 'node:zlib';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { applyResearch, BeltConfigSchema, ChestConfigSchema, ConfigSchema, importBlueprint, InserterConfigSchema, LATEST_SIDECAR_VERSION, MachineConfigurationSchema, MiningDrillConfigSchema, researchDifferences,
+import { applyResearch, BeltConfigSchema, decodeBlueprintFileBrowser, encodeBlueprintFileBrowser, ChestConfigSchema, ConfigSchema, importBlueprint, InserterConfigSchema, LATEST_SIDECAR_VERSION, MachineConfigurationSchema, MiningDrillConfigSchema, researchDifferences,
     type Config, type DebugSteps, type FactorioData, type ImportInputs } from 'clock-generator/browser';
 import type { EngineAnswers, EngineQuery, LiveCoverage, PastedEntities, PrimaryCompletedResponse, ValidationFailedResponse, WorkerRequest, WorkerResponse } from './types';
 import { readConfigFile, readSavedConfig, serializeConfig } from '../hooks/usePersistedConfigForm';
@@ -979,8 +978,8 @@ describe('a pasted blueprint', () => {
         bonuses: { mining_drill_productivity_bonus: 0, inserter_stack_size_bonus: 0, bulk_inserter_capacity_bonus: 0, belt_stack_size_bonus: 0, recipes: {} } };
     const pastedOf = (text: string, answers: Record<string, string> = {}) => ask({ kind: 'pasted-blueprint', text, inputs: { research: noResearch, answers } });
     /** A blueprint string of the JSON, as the game writes it */
-    const pack = (json: unknown) => '0' + deflateSync(Buffer.from(JSON.stringify(json))).toString('base64');
-    const unpack = (text: string) => JSON.parse(inflateSync(Buffer.from(text.trim().slice(1), 'base64')).toString()) as { blueprint: { entities: Record<string, unknown>[] } };
+    const pack = (json: unknown) => encodeBlueprintFileBrowser(json as Parameters<typeof encodeBlueprintFileBrowser>[0]);
+    const unpack = (text: string) => decodeBlueprintFileBrowser(text.trim()) as unknown as { blueprint: { entities: Record<string, unknown>[] } };
     const listsOf = (pasted: { machines: unknown; drills: unknown; inserters: unknown; belts: unknown; chests: unknown }) =>
         ({ machines: pasted.machines, drills: pasted.drills, inserters: pasted.inserters, belts: pasted.belts, chests: pasted.chests });
 

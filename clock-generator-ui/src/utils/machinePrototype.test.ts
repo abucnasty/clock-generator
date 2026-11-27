@@ -50,6 +50,7 @@ describe('a machine row and its machine', () => {
         expect(machineIconText(row({ prototype: 'cryogenic-plant', _prototype_source: 'hand' }), name)).toBe('Cryogenic plant, chosen by hand');
         expect(machineIconText(row({ prototype: 'cryogenic-plant', _prototype_source: 'recipe' }), name)).toBe('Cryogenic plant, picked for its recipe');
         expect(machineIconText(row({ prototype: 'cryogenic-plant' }), name)).toBe('Cryogenic plant, from the configuration');
+        expect(machineIconText(row({ prototype: 'cryogenic-plant', _prototype_source: 'blueprint' }), name)).toBe('Cryogenic plant, from the blueprint');
         expect(machineIconText(row({}), name)).toBe('No machine set: simulated as an assembling machine');
     });
 
@@ -75,6 +76,16 @@ describe('where a machine came from', () => {
         const incoming = { machines: imported.machines, drills: [], inserters: [], belts: [], chests: [], guidance: Option.none, suggested_target: Option.none };
         expect(applyPaste(createDefaultConfig(), incoming, selections).machines.map(machine => machine._prototype_source)).toEqual(['sidecar', undefined]);
         expect(applyPaste(createDefaultConfig(), { ...incoming, picked_machines: [1] }, selections).machines[0]._prototype_source).toBe('recipe');
+    });
+
+    it("is the blueprint's for a pasted blueprint", () => {
+        const selections = { target: false, machines: true, drills: false, inserters: false, belts: false, chests: false };
+        const incoming = { machines: imported.machines, drills: [], inserters: [], belts: [], chests: [], guidance: Option.none, suggested_target: Option.none };
+        const research = { profile: 'No research', template: 'no-research' as const,
+            bonuses: { mining_drill_productivity_bonus: 0, inserter_stack_size_bonus: 0, bulk_inserter_capacity_bonus: 0, belt_stack_size_bonus: 0, recipes: {} },
+            base: { machines: [], drills: [], silos: [], inserters: [], belts: [] } };
+        expect(applyPaste(createDefaultConfig(), incoming, selections, undefined, { research, copy_offset: null }).machines.map(machine => machine._prototype_source))
+            .toEqual(['blueprint', undefined]);
     });
 
     it('is by hand once chosen, and goes with the machine', () => {

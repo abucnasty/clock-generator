@@ -171,3 +171,45 @@ it('retains an exact rate unless the suggested numeric setpoint is selected', ()
     expect(applyPaste(form, empty(), none, suggested).setpoint).toEqual(form.setpoint);
     expect(applyPaste(form, empty(), { ...none, target: true }, suggested).setpoint).toEqual(suggested);
 });
+
+describe('a pasted blueprint', () => {
+    const bonuses = { mining_drill_productivity_bonus: 100, inserter_stack_size_bonus: 3, bulk_inserter_capacity_bonus: 11, belt_stack_size_bonus: 3, recipes: {} };
+    const research = {
+        profile: 'Mine', template: null, bonuses,
+        base: { machines: [{ id: 1, recipe: '', productivity: 0 }, { id: 2, recipe: '', productivity: 0 }], drills: [{ id: 1, productivity: 0 }],
+            silos: [], inserters: [{ id: 1 }, { id: 2, stack_size: 3 }], belts: [{ id: 1 }] },
+    };
+    const pasted = (): PastedEntities => ({ ...empty(), machines: [machine(1), machine(2)], drills: [drill(1)], inserters: [inserter(1, 'machine'), inserter(2, 'machine')],
+        belts: [{ id: 1, type: 'turbo-transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 4 }] }] });
+
+    it('writes its research block, the step between copies and the machines as the blueprint\'s', () => {
+        const next = applyPaste(current(), pasted(), all, { item: 'iron-gear-wheel', items_per_second: 2, copies: 3 }, { research, copy_offset: { x: 0, y: 7 } });
+        expect(next.research).toEqual(research);
+        expect(next.setpoint).toEqual({ item: 'iron-gear-wheel', items_per_second: 2, copies: 3, copy_offset: { x: 0, y: 7 } });
+        expect(next.machines.map(row => row._prototype_source)).toEqual([undefined, undefined]);
+        const named = applyPaste(current(), { ...pasted(), machines: [{ ...machine(1), prototype: 'assembling-machine-3' }] }, all, undefined, { research, copy_offset: null });
+        expect(named.machines[0]._prototype_source).toBe('blueprint');
+        expect(named.setpoint).toEqual(current().setpoint);
+    });
+
+    it('names in the base only the rows it writes, so a later profile leaves the rows the user kept as they are', () => {
+        const form = current();
+        form.inserters = [formInserter(1), formInserter(2)];
+        const next = applyPaste(form, pasted(), { ...all, inserters: false }, undefined, { research, copy_offset: null });
+        expect(next.inserters).toBe(form.inserters);
+        expect(next.research!.base).toEqual({ ...research.base, inserters: [] });
+        // rows a simplification took out are not named
+        const fewer = applyPaste(current(), { ...pasted(), machines: [machine(2)] }, all, undefined, { research, copy_offset: null });
+        expect(fewer.research!.base.machines).toEqual([{ id: 2, recipe: '', productivity: 0 }]);
+    });
+
+    it('writes no block where it writes none of the rows research gives a value', () => {
+        const form = { ...current(), research };
+        const next = applyPaste(form, pasted(), { ...none, target: true }, { item: 'iron-gear-wheel', items_per_second: 2, copies: 1 }, { research: { ...research, profile: 'Other' }, copy_offset: null });
+        expect(next.research).toBe(research);
+    });
+
+    it('writes no block for a paste of the Sidecar mod', () => {
+        expect(applyPaste(current(), pasted(), all)).not.toHaveProperty('research');
+    });
+});
