@@ -11,6 +11,7 @@ import factorioData from '../../../clock-generator/resources/data-filtered.json?
 import ironScaffold from '../../../clock-generator/resources/config-samples/smelting/iron-plate/iron-plate-80-car-chest.scaffold?raw';
 import { encodeBlueprintFileBrowser, FactorioDataService, importBlueprint, type FactorioData } from 'clock-generator/browser';
 import { BLUEPRINT_FAILED_PROMPT, BLUEPRINT_PROMPTS } from '../utils/blueprintPaste';
+import { targetToFill } from '../utils/pasteTarget';
 import { templateOf } from '../utils/researchProfiles';
 import { PASTE_PROMPTS } from '../utils/sidecarGuide';
 
@@ -483,6 +484,66 @@ describe('a pasted blueprint', () => {
         const again = await reachSettledBuild(user);
         expect(within(again).getByRole('button', { name: 'Import Selected' })).toBeDefined();
         expect(apply().disabled).toBe(false);
+    });
+
+    /** Picks the finite-research profile, which asks the import again, and waits until that answer is held back */
+    async function changeProfileAndHold(dialog: HTMLElement, user: ReturnType<typeof userEvent.setup>) {
+        holdBlueprintAnswers();
+        await user.click(within(dialog).getByRole('combobox', { name: 'Research profile' }));
+        await user.click(await screen.findByRole('option', { name: new RegExp(`^${templateOf('all-finite-research')!.name}`) }));
+        await vi.waitFor(() => expect(heldAnswers.length).toBeGreaterThan(0));
+    }
+    /** Clears a field, types the value and leaves the field, as a user commits it */
+    async function typeInto(user: ReturnType<typeof userEvent.setup>, field: HTMLElement, value: string) {
+        await user.clear(field);
+        await user.type(field, value);
+        await user.tab();
+    }
+
+    it.each([
+        ['a machine\'s speed', async (dialog: HTMLElement, user: ReturnType<typeof userEvent.setup>) => {
+            const speeds = within(within(dialog).getByRole('group', { name: 'Machine values' })).getAllByRole('textbox', { name: /^Speed, / });
+            await typeInto(user, speeds[0], '7.5');
+        }, (next: Parameters<Props['onApplyPaste']>[0]) => expect(next.machines[0].crafting_speed).toBe(7.5)],
+        ['the items per second', async (dialog: HTMLElement, user: ReturnType<typeof userEvent.setup>) => {
+            await typeInto(user, within(within(dialog).getByRole('group', { name: 'Setpoint' })).getByRole('textbox', { name: 'Items per second' }), '37.5');
+        }, (next: Parameters<Props['onApplyPaste']>[0]) => expect(next.setpoint.items_per_second).toBe(37.5)],
+    ])('keeps %s typed while the answer to a changed research profile is out, and saves it with that profile\'s numbers', async (_name, typeInGap, expectTyped) => {
+        const { user } = Render();
+        const dialog = await reachSettledBuild(user);
+        await changeProfileAndHold(dialog, user);
+        await typeInGap(dialog, user);
+        // typing in the gap does not ask: the one answer that is out is the one that comes
+        expect(heldAnswers.length).toBe(1);
+
+        stopHolding();
+        releaseHeldAnswers();
+        await vi.waitFor(() => expect(apply().disabled).toBe(false));
+        await user.click(apply());
+        const next = vi.mocked(props.onApplyPaste).mock.calls[0][0];
+        expectTyped(next);
+        const after = importBlueprint(iron, lastBlueprintQuery().inputs, data);
+        if (after.kind !== 'build') throw new Error('no build');
+        expect(next.research).toMatchObject({ template: 'all-finite-research' });
+        expect(next.drills!.configs.map(drill => drill.productivity)).toEqual(after.drills.map(drill => drill.productivity));
+    });
+
+    it('still moves the setpoint to the new suggestion when nothing was typed in the gap', async () => {
+        const { user } = Render();
+        const dialog = await reachSettledBuild(user);
+        const before = importBlueprint(iron, lastBlueprintQuery().inputs, data);
+        if (before.kind !== 'build' || before.suggested_target === null) throw new Error('no suggestion');
+        await changeProfileAndHold(dialog, user);
+        stopHolding();
+        releaseHeldAnswers();
+        await vi.waitFor(() => expect(apply().disabled).toBe(false));
+        await user.click(apply());
+        const next = vi.mocked(props.onApplyPaste).mock.calls[0][0];
+        const after = importBlueprint(iron, lastBlueprintQuery().inputs, data);
+        if (after.kind !== 'build' || after.suggested_target === null) throw new Error('no suggestion');
+        expect(next.setpoint.items_per_second).toEqual(targetToFill(after.suggested_target).items_per_second);
+        // the profile moves the suggested rate, so a fix that took the rate shown before the answer would fail here
+        expect(targetToFill(after.suggested_target).items_per_second).not.toEqual(targetToFill(before.suggested_target).items_per_second);
     });
 
     it('asks the worker again when the copies change, and with the setpoint item it was given', async () => {
