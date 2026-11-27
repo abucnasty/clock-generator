@@ -161,7 +161,12 @@ function compare(run: Run): Compared {
 
     const decoded = decodeBlueprint(run.text);
     if (decoded.kind !== "blueprint") throw new Error("not a blueprint");
-    const entityAt = (p: Point | undefined) => decoded.entities.find((e) => samePoint(p, e.position, t));
+    const entityAt = (p: Point | undefined, what: string) => {
+        const found = decoded.entities.find((e) => samePoint(p, e.position, t));
+        // a read entity that lies on no blueprint entity would match every row of the closed list and of not_held
+        if (!found) differences.push(`${build.name} ${what}: no blueprint entity at its place`);
+        return found;
+    };
 
     const allowed = (where: { kind: string; entity_number?: number; read_belt?: number; line?: number; lane?: number }, field: string): Allowed | undefined =>
         ALLOWED.find((a) => a.build === build.name && a.kind === where.kind && a.field === field
@@ -230,13 +235,13 @@ function compare(run: Run): Compared {
     for (const r of file.machines ?? []) {
         const mine = importAt(outcome.machines as unknown as Raw[], r.position);
         if (!mine) continue;
-        const where = { kind: "machine", entity_number: entityAt(r.position)?.entity_number };
+        const where = { kind: "machine", entity_number: entityAt(r.position, `machine ${r.id}`)?.entity_number ?? -1 };
         fields(`machine ${r.id}`, where, r, mine);
         if (r.result_target || mine.result_target) endOf(`machine ${r.id}`, where, "result_target", r.result_target, mine.result_target as Raw | undefined);
     }
     for (const r of file.chests ?? []) {
         const mine = importAt(outcome.chests as unknown as Raw[], r.position);
-        if (mine) fields(`chest ${r.id}`, { kind: "chest", entity_number: entityAt(r.position)?.entity_number }, r, mine);
+        if (mine) fields(`chest ${r.id}`, { kind: "chest", entity_number: entityAt(r.position, `chest ${r.id}`)?.entity_number ?? -1 }, r, mine);
     }
     pairs.drill = 0;
     for (const r of drillsOf(file)) {
@@ -246,7 +251,7 @@ function compare(run: Run): Compared {
             continue;
         }
         pairs.drill += 1;
-        const where = { kind: "drill", entity_number: entityAt(r.position)?.entity_number };
+        const where = { kind: "drill", entity_number: entityAt(r.position, `drill ${r.id}`)?.entity_number ?? -1 };
         fields(`drill ${r.id}`, where, r, mine);
         endOf(`drill ${r.id}`, where, "target", r.target, mine.target as Raw | undefined);
     }
@@ -260,7 +265,7 @@ function compare(run: Run): Compared {
             continue;
         }
         pairs.inserter += 1;
-        const entity_number = entityAt(r.position)?.entity_number;
+        const entity_number = entityAt(r.position, `inserter ${index + 1}`)?.entity_number ?? -1;
         const where = { kind: "inserter", entity_number };
         const what = `inserter ${index + 1} (entity ${entity_number})`;
         fields(what, where, r, mine);
@@ -316,6 +321,9 @@ function compare(run: Run): Compared {
         });
         if (notHeld(where, "flow_direction")) notHeldSkipped += 1;
         else check(what, where, "flow_direction", r.flow_direction ?? null, mine.flow_direction ?? null);
+    }
+    for (const [kind, map] of Object.entries(maps)) {
+        if (new Set(map.values()).size !== map.size) differences.push(`${build.name}: the map from read ${kind} ids to import ids is not one to one`);
     }
     return { differences, allowedUsed, compared, notHeldSkipped, pairs };
 }
@@ -553,6 +561,14 @@ describe("notes", () => {
         const build = changed("steel", (es) => { (entity(es, 8).position as Point).x += 0.25; });
         expect(build.kind).toBe("build");
         expect(notesOf(build, "world:off-grid")).toEqual([8]);
+    });
+
+    it("lists an entity the data has no row for as a note, and counts it as not read", () => {
+        const steel = runOf("steel");
+        const rails = unpack(steel.text).blueprint.entities.filter((e) => e.name === "straight-rail").map((e) => e.entity_number as number);
+        expect(rails.length).toBeGreaterThan(0);
+        expect(notesOf(steel.outcome, "world:unknown-name")).toEqual(rails);
+        expect(steel.outcome.ignored).toContainEqual({ name: "straight-rail", count: rails.length });
     });
 
     it("has a code for every note a step can give", () => {

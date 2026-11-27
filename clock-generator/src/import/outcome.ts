@@ -44,8 +44,8 @@ export type GeometryNoteField = (typeof GEOMETRY_NOTE_FIELDS)[number];
 
 /** Every code a note can have. The words are the dialog's. */
 export const NOTE_CODES = [
-    // the world's problems with an entity (a name with no data row is not a note: it is counted in `ignored`)
-    "world:bad-entity", "world:duplicate-number", "world:no-size", "world:bad-direction", "world:bad-type", "world:no-reach", "world:off-grid", "world:overlap",
+    // the world's problems with an entity (a name with no data row is also counted in `ignored`)
+    "world:unknown-name", "world:bad-entity", "world:duplicate-number", "world:no-size", "world:bad-direction", "world:bad-type", "world:no-reach", "world:off-grid", "world:overlap",
     // the geometry's problems, and its values with no game read (unread) or that the blueprint cannot show (default)
     "geometry:no-vectors", "geometry:bad-direction", "geometry:no-box", "geometry:bad-orientation",
     ...GEOMETRY_NOTE_FIELDS.map(field => `unread:${field}` as const),

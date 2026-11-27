@@ -25,7 +25,8 @@ import { worldOf, type BuildWorld, type PrototypeRow, type WorldData, type World
 
 // ---------------------------------------------------------------- the data each step takes, from the game data
 
-type Vector = readonly [number, number] | { x: number; y: number };
+/** The effects a module or a beacon can give, as the speeds' data names them */
+type SpeedEffectName = NonNullable<SpeedData["beacon"][string]["allowed_effects"]>[number];
 
 const own = <T>(record: Readonly<Record<string, T>> | undefined, key: string): T | undefined =>
     record !== undefined && Object.prototype.hasOwnProperty.call(record, key) ? record[key] : undefined;
@@ -64,12 +65,12 @@ export function geometryDataOf(data: FactorioData): GeometryData {
 
 /** The flows' slice: the types, the drills, the resources, the recipes, the crafting machines and the item names */
 export function flowsDataOf(data: FactorioData): FlowsData {
-    const drills = data["mining-drill"] as unknown as Record<string, { resource_categories?: string[]; vector_to_place_result?: Vector }>;
-    const resources = data.resource as unknown as Record<string, { category?: string; minable: FlowsData["resources"][string]["minable"] }>;
+    const drills = data["mining-drill"];
+    const resources = data.resource;
     return {
         entity_types: Object.fromEntries(Object.entries(data.entity_footprint ?? {}).map(([name, row]) => [name, row.type])),
-        mining_drills: Object.fromEntries(Object.entries(drills).map(([name, row]) => [name, { resource_categories: row.resource_categories ?? [], vector_to_place_result: row.vector_to_place_result ?? [0, 0] }])),
-        resources: Object.fromEntries(Object.entries(resources).map(([name, row]) => [name, { ...(row.category ? { category: row.category } : {}), minable: row.minable }])),
+        mining_drills: Object.fromEntries(Object.entries(drills).map(([name, row]) => [name, { resource_categories: row.resource_categories, vector_to_place_result: row.vector_to_place_result }])),
+        resources: Object.fromEntries(Object.entries(resources).map(([name, row]) => [name, { ...("category" in row && typeof row.category === "string" ? { category: row.category } : {}), minable: row.minable }])),
         recipes: Object.fromEntries(Object.entries(data.recipe).map(([name, row]) => [name, { categories: row.categories, ingredients: row.ingredients, results: row.results }])),
         crafting_machines: Object.fromEntries(Object.entries(data.crafting_machine).map(([name, row]) => [name, {
             type: row.type,
@@ -80,16 +81,25 @@ export function flowsDataOf(data: FactorioData): FlowsData {
     };
 }
 
+/** An effect list as the step reads it: the game may write one effect alone, which is a list of that one */
+function effectListOf<T extends { allowed_effects?: string | readonly string[] }>(rows: Readonly<Record<string, T>>): Record<string, Omit<T, "allowed_effects"> & { allowed_effects?: SpeedEffectName[] }> {
+    return Object.fromEntries(Object.entries(rows).map(([name, row]) => {
+        const { allowed_effects, ...rest } = row;
+        const list = allowed_effects === undefined ? undefined : (typeof allowed_effects === "string" ? [allowed_effects] : [...allowed_effects]) as SpeedEffectName[];
+        return [name, { ...rest, ...(list !== undefined && { allowed_effects: list }) }];
+    }));
+}
+
 /** The speeds' slice: the game data's own sections */
 export function speedDataOf(data: FactorioData): SpeedData {
     return {
         quality: data.quality,
         module: data.module,
-        beacon: data.beacon,
-        crafting_machine: data.crafting_machine,
-        rocket_silo: data.rocket_silo,
-        "mining-drill": data["mining-drill"],
-    } as unknown as SpeedData;
+        beacon: effectListOf(data.beacon),
+        crafting_machine: effectListOf(data.crafting_machine),
+        rocket_silo: effectListOf(data.rocket_silo),
+        "mining-drill": effectListOf(data["mining-drill"]),
+    };
 }
 
 /** The ids' slice: each crafting machine's type, burner fuel categories and subgroup, as the game data holds them */
@@ -109,8 +119,8 @@ type SpeedUnreadReason = SpeedResult["rows"][number]["unread"][number]["reason"]
 type SpeedProblemCode = SpeedResult["problems"][number]["problem"];
 
 /** Every code of each step has its note: these records fail to compile when a step gains a code */
-export const WORLD_NOTES: Record<Exclude<WorldProblemCode, "unknown-name">, NoteCode> = {
-    "bad-entity": "world:bad-entity", "duplicate-number": "world:duplicate-number", "no-size": "world:no-size", "bad-direction": "world:bad-direction",
+export const WORLD_NOTES: Record<WorldProblemCode, NoteCode> = {
+    "unknown-name": "world:unknown-name", "bad-entity": "world:bad-entity", "duplicate-number": "world:duplicate-number", "no-size": "world:no-size", "bad-direction": "world:bad-direction",
     "bad-type": "world:bad-type", "no-reach": "world:no-reach", "off-grid": "world:off-grid", overlap: "world:overlap",
 };
 export const GEOMETRY_NOTES: Record<BuildGeometry["problems"][number]["code"], NoteCode> = {
@@ -477,7 +487,7 @@ function assemble(entities: readonly BlueprintEntityRead[], inputs: ImportInputs
     if (geometry.copy_offset.value !== null) notes.based(geometry.copy_offset.basis, "copy-offset", 0);
 
     // ------------------------------------------------ the steps' own notes (i)
-    for (const p of world.problems) if (p.code !== "unknown-name") notes.add(WORLD_NOTES[p.code], p.entity_number);
+    for (const p of world.problems) notes.add(WORLD_NOTES[p.code], p.entity_number);
     for (const p of geometry.problems) notes.add(GEOMETRY_NOTES[p.code], p.entity_number);
     for (const u of flows.unread) notes.add(FLOWS_UNREAD_NOTES[u.code], u.entity_number, u.lane === undefined ? {} : { lane: u.lane });
     for (const c of flows.circuit_set) notes.add(CIRCUIT_NOTES[c.sets], c.entity_number);
