@@ -224,8 +224,10 @@ export function ConfigImportExport({
         && acknowledged?.selections === importSelections;
     if (acknowledged && !acknowledgedCurrent) setAcknowledged(null);
     const hasImportWork = (importSelections.target && pendingImport?.fill != null) || preview?.counts.some(row => row.replacing) === true;
-    // a pasted blueprint imports nothing while a question is open, or after its last ask failed
-    const blueprintOpen = pendingImport?.blueprint !== undefined && (pendingImport.blueprint.pasted.questions.length > 0 || pendingImport.blueprint.failed);
+    // the last ask of a pasted blueprint is out: the preview still holds the answer of the ask before it
+    const [blueprintAskOut, setBlueprintAskOut] = useState(false);
+    // a pasted blueprint imports nothing while a question is open, after its last ask failed, or while its last ask is out
+    const blueprintOpen = pendingImport?.blueprint !== undefined && (pendingImport.blueprint.pasted.questions.length > 0 || pendingImport.blueprint.failed || blueprintAskOut);
     const canImport = hasImportWork && !blueprintOpen && !preview?.geometryProblem && (!preview?.crossings.length || acknowledgedCurrent);
 
     // Simplification can replace a complete import, never a category the user chose to retain.
@@ -262,6 +264,7 @@ export function ConfigImportExport({
         pasteRequestRef.current++;
         pasteBusyRef.current = false;
         setPendingImport(null);
+        setBlueprintAskOut(false);
         setPasteDialog(null);
         setAcknowledged(null);
         setImportSelections(freshImportSelections());
@@ -417,6 +420,7 @@ export function ConfigImportExport({
         const { answer } = settled;
         if (answer.kind === 'problem') return BLUEPRINT_PROMPTS[answer.problem];
         confirmOpenerRef.current = document.activeElement;
+        setBlueprintAskOut(false);
         setPendingImport(pendingOf({ ...settled.session, pasted: answer, failed: false }));
         // everything there is; the setpoint only where the user's build has none
         setImportSelections({ target: suggested, machines: true, drills: true, inserters: true, belts: true, chests: true });
@@ -436,12 +440,15 @@ export function ConfigImportExport({
         if (!asks) return;
         const ask = ++blueprintAskRef.current;
         const request = pasteRequestRef.current;
+        setBlueprintAskOut(true);
         settle(next).then(({ session, answer }) => {
             if (ask !== blueprintAskRef.current || request !== pasteRequestRef.current) return;
+            setBlueprintAskOut(false);
             setPendingImport(answer.kind === 'build' ? pendingOf({ ...session, pasted: answer, failed: false }) : pendingOf({ ...next, failed: true }));
         }, error => {
             if (ask !== blueprintAskRef.current || request !== pasteRequestRef.current) return;
             console.error('Blueprint paste error:', error);
+            setBlueprintAskOut(false);
             setPendingImport(pendingOf({ ...next, failed: true }));
         });
     }, [pendingImport, pendingOf, settle]);
@@ -596,7 +603,7 @@ export function ConfigImportExport({
             .map(row => countOf(row.incoming, row.category.slice(0, -1), row.category));
         if (fill !== null) parts.unshift('Setpoint');
         const blueprint = pendingImport.blueprint;
-        if (blueprint && (blueprint.pasted.questions.length > 0 || blueprint.failed)) return;
+        if (blueprint && (blueprint.pasted.questions.length > 0 || blueprint.failed || blueprintAskOut)) return;
         const next = applyPaste(currentForm, pendingImport, importSelections, fill?.values,
             blueprint ? { research: blueprint.pasted.research, copy_offset: blueprint.pasted.copy_offset } : undefined);
 
@@ -606,7 +613,7 @@ export function ConfigImportExport({
         onUndoable(describePaste(parts));
         onApplyPaste(next);
         onBuildReplaced();
-    }, [pendingImport, importSelections, currentForm, acknowledgedCurrent, onApplyPaste, onBuildReplaced, onUndoable, resetPasteFlow]);
+    }, [pendingImport, importSelections, currentForm, acknowledgedCurrent, blueprintAskOut, onApplyPaste, onBuildReplaced, onUndoable, resetPasteFlow]);
 
     const handleCancelImport = resetPasteFlow;
 
