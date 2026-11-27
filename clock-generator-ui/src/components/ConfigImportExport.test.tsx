@@ -10,6 +10,7 @@ import factorioData from '../../../clock-generator/resources/data-filtered.json?
 import ironScaffold from '../../../clock-generator/resources/config-samples/smelting/iron-plate/iron-plate-80-car-chest.scaffold?raw';
 import { encodeBlueprintFileBrowser, FactorioDataService, importBlueprint, type FactorioData } from 'clock-generator/browser';
 import { BLUEPRINT_FAILED_PROMPT, BLUEPRINT_PROMPTS } from '../utils/blueprintPaste';
+import { templateOf } from '../utils/researchProfiles';
 import { PASTE_PROMPTS } from '../utils/sidecarGuide';
 
 const validate = vi.hoisted(() => vi.fn());
@@ -229,11 +230,105 @@ describe('a pasted blueprint', () => {
         const dialog = await dialogOpen();
         const before = asked('pasted-blueprint').length;
         await user.click(within(dialog).getByRole('combobox', { name: 'Research profile' }));
-        await user.click(await screen.findByRole('option', { name: /All finite research/ }));
+        await user.click(await screen.findByRole('option', { name: /All research/ }));
         await screen.findByText(/Numbers used: mining \+20 %/);
         expect(asked('pasted-blueprint').length).toBe(before + 1);
-        expect(lastBlueprintQuery().inputs.research).toMatchObject({ profile: 'All finite research', template: 'all-finite-research', bonuses: { mining_drill_productivity_bonus: 20 } });
+        expect(lastBlueprintQuery().inputs.research).toMatchObject({ profile: 'All research', template: 'all-finite-research', bonuses: { mining_drill_productivity_bonus: 20 } });
         expect(JSON.parse(window.localStorage.getItem('clock-generator-research-profiles')!).lastUsed).toBe('all-finite-research');
+    });
+
+    // the answers the worker is asked for while they are held back, each as the function that gives it
+    const heldAnswers: Array<() => void> = [];
+    const holdBlueprintAnswers = () => validate.mockImplementation((query: EngineQuery) => query.kind === 'pasted-blueprint'
+        ? new Promise(resolve => { heldAnswers.push(() => resolve(blueprintAnswer(query))); })
+        : Promise.resolve(incoming));
+    const stopHolding = () => validate.mockImplementation(async (query: EngineQuery) => query.kind === 'pasted-blueprint' ? blueprintAnswer(query) : incoming);
+    const releaseHeldAnswers = () => act(() => { heldAnswers.splice(0).forEach(answer => answer()); });
+    /** Pastes the iron build and answers its drill ore, to the point where both asks of the answer are in and the button is on */
+    async function reachSettledBuild(user: ReturnType<typeof userEvent.setup>) {
+        heldAnswers.length = 0;
+        await pasteText(iron);
+        const dialog = await dialogOpen();
+        await user.click(within(dialog).getByRole('button', { name: /iron.ore/i }));
+        await screen.findByRole('checkbox', { name: /^Drills \(1\)/ });
+        await vi.waitFor(() => expect(apply().disabled).toBe(false));
+        // the answer, then the suggested item
+        expect(lastBlueprintQuery().inputs.setpoint).toEqual({ item: 'iron-plate', copies: 1 });
+        return dialog;
+    }
+
+    it('imports nothing while the answer to a changed research profile is out, and saves that profile\'s numbers once it is in', async () => {
+        const { user } = Render();
+        const dialog = await reachSettledBuild(user);
+        const before = importBlueprint(iron, lastBlueprintQuery().inputs, data);
+        if (before.kind !== 'build') throw new Error('no build');
+        holdBlueprintAnswers();
+        const finite = templateOf('all-finite-research')!;
+        await user.click(within(dialog).getByRole('combobox', { name: 'Research profile' }));
+        await user.click(await screen.findByRole('option', { name: new RegExp(`^${finite.name}`) }));
+        await vi.waitFor(() => expect(heldAnswers.length).toBeGreaterThan(0));
+        // in the gap the preview still holds the answer of the previous profile
+        tryApply();
+        expect(props.onApplyPaste).not.toHaveBeenCalled();
+        expect(apply().disabled).toBe(true);
+
+        stopHolding();
+        releaseHeldAnswers();
+        await vi.waitFor(() => expect(apply().disabled).toBe(false));
+        await user.click(apply());
+        const next = vi.mocked(props.onApplyPaste).mock.calls[0][0];
+        const after = importBlueprint(iron, lastBlueprintQuery().inputs, data);
+        if (after.kind !== 'build') throw new Error('no build');
+        expect(lastBlueprintQuery().inputs.research).toMatchObject({ template: 'all-finite-research' });
+        expect(next.research).toMatchObject({ template: 'all-finite-research' });
+        expect(next.drills!.configs.map(drill => drill.productivity)).toEqual(after.drills.map(drill => drill.productivity));
+        expect(next.drills!.configs[0].productivity).toBeCloseTo(before.drills[0].productivity + finite.bonuses.mining_drill_productivity_bonus, 6);
+    });
+
+    it.each([
+        ['the setpoint item', async (dialog: HTMLElement, user: ReturnType<typeof userEvent.setup>) => {
+            await user.click(within(within(dialog).getByRole('group', { name: 'Setpoint' })).getByRole('combobox', { name: 'Setpoint item' }));
+            await user.click(await screen.findByRole('option', { name: /^stone/i }));
+        }],
+        ['the copies', async (dialog: HTMLElement, user: ReturnType<typeof userEvent.setup>) => {
+            const copies = within(within(dialog).getByRole('group', { name: 'Setpoint' })).getByRole('textbox', { name: 'Copies' });
+            await user.clear(copies);
+            await user.type(copies, '3');
+            await user.tab();
+        }],
+    ])('keeps Import Selected off while the answer to changed %s is out, and on again when it is in', async (_name, change) => {
+        const { user } = Render();
+        const dialog = await reachSettledBuild(user);
+        holdBlueprintAnswers();
+        await change(dialog, user);
+        await vi.waitFor(() => expect(heldAnswers.length).toBeGreaterThan(0));
+        expect(apply().disabled).toBe(true);
+        tryApply();
+        expect(props.onApplyPaste).not.toHaveBeenCalled();
+
+        stopHolding();
+        const query = lastBlueprintQuery();
+        releaseHeldAnswers();
+        const answer = blueprintAnswer(query);
+        // the button follows the answer: on for a build with no open question
+        await vi.waitFor(() => expect(apply().disabled).toBe(!(answer.kind === 'build' && answer.questions.length === 0)));
+    });
+
+    it('opens the button again for a new paste after a cancel in the gap', async () => {
+        const { user } = Render();
+        const dialog = await reachSettledBuild(user);
+        holdBlueprintAnswers();
+        await user.click(within(dialog).getByRole('combobox', { name: 'Research profile' }));
+        await user.click(await screen.findByRole('option', { name: new RegExp(`^${templateOf('all-finite-research')!.name}`) }));
+        await vi.waitFor(() => expect(heldAnswers.length).toBeGreaterThan(0));
+        expect(apply().disabled).toBe(true);
+        await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+        await vi.waitFor(() => expect(screen.queryByRole('dialog', { name: 'Confirm Import from Factorio' })).toBeNull());
+
+        stopHolding();
+        const again = await reachSettledBuild(user);
+        expect(within(again).getByRole('button', { name: 'Import Selected' })).toBeDefined();
+        expect(apply().disabled).toBe(false);
     });
 
     it('asks the worker again when the copies change, and with the setpoint item it was given', async () => {

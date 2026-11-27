@@ -6,8 +6,8 @@ import type { StorageLike } from '../utils/buildLibrary';
 import { PROFILES_KEY, TEMPLATES, openProfileStore, type Bonuses } from '../utils/researchProfiles';
 import { ResearchProfilesDialog } from './ResearchProfilesDialog';
 
-const NAMES = { item: {}, recipe: { 'plastic-bar': 'Plastic bar', 'low-density-structure': 'Low density structure', 'steel-plate': 'Steel plate' } };
-const RECIPES = ['plastic-bar', 'low-density-structure', 'steel-plate'];
+const NAMES = { item: {}, recipe: { 'plastic-bar': 'Plastic bar', 'low-density-structure': 'Low density structure', 'steel-plate': 'Steel plate', 'iron-gear-wheel': 'Iron gear wheel' } };
+const RECIPES = ['plastic-bar', 'low-density-structure', 'steel-plate', 'iron-gear-wheel'];
 
 function memoryStorage() {
     const items = new Map<string, string>();
@@ -38,7 +38,7 @@ const button = (name: string | RegExp) => screen.getByRole<HTMLButtonElement>('b
 const profileBox = () => screen.getByRole('combobox', { name: 'Profile' });
 
 /** Makes a profile through the New dialog and leaves it selected */
-async function makeProfile(user: ReturnType<typeof show>['user'], name: string, template = 'All finite research') {
+async function makeProfile(user: ReturnType<typeof show>['user'], name: string, template = 'All research') {
     await user.click(button('New'));
     const dialog = screen.getByRole('dialog', { name: 'New research profile' });
     await user.type(within(dialog).getByRole('textbox', { name: 'Name' }), name);
@@ -54,9 +54,9 @@ describe('the dialog', () => {
         expect(profileBox().textContent).toContain('No research');
         await user.click(profileBox());
         expect(screen.getAllByRole('option').map(option => option.textContent)).toEqual([
-            expect.stringContaining('No research'), expect.stringContaining('All finite research'),
+            expect.stringContaining('No research'), expect.stringContaining('All research'),
         ]);
-        await user.click(screen.getByRole('option', { name: /All finite research/ }));
+        await user.click(screen.getByRole('option', { name: /All research/ }));
         expect(field('Mining productivity').value).toBe('20');
         expect(field('Mining productivity').readOnly).toBe(true);
         expect(field('Inserter capacity').value).toBe('3');
@@ -85,17 +85,17 @@ describe('the dialog', () => {
         expect(profileBox().textContent).toContain('My megabase');
         expect(field('Mining productivity').value).toBe('20');
         expect(field('Mining productivity').readOnly).toBe(false);
-        expect(screen.getByText('Started from the template: All finite research')).toBeDefined();
+        expect(screen.getByText('Started from the template: All research')).toBeDefined();
         expect(JSON.parse(memory.items.get(PROFILES_KEY)!).profiles).toHaveLength(1);
     });
 
     it('opens New with the template chosen from "New profile from this template"', async () => {
         const { user } = openDialog();
         await user.click(profileBox());
-        await user.click(screen.getByRole('option', { name: /All finite research/ }));
+        await user.click(screen.getByRole('option', { name: /All research/ }));
         await user.click(button('New profile from this template'));
         const dialog = screen.getByRole('dialog', { name: 'New research profile' });
-        expect(within(dialog).getByRole<HTMLInputElement>('radio', { name: 'All finite research' }).checked).toBe(true);
+        expect(within(dialog).getByRole<HTMLInputElement>('radio', { name: 'All research' }).checked).toBe(true);
     });
 
     it('refuses an empty name, a name in use and a template\'s name in New, and says why', async () => {
@@ -172,11 +172,11 @@ describe('the dialog', () => {
         await user.tab();
         expect(button('Revert to template').disabled).toBe(false);
         await user.click(button('Revert to template'));
-        const ask = screen.getByRole('dialog', { name: 'Revert "Mine" to "All finite research"?' });
+        const ask = screen.getByRole('dialog', { name: 'Revert "Mine" to "All research"?' });
         await user.click(within(ask).getByRole('button', { name: 'Cancel' }));
         expect(field('Inserter capacity').value).toBe('2');
         await user.click(button('Revert to template'));
-        await user.click(within(screen.getByRole('dialog', { name: 'Revert "Mine" to "All finite research"?' })).getByRole('button', { name: 'Revert' }));
+        await user.click(within(screen.getByRole('dialog', { name: 'Revert "Mine" to "All research"?' })).getByRole('button', { name: 'Revert' }));
         expect(field('Inserter capacity').value).toBe('3');
         expect(button('Revert to template').disabled).toBe(true);
     });
@@ -251,7 +251,7 @@ describe('the dialog', () => {
     it('adds a recipe row with the recipe picker, sets its productivity and removes it', async () => {
         const memory = memoryStorage();
         const { user } = openDialog(memory.storage);
-        await makeProfile(user, 'Mine');
+        await makeProfile(user, 'Mine', 'No research');
         await user.click(button('Add a recipe'));
         await user.click(screen.getByRole('button', { name: 'Recipe to add' }));
         const picker = screen.getByRole('dialog', { name: 'Choose a recipe for Recipe to add' });
@@ -273,10 +273,67 @@ describe('the dialog', () => {
         expect(JSON.parse(memory.items.get(PROFILES_KEY)!).profiles[0].bonuses.recipes).toEqual({});
     });
 
+    it('shows the 18 recipes of the All template read-only at 300, with "Set yours" under Recipe productivity', async () => {
+        const { user } = openDialog();
+        await user.click(profileBox());
+        await user.click(screen.getByRole('option', { name: /All research/ }));
+        const recipes = within(screen.getByRole('region', { name: /Recipe productivity/ }));
+        const rows = recipes.getAllByRole<HTMLInputElement>('textbox');
+        expect(rows).toHaveLength(18);
+        for (const row of rows) {
+            expect(row.value).toBe('300');
+            expect(row.readOnly).toBe(true);
+        }
+        expect(recipes.getByText('Set yours')).toBeDefined();
+        expect(screen.getAllByText('Set yours')).toHaveLength(2);
+    });
+
+    it('keeps "Set yours" on the recipes of a profile until a recipe number is changed, added or removed', async () => {
+        const { user } = openDialog();
+        await makeProfile(user, 'Mine');
+        const section = () => within(screen.getByRole('region', { name: /Recipe productivity/ }));
+        expect(section().getByText('Set yours')).toBeDefined();
+        expect(screen.getAllByText('Set yours')).toHaveLength(2);
+        await user.clear(field('Plastic bar'));
+        await user.type(field('Plastic bar'), '290');
+        await user.tab();
+        expect(section().queryByText('Set yours')).toBeNull();
+        await user.click(button('Revert to template'));
+        await user.click(within(screen.getByRole('dialog', { name: /^Revert/ })).getByRole('button', { name: 'Revert' }));
+        expect(section().getByText('Set yours')).toBeDefined();
+        await user.click(button('Remove Plastic bar'));
+        expect(section().queryByText('Set yours')).toBeNull();
+        await user.click(button('Revert to template'));
+        await user.click(within(screen.getByRole('dialog', { name: /^Revert/ })).getByRole('button', { name: 'Revert' }));
+        expect(section().getByText('Set yours')).toBeDefined();
+        await user.click(button('Add a recipe'));
+        await user.click(screen.getByRole('button', { name: 'Recipe to add' }));
+        const picker = screen.getByRole('dialog', { name: 'Choose a recipe for Recipe to add' });
+        await user.click(within(picker).getByRole('button', { name: 'Iron gear wheel' }));
+        await user.click(within(picker).getByRole('button', { name: 'Apply' }));
+        expect(section().queryByText('Set yours')).toBeNull();
+        await user.click(button('Revert to template'));
+        await user.click(within(screen.getByRole('dialog', { name: /^Revert/ })).getByRole('button', { name: 'Revert' }));
+        expect(section().getByText('Set yours')).toBeDefined();
+        // mining keeps its own mark while its number is the template's
+        await user.clear(field('Mining productivity'));
+        await user.type(field('Mining productivity'), '25');
+        await user.tab();
+        expect(screen.getAllByText('Set yours')).toHaveLength(1);
+        expect(section().getByText('Set yours')).toBeDefined();
+    });
+
+    it('shows no "Set yours" under Recipe productivity of No research', async () => {
+        const { user } = openDialog();
+        expect(within(screen.getByRole('region', { name: /Recipe productivity/ })).queryByText('Set yours')).toBeNull();
+        await makeProfile(user, 'Mine', 'No research');
+        expect(within(screen.getByRole('region', { name: /Recipe productivity/ })).queryByText('Set yours')).toBeNull();
+    });
+
     it('shows the recipes of a template read-only, with no way to add one', async () => {
         const { user } = openDialog();
         await user.click(profileBox());
-        await user.click(screen.getByRole('option', { name: /All finite research/ }));
+        await user.click(screen.getByRole('option', { name: /All research/ }));
         expect(screen.queryByRole('button', { name: 'Add a recipe' })).toBeNull();
     });
 
