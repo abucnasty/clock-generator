@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { show } from '../test/fixtures';
 import { RefusedConfigDialog } from './RefusedConfigDialog';
@@ -12,6 +12,15 @@ describe('the message for a configuration the site does not read', () => {
         expect(dialog.textContent).toContain('copy your build as a blueprint in Factorio and paste it here');
         expect(screen.getByRole('button', { name: 'Paste a blueprint' })).toBeDefined();
         expect(screen.getByRole('button', { name: 'Close' })).toBeDefined();
+    });
+
+    it('says an export of the Sidecar mod is no longer supported, and that the mod is not needed', () => {
+        show(<RefusedConfigDialog kind="sidecar" onPaste={vi.fn()} onClose={vi.fn()} />);
+        const dialog = screen.getByRole('dialog', { name: 'Sidecar exports are no longer supported' });
+        expect(dialog.textContent).toContain('The Clock Generator Sidecar mod is deprecated, and this site no longer reads its exports.');
+        expect(dialog.textContent).toContain('You do not need the mod.');
+        expect(within(dialog).getByRole('button', { name: 'Paste a blueprint' })).toBeDefined();
+        expect(within(dialog).getByRole('button', { name: 'Close' })).toBeDefined();
     });
 
     it('says a newer one was made by a newer version of the site', () => {

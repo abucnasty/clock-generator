@@ -103,7 +103,6 @@ export function applyPaste(current: ConfigFormData, incoming: PastedEntities, se
     const withUuid = <T,>(row: T) => ({ ...row, _uuid: crypto.randomUUID() });
     const setpoint = selections.target && target ? target : current.setpoint;
     const research = blueprint ? researchOfPaste(blueprint.research, incoming, replacing) : null;
-    const sourceOf = (id: number) => blueprint ? 'blueprint' as const : incoming.picked_machines?.includes(id) ? 'recipe' as const : 'sidecar' as const;
     // a block describes the rows a blueprint gave: rows from another source leave no block behind
     const rest = { ...current };
     if (!blueprint && categories.some(replacing)) delete rest.research;
@@ -112,7 +111,7 @@ export function applyPaste(current: ConfigFormData, incoming: PastedEntities, se
         setpoint: blueprint ? withCopyOffset(setpoint, blueprint.copy_offset) : setpoint,
         ...(research !== null && { research }),
         machines: replacing('machines')
-            ? incoming.machines.map(row => withUuid({ ...row, ...(row.prototype !== undefined && { _prototype_source: sourceOf(row.id) }) }))
+            ? incoming.machines.map(row => withUuid({ ...row, ...(blueprint && row.prototype !== undefined && { _prototype_source: 'blueprint' as const }) }))
             : current.machines,
         inserters: replacing('inserters')
             ? incoming.inserters.map((row, index) => withUuid({ ...row, id: row.id ?? index + 1 }))

@@ -29,8 +29,7 @@ Conventions:
   differs (`-230`, `-direct-insert`).
 - `<stem>.scaffold` is the one-copy scaffold. The scaffold of a config is `<stem>.scaffold`, else the one whose stem is the
   longest prefix of its own at a hyphen (`advanced-circuit-230` uses `advanced-circuit.scaffold`).
-- Any other blueprint string of a build is `<stem>-<role>.blueprint` (for example `-wiring-guide`, `-hand-clock`); a
-  sidecar export is `<stem>.sidecar-export.json`, beside the config.
+- Any other blueprint string of a build is `<stem>-<role>.blueprint` (for example `-wiring-guide`, `-hand-clock`).
 - Every config is in the current shape: each machine names its `prototype` (the one its scaffold shows) or none, never a
   `type`. `src/config/current-samples.test.ts` fails on a sample that a load-time migration would change; the former
   shapes live only in `src/config/fixtures/legacy/`, one per migration.

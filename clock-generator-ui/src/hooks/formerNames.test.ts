@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { readConfigFile, readSavedConfig } from './usePersistedConfigForm';
-import { readSidecarExport } from '../utils/sidecarExport';
 
 // A build saved by the site before the setpoint was named so keeps its `target_output`, and `loop_seed_items` in its overrides.
 const former = (extra: object = {}) => JSON.stringify({
@@ -19,10 +18,6 @@ describe('a build saved or exported under the former names', () => {
 
     it('is read from an imported file with its setpoint and its kick start', () => {
         expect(readConfigFile(former())).toMatchObject({ setpoint: { item: 'iron-gear-wheel' }, overrides: { kick_start_items: 40 } });
-    });
-
-    it('is told for a build file, not read as an export of the mod', () => {
-        expect(readSidecarExport(former())).toEqual({ kind: 'problem', problem: 'build-file' });
     });
 });
 

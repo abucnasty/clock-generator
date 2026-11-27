@@ -304,7 +304,7 @@ release ships all of it.
 1. Try `master` on its preview address (in the run summary of its last `release.yml` run). This is the UAT.
 2. Make the branch `release/<slug>` from `master`.
 3. Bump the generator version in `clock-generator` and `clock-generator-ui`, with their lock files. If the sidecar ships,
-   bump its three places: `info.json`, the newest entry of `changelog.txt` and `LATEST_SIDECAR_VERSION`.
+   bump its two places: `info.json` and the newest entry of `changelog.txt`.
 4. Date the section of the version in the changelogs: `[Unreleased]` becomes the version.
 5. Do not regenerate the [record](#the-record-of-the-blast-jobs): it holds no hash of a clock's text, so the version bump moves
    no file in it. The pull request changes no file in `clock-generator/record/`. A move of the record stops the pull request.

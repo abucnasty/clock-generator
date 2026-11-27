@@ -2,8 +2,8 @@ import { Button } from '@mui/material';
 import type { ConfigFormatProblem } from 'clock-generator/light';
 import { AppDialog } from './AppDialog';
 
-/** Why an opened file, a paste or a share link is not read */
-export type RefusedKind = ConfigFormatProblem;
+/** Why an opened file, a paste or a share link is not read: its format, or it is an export of the Sidecar mod */
+export type RefusedKind = ConfigFormatProblem | 'sidecar';
 
 const MESSAGES: Record<RefusedKind, { title: string; lines: string[] }> = {
     old: {
@@ -11,6 +11,13 @@ const MESSAGES: Record<RefusedKind, { title: string; lines: string[] }> = {
         lines: [
             'It was made by a version of the clock generator before 0.33.0. The clock generator is in beta, and 0.33.0 changed the configuration.',
             'To make it again: copy your build as a blueprint in Factorio and paste it here.',
+        ],
+    },
+    sidecar: {
+        title: 'Sidecar exports are no longer supported',
+        lines: [
+            'The Clock Generator Sidecar mod is deprecated, and this site no longer reads its exports. You do not need the mod.',
+            'Copy your build as a blueprint in Factorio and paste it here.',
         ],
     },
     newer: {

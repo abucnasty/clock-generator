@@ -1,6 +1,5 @@
 import {describe, expect, it} from "vitest";
 import {ConfigSchema} from "./schema";
-import {sidecarPickupInserters} from "./pickup-capture";
 import {SimulationContext} from "../crafting/sequence/simulation-context";
 
 const base = () => ({
@@ -30,33 +29,6 @@ describe("persistent pickup capture boundary", () => {
         const config = ConfigSchema.parse(withSource({pickup_length: 1, near_lane: 1, pickup_capture: supported}));
         expect(() => SimulationContext.fromConfig(config)).not.toThrow();
         expect(config.inserters[0].source).toMatchObject({pickup_capture: supported});
-    });
-
-    it.each(["0.9.1", "0.11.0", "99.0.0"])("preserves an unsupported splitter from %s across save/reload", version => {
-        let config = ConfigSchema.parse({...base(), sidecar_version: version, pickup_warnings: [{inserter_id: 1, reason: "splitter"}]});
-        for (let reload = 0; reload < 3; reload++) {
-            config = ConfigSchema.parse(JSON.parse(JSON.stringify(config)));
-            expect(config.inserters[0].source).toMatchObject({pickup_capture: {
-                status: "unsupported", entity_type: "splitter", reason: "splitter", sidecar_version: version,
-            }});
-            // Parsing fills manual defaults, but they can never turn this capture into a supported pickup.
-            expect(() => SimulationContext.fromConfig(config)).toThrow(/Inserter 1: Pickup captured as unsupported \(splitter\)/);
-        }
-    });
-
-    it("does not treat geometry or even the current mod version as a positive capture declaration", () => {
-        const raw = withSource({pickup_length: 0.5, near_lane: 2});
-        const config = ConfigSchema.parse({...raw, sidecar_version: "0.11.0"});
-        expect(config.inserters[0].source).toMatchObject({pickup_length: 0.5, pickup_capture: {status: "unclassified", reason: "legacy"}});
-        expect(() => SimulationContext.fromConfig(config)).toThrow(/Update Sidecar and recapture/);
-    });
-
-    it("migrates pasted entries before defaults and gives an explicit warning precedence", () => {
-        const entries = [{source: {type: "belt", id: 1, near_lane: 1, pickup_capture: supported}}];
-        expect(sidecarPickupInserters(entries, "0.11.0", [{inserter_id: 1, reason: "side-loaded"}])).toMatchObject([
-            {source: {pickup_capture: {status: "unsupported", reason: "side-loaded"}}},
-        ]);
-        expect(sidecarPickupInserters(entries, "0.11.0", [])).toEqual(entries);
     });
 
     it.each([

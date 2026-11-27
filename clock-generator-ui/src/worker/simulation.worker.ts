@@ -18,7 +18,7 @@ import { laneTakersOf } from '../utils/laneTakers';
 import { installFactsOf } from './installFacts';
 import { createReadyGate } from './requestGate';
 import { NO_NAMES, hiddenRecipeIds, type GameNames } from '../utils/gameNames';
-import type { CheckedRepeatedUnitConversion, RepeatedUnitsRecovery, CheckedShiftRow, ClockAlternativeRunView, ClockAlternativeView, EngineAnswers, EngineQuery, FactorioLookups, FuelViewData, PastedEntities, ShiftOptionsView, ShiftRangeEdge, WorkerRequest, WorkerResponse } from './types';
+import type { CheckedRepeatedUnitConversion, RepeatedUnitsRecovery, CheckedShiftRow, ClockAlternativeRunView, ClockAlternativeView, EngineAnswers, EngineQuery, FactorioLookups, FuelViewData, ShiftOptionsView, ShiftRangeEdge, WorkerRequest, WorkerResponse } from './types';
 import { REFUSED_CONFIG_ERRORS } from './types';
 
 type ClockGenerator = typeof import('clock-generator/browser');
@@ -400,33 +400,9 @@ function validateEntries<T>(schema: z.ZodType<T>, entries: unknown, label: strin
     });
 }
 
-function pastedEntities(pasted: Extract<EngineQuery, { kind: 'pasted-entities' }>): PastedEntities {
-    // IDs are already assigned by the mod
-    const machines = validateEntries(clockGenerator.MachineConfigurationSchema, pasted.machines, 'machine');
-    // in this order, so that the error names the first entry the schema rejects
-    const drills = validateEntries(clockGenerator.MiningDrillConfigSchema, pasted.drills, 'drill');
-    const inserters = validateEntries(clockGenerator.InserterConfigSchema, clockGenerator.sidecarPickupInserters(pasted.inserters, pasted.sidecar_version, pasted.pickup_warnings), 'inserter');
-    const belts = validateEntries(clockGenerator.BeltConfigSchema, pasted.belts, 'belt');
-    const chests = validateEntries(clockGenerator.ChestConfigSchema, pasted.chests, 'chest');
-    return {
-        machines,
-        picked_machines: machines.filter((machine, index) => machine.prototype !== undefined && !hasPrototype(Array.isArray(pasted.machines) ? pasted.machines[index] : undefined))
-            .map(machine => machine.id),
-        drills,
-        inserters,
-        belts,
-        chests,
-        guidance: clockGenerator.checkSidecarImport(pasted.sidecar_version, machines, undefined,
-            Array.isArray(pasted.chests) ? pasted.chests : [], Array.isArray(pasted.inserters) ? pasted.inserters : [],
-            Array.isArray(pasted.drills) ? pasted.drills : []),
-        // held to the belt the product is put on and to the engine's most for the whole build, where they are lower
-        suggested_target: clockGenerator.suggestedTargetOf(pasted.suggested_target, machines, { inserters, belts }, { chests, drills }),
-    };
-}
-
 /**
- * A pasted blueprint, through the import: each list checked against its schema on every call, as a Sidecar paste's are.
- * Neither the Sidecar's version check nor its pickup marks are used: the import writes each pickup's capture itself.
+ * A pasted blueprint, through the import: each list checked against its schema on every call. The import writes each
+ * pickup's capture itself.
  */
 function pastedBlueprint(pasted: Extract<EngineQuery, { kind: 'pasted-blueprint' }>): EngineAnswers['pasted-blueprint'] {
     const outcome = clockGenerator.importBlueprint(pasted.text, pasted.inputs, gameData);
@@ -590,8 +566,6 @@ function answer(asked: EngineQuery): EngineAnswers[EngineQuery['kind']] {
             return savedConfig(query.config);
         case 'config-file':
             return configFile(query.config);
-        case 'pasted-entities':
-            return pastedEntities(query);
         case 'pasted-blueprint':
             return pastedBlueprint(query);
         case 'apply-research':

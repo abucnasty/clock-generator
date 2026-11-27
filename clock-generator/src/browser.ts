@@ -46,16 +46,6 @@ export {
     ConfigParseResult,
 } from './config/config-browser';
 
-export {
-    LATEST_SIDECAR_VERSION,
-    SIDECAR_VERSION_WITH_ENERGY_CONSUMPTION,
-    SIDECAR_FEATURES,
-    SIDECAR_IMPORT_PIPELINE,
-    compareVersions,
-    checkSidecarImport,
-    sidecarFeatureStep,
-} from './config/sidecar-version';
-export type { SidecarFeature } from './config/sidecar-version';
 export { suggestedTargetOf } from './config/suggested-target';
 export { CONFIG_FORMAT, configFormatProblem, withConfigFormat } from './config/format';
 export type { ConfigFormatProblem } from './config/format';
@@ -63,8 +53,6 @@ export { readRecipeSetpointAsItem } from './config/migrate-recipe-setpoint';
 export { refusalOfPick, refusalOfSetpoint } from './config/setpoint-check';
 export { setpointOutputOf } from './data/setpoint-output';
 export type { SuggestedTarget } from './config/suggested-target';
-export { ImportPipeline } from './config/import-pipeline';
-export type { ImportInput, ImportStep, ImportedMachine } from './config/import-pipeline';
 export * as Option from 'fp-ts/Option';
 
 export {
@@ -406,7 +394,6 @@ export { buildToNameOf, entityNamesInSentence } from './crafting/build-names';
 export type { SharedItemDeadlockRisk } from './crafting/deadlock-risk';
 export { DEFAULT_KICK_START_ITEMS } from './crafting/runner/cold-start';
 
-export { sidecarPickupInserters } from "./config/pickup-capture";
 
 export { regionOrbitsOfConfig } from "./crafting/graph/regions";
 export type { FoundOrbit } from "./crafting/graph/regions";

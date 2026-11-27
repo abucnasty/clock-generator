@@ -1,5 +1,4 @@
 import { canonicalRate, configFormatProblem, withConfigFormat } from 'clock-generator/light';
-import { pickupCaptureWarningMessage, sideLoadedDropMessage } from "../utils/sidecarExport";
 import { Check, Download, Upload, ContentPaste, MoreVert, RestartAlt, Science, MenuBook, Link, DarkModeOutlined, LightModeOutlined, BrightnessAutoOutlined, Tune } from '@mui/icons-material';
 import { Box, Button, Alert, Tooltip, FormControlLabel, Checkbox, Typography, IconButton, Menu, MenuItem, ListItemIcon, ListItemText, Divider, TextField, useMediaQuery, useTheme } from '@mui/material';
 import { useRef, useState, useCallback, useImperativeHandle, type ReactNode, type Ref } from 'react';
@@ -13,8 +12,8 @@ import type { DisplayScheme } from '../utils/displayPreferences';
 import { neverOverrideNoteOfText, withNeverOverrideNote } from '../utils/neverOverrideNote';
 import { countOf, describePaste, exampleUndoMessage, UNDO_IMPORT_MESSAGE, UNDO_RESET_MESSAGE } from '../utils/undoSnapshot';
 import { BUTTON_NAMES } from '../utils/a11yLabels';
-import { isBuildFile, looksLikeSidecarExport, readSidecarExport } from '../utils/sidecarExport';
-import { INTRO_BUTTONS, invalidExportPrompt, openFileProblem, PASTE_PROMPTS, type PastePrompt } from '../utils/sidecarGuide';
+import { isBuildFile } from '../utils/sidecarExport';
+import { INTRO_BUTTONS, openFileProblem, PASTE_PROMPTS, type PastePrompt } from '../utils/sidecarGuide';
 import { maximumTargetNote, NO_TARGET_NOTE, replacesTargetNote, targetRowCaption, targetRowLabel, targetToFill, type TargetValues } from '../utils/pasteTarget';
 import type { ExampleBuild } from '../utils/exampleBuilds';
 import { focusSetpointHeading } from '../utils/introCard';
@@ -47,7 +46,6 @@ import { ImportSimplification } from './ImportSimplification';
 import { importReduction, type ImportReduction } from '../utils/importReduction';
 import { formDataToConfig } from '../utils/configForm/configMapping';
 import { PickupGeometrySummary } from './PickupGeometrySummary';
-import type { PickupCaptureWarning } from '../utils/sidecarExport';
 import { BlueprintImportPanel, BlueprintMachineValues, BlueprintNotes, BlueprintSetpointRow, type MachineOverrides } from './BlueprintImportPanel';
 import { BLUEPRINT_FAILED_PROMPT, BLUEPRINT_PROMPTS, isJsonText } from '../utils/blueprintPaste';
 import { openProfileStore, TEMPLATES } from '../utils/researchProfiles';
@@ -83,6 +81,15 @@ const THEME_CHOICES = [
     { scheme: 'system', label: 'Theme: Auto (device)', icon: BrightnessAutoOutlined },
 ] satisfies { scheme: DisplayScheme; label: string; icon: typeof DarkModeOutlined }[];
 
+/** JSON that parses and is not a build file: an export of the Sidecar mod, which the site no longer reads */
+function isSidecarExportText(text: string): boolean {
+    try {
+        return !isBuildFile(JSON.parse(text));
+    } catch {
+        return false;
+    }
+}
+
 /** Describe the destination of this exact preview without suggesting a silent rebind or renumber. */
 function crossingText(warning: PasteReferenceWarning): string {
     const imported = warning.direction === 'incoming-to-retained';
@@ -92,7 +99,6 @@ function crossingText(warning: PasteReferenceWarning): string {
 }
 
 interface PendingImport extends PastedEntities {
-    pickupWarnings?: PickupCaptureWarning[];
     /** Set for a pasted blueprint */
     blueprint?: BlueprintSession;
     original?: PendingImport;
@@ -460,9 +466,9 @@ export function ConfigImportExport({
     }, [pendingImport, pendingOf, settle]);
 
     /**
-     * Reads a paste and opens the confirm dialog for it: a blueprint goes through the import, JSON is read as an export of
-     * the Sidecar mod. Returns why it could not, for the Paste from Factorio dialog to say, or null once the confirm dialog
-     * is open.
+     * Reads a paste and opens the confirm dialog for it: a blueprint goes through the import; JSON is a build file, to open
+     * with Open, or an export of the Sidecar mod, which gets its message. Returns why it could not, for the Paste from
+     * Factorio dialog to say, or null once the confirm dialog or a message is open.
      */
     const startPaste = useCallback(async (text: string, request = ++pasteRequestRef.current): Promise<PastePrompt | null> => {
         if (request !== pasteRequestRef.current) return null;
@@ -480,47 +486,12 @@ export function ConfigImportExport({
             setRefused(format);
             return null;
         }
-        const read = readSidecarExport(text);
-        if (read.kind === 'problem') {
-            return PASTE_PROMPTS[read.problem];
-        }
-        let validated: PastedEntities;
-        try {
-            // each list checked against its schema
-            validated = await askEngine({
-                kind: 'pasted-entities',
-                machines: read.machines,
-                drills: read.drills,
-                inserters: read.inserters,
-                belts: read.belts,
-                chests: read.chests,
-                sidecar_version: read.sidecarVersion,
-                pickup_warnings: read.pickupWarnings,
-                suggested_target: read.suggestedTarget,
-            });
-        } catch (error) {
-            if (request !== pasteRequestRef.current) return null;
-            console.error('Paste from Factorio error:', error);
-            return invalidExportPrompt(error instanceof Error ? error.message : 'Unknown error');
-        }
-        if (request !== pasteRequestRef.current) return null;
-        const suggestion = Option.toNullable(validated.suggested_target);
-        const fill = suggestion ? { values: targetToFill(suggestion), source: suggestion.source,
-            ...(suggestion.belt_limit !== undefined && { beltLimit: suggestion.belt_limit }),
-            ...(suggestion.build_limit !== undefined && { buildLimit: suggestion.build_limit }) } : null;
-        confirmOpenerRef.current = document.activeElement;
-        setPendingImport({ ...validated, fill, pickupWarnings: read.pickupWarnings });
-        // everything there is, except a target the player has already set; the first exports had machines only
-        setImportSelections({
-            target: fill !== null && currentTarget.item === '',
-            machines: validated.machines.length > 0,
-            drills: !read.legacy && validated.drills.length > 0,
-            inserters: !read.legacy && validated.inserters.length > 0,
-            belts: !read.legacy && validated.belts.length > 0,
-            chests: !read.legacy && validated.chests.length > 0,
-        });
+        // a build file of this format is opened with Open; any other JSON is an export of the Sidecar mod, no longer read
+        if (value === undefined) return PASTE_PROMPTS['not-json'];
+        if (isBuildFile(value)) return PASTE_PROMPTS['build-file'];
+        setRefused('sidecar');
         return null;
-    }, [currentTarget.item, startBlueprintPaste]);
+    }, [startBlueprintPaste]);
 
     const handleFileChange = useCallback(
         async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -531,12 +502,14 @@ export function ConfigImportExport({
 
             try {
                 const content = await file.text();
-                if (looksLikeSidecarExport(content) || !isJsonText(content)) {
-                    // an export of the mod or a blueprint saved to a file goes to the paste
+                if (!isJsonText(content)) {
+                    // a blueprint saved to a file goes to the paste
                     const prompt = await startPaste(content);
                     if (prompt) {
                         showPastePrompt(prompt);
                     }
+                } else if (isSidecarExportText(content)) {
+                    setRefused('sidecar');
                 } else {
                     await importConfigText(content, UNDO_IMPORT_MESSAGE);
                 }
@@ -914,13 +887,6 @@ export function ConfigImportExport({
                 {pendingImport && !pendingImport.reduction && (
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                         <PickupGeometrySummary build={{ inserters: prospectiveInserters }} backedUp={null} />
-                        {importSelections.inserters && pendingImport.pickupWarnings?.map(warning => <Typography key={warning.inserter_id} variant="body2" color="text.secondary">
-                            Captured Inserter {warning.inserter_id}: {pickupCaptureWarningMessage(warning.reason)}
-                        </Typography>)}
-                        {importSelections.inserters && !pendingImport.blueprint && pendingImport.inserters.flatMap((inserter, i) => inserter.sink.type === 'belt' && inserter.sink.drop_capture
-                            ? [<Typography key={`side-loaded-${i}`} variant="body2" color="text.secondary">
-                                Captured Inserter {inserter.id ?? i + 1}: {sideLoadedDropMessage(inserter.sink.drop_capture.tiles)}
-                            </Typography>] : [])}
                         {preview?.geometryProblem && <Alert severity="error">{preview.geometryProblem}</Alert>}
                         {pendingImport.fill || pendingImport.blueprint ? (
                             <Box>

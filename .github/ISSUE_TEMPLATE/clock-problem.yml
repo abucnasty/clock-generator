@@ -68,8 +68,8 @@ body:
     attributes:
       label: How was the configuration made?
       options:
-        - Pasted from Factorio with the Clock Generator Sidecar mod
-        - Pasted from the sidecar mod, then changed by hand
+        - Pasted from Factorio as a blueprint
+        - Pasted from Factorio as a blueprint, then changed by hand
         - Entered by hand
         - Opened from someone else's configuration file
 
@@ -102,8 +102,8 @@ body:
     id: mods
     attributes:
       label: Mods
-      description: Mods that change machines, inserters, recipes or belts, and the version of the Clock Generator Sidecar if you used it.
-      placeholder: Clock Generator Sidecar 0.3.0, no others
+      description: Mods that change machines, inserters, recipes or belts.
+      placeholder: None
 
   - type: checkboxes
     id: checked

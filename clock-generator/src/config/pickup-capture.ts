@@ -54,27 +54,6 @@ function normalizeSource(source: Record<string, unknown>): Record<string, unknow
     return updated;
 }
 
-/** Run before schema defaults: legacy diagnostics must not disappear into a straight-belt default. */
-export function sidecarPickupInserters(inserters: unknown, version: unknown, warnings: unknown): unknown {
-    if (!Array.isArray(inserters)) return inserters;
-    const notes = Array.isArray(warnings) ? warnings.filter(object) : [];
-    return inserters.map((entry, index) => {
-        if (!object(entry) || !object(entry.source) || entry.source.type !== "belt") return entry;
-        const source = normalizeSource(entry.source);
-        const note = notes.find(note => note.inserter_id === (entry.id ?? index + 1));
-        // An explicit warning wins over a contradictory supported marker. Unknown metadata is preserved so
-        // validation rejects future models rather than stripping their fields and assuming a current model.
-        if (source.pickup_capture !== undefined && !note) return source === entry.source ? entry : {...entry, source};
-        const capture = object(source.pickup_capture) ? source.pickup_capture : {};
-        const reason = note ? (typeof note.reason === "string" ? note.reason : "unsupported") : "legacy";
-        return { ...entry, source: { ...source, pickup_capture: {
-            ...capture, status: note ? "unsupported" : "unclassified", reason,
-            ...(reason === "splitter" && { entity_type: "splitter" }),
-            ...(typeof version === "string" && { sidecar_version: version }),
-        } } };
-    });
-}
-
 /** Derive length only from explicit layouts; normalize recognizable capture provenance before defaults. */
 export function normalizePickupCaptureConfig(value: unknown): unknown {
     if (!object(value) || !Array.isArray(value.inserters)) return value;
@@ -84,8 +63,7 @@ export function normalizePickupCaptureConfig(value: unknown): unknown {
         const source = normalizeSource(entry.source);
         return source === entry.source ? entry : {...entry, source};
     });
-    return {...value, inserters: "sidecar_version" in value || "pickup_warnings" in value
-        ? sidecarPickupInserters(inserters, value.sidecar_version, value.pickup_warnings) : inserters};
+    return {...value, inserters};
 }
 
 /** A supported declaration still needs the matching model inputs; provenance alone is not a supply model. */

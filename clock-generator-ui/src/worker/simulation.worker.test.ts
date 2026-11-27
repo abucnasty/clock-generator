@@ -5,19 +5,16 @@ import militarySample from '../../../clock-generator/resources/config-samples/sc
 import ironScaffold from '../../../clock-generator/resources/config-samples/smelting/iron-plate/iron-plate-80-car-chest.scaffold?raw';
 import chestChainScaffold from '../../../clock-generator/resources/config-samples/intermediates/productivity-module/productivity-module-80-chest-chain.scaffold?raw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { applyResearch, BeltConfigSchema, decodeBlueprintFileBrowser, encodeBlueprintFileBrowser, ChestConfigSchema, ConfigSchema, importBlueprint, InserterConfigSchema, LATEST_SIDECAR_VERSION, MachineConfigurationSchema, MiningDrillConfigSchema, researchDifferences,
+import { applyResearch, BeltConfigSchema, decodeBlueprintFileBrowser, encodeBlueprintFileBrowser, ChestConfigSchema, ConfigSchema, importBlueprint, InserterConfigSchema, MachineConfigurationSchema, MiningDrillConfigSchema, researchDifferences,
     type Config, type DebugSteps, type FactorioData, type ImportInputs } from 'clock-generator/browser';
-import { REFUSED_CONFIG_ERRORS, refusedConfigOf, type EngineAnswers, type EngineQuery, type LiveCoverage, type PastedEntities, type PrimaryCompletedResponse, type ValidationFailedResponse, type WorkerRequest, type WorkerResponse } from './types';
+import { REFUSED_CONFIG_ERRORS, refusedConfigOf, type EngineAnswers, type EngineQuery, type LiveCoverage, type PrimaryCompletedResponse, type ValidationFailedResponse, type WorkerRequest, type WorkerResponse } from './types';
 import { readConfigFile, readSavedBuild, readSavedConfig, serializeConfig } from '../hooks/usePersistedConfigForm';
 import { configToFormData, formDataToConfig } from '../utils/configForm/configMapping';
-import { createDefaultConfig } from '../utils/configForm/formData';
-import { applyPaste } from '../utils/pastePreview';
+import { createDefaultConfig, type ConfigFormData } from '../utils/configForm/formData';
 import { decodeShareLink, encodeShareLink, readShareHash } from '../utils/shareLink';
 import { buildValidationIssues, refusedInserterIdsOf, type ValidationDiagnostic } from '../utils/buildValidation';
 import { timelineRequestFor } from '../utils/timelineRequest';
 import { Option } from 'clock-generator/light';
-import { targetToFill } from '../utils/pasteTarget';
-import { isTargetAboveMax, rateMaxOf } from '../utils/targetRateLimit';
 import type { ClockAlternativeView } from './types';
 
 /** Every response the worker posted in this test, in order */
@@ -59,10 +56,6 @@ const listed = (live: LiveCoverage, machines: { id: number }[], failure?: { mess
     lanesExactlyFull: live.lanesExactlyFull, lanesExactlyFullInserters: live.lanesExactlyFullInserters, copyGapNeeded: live.copyGapNeeded,
     machinePrototypes: live.machinePrototypes, coverageText: issue => `${issue.kind} ${issue.item_name}`,
 });
-
-/** Pastes every kind of entity into a new build and gives the form state the page saves, read back */
-const pastedAndSaved = (pasted: PastedEntities) => readSavedConfig(serializeConfig(applyPaste(createDefaultConfig(), pasted,
-    { target: false, machines: true, drills: true, inserters: true, belts: true, chests: true })))!;
 
 const noDebug: DebugSteps = { prepare: false, warm_up: false, simulate: false };
 
@@ -106,103 +99,6 @@ it('answers a region-orbits query with the finder\'s plain data, which a copy be
     expect(orbit?.regions.map(region => region.nodes.filter(node => node.startsWith('machine:')).sort())).toEqual([['machine:1', 'machine:2'], ['machine:4', 'machine:5']]);
     // a build with one machine has no copies of a region
     expect(await ask({ kind: 'region-orbits', config: { ...config, machines: config.machines.slice(0, 1), inserters: [], belts: [], chests: [], drills: undefined } as Config })).toBeNull();
-});
-
-it.each(['blocked', 'markers'] as const)('keeps blocked container slots through Sidecar paste (%s), save/reload and engine validation', async spelling => {
-    // Sidecar exports both game markers as blocked slots; an export of the 0.20.0 drafts named the marker as the item
-    const slot_filters = [{ slot: 1, item: 'iron-plate' }, ...Array.from({ length: 79 }, (_, i) => spelling === 'blocked'
-        ? { slot: i + 2, blocked: true } : { slot: i + 2, item: i % 2 ? 'no-item' : 'deconstruction-planner' })];
-    const pasted = await ask({
-        kind: 'pasted-entities', sidecar_version: LATEST_SIDECAR_VERSION, suggested_target: undefined, drills: [], belts: [],
-        machines: [{ id: 1, recipe: 'iron-gear-wheel', crafting_speed: 1, productivity: 0 }],
-        chests: [
-            { id: 1, type: 'car', slot_filters },
-            { id: 2, type: 'infinity-chest', item_filter: [{ item_name: 'iron-plate', request_count: 200 }] },
-            { id: 3, type: 'infinity-chest', remove_unfiltered_items: true },
-        ],
-        inserters: [
-            { id: 1, source: { type: 'chest', id: 2 }, sink: { type: 'chest', id: 1 }, prototype: 'stack-inserter', quality: 'legendary' },
-            { id: 2, source: { type: 'chest', id: 1 }, sink: { type: 'machine', id: 1 }, prototype: 'stack-inserter', quality: 'legendary' },
-            { id: 3, source: { type: 'machine', id: 1 }, sink: { type: 'chest', id: 3 }, prototype: 'stack-inserter', quality: 'legendary' },
-        ],
-    });
-    const config = formDataToConfig(pastedAndSaved(pasted));
-    config.setpoint = { item: 'iron-gear-wheel', items_per_second: 1, copies: 1 };
-    expect(config.chests![0]).toEqual({ id: 1, type: 'car',
-        slot_filters: [{ slot: 1, item: 'iron-plate' }, ...Array.from({ length: 79 }, (_, i) => ({ slot: i + 2, blocked: true }))] });
-    expect(await send({ type: 'validate', requestId: 201, config })).toMatchObject({ type: 'validated' });
-});
-
-it('keeps an out-of-order recycler machine target, byproduct belt, and bend capture through Sidecar paste and saved-config mapping', async () => {
-    const capture = { status: 'supported' as const, model: 'belt' as const, model_version: 3, entity_type: 'transport-belt',
-        entity_name: 'turbo-transport-belt', sidecar_version: '0.15.0' };
-    const pasted = await ask({
-        kind: 'pasted-entities', sidecar_version: LATEST_SIDECAR_VERSION, suggested_target: undefined, drills: [], chests: [],
-        // IDs are deliberately sparse and the target machine precedes the recycler in raw Sidecar export order.
-        machines: [
-            { id: 44, recipe: 'supercapacitor', crafting_speed: 63.75, productivity: 175, prototype: 'electromagnetic-plant' },
-            { id: 8, recipe: 'processing-unit-recycling', crafting_speed: 14.7805, productivity: 0, prototype: 'recycler',
-                result_target: { type: 'machine', id: 44 } },
-        ],
-        belts: [
-            { id: 90, type: 'turbo-transport-belt', lanes: [{ ingredient: 'advanced-circuit', stack_size: 4 }] },
-            { id: 22, type: 'turbo-transport-belt', lanes: [{ ingredient: 'processing-unit', stack_size: 4 }] },
-        ],
-        inserters: [
-            { id: 31, source: { type: 'machine', id: 8 }, sink: { type: 'belt', id: 90 }, filters: ['advanced-circuit'], prototype: 'stack-inserter', quality: 'legendary' },
-            { id: 32, source: { type: 'belt', id: 22, near_lane: 1, pickup_length: 1, pickup_layout: 'bend-right-upstream', pickup_capture: capture },
-                sink: { type: 'machine', id: 8 }, filters: ['processing-unit'], prototype: 'stack-inserter', quality: 'legendary' },
-        ],
-    });
-    const roundTripped = formDataToConfig(configToFormData(formDataToConfig(pastedAndSaved(pasted))));
-    expect(roundTripped.machines.find(machine => machine.id === 8)?.result_target).toEqual({ type: 'machine', id: 44 });
-    expect(roundTripped.inserters.find(inserter => inserter.id === 31)).toMatchObject({ source: { type: 'machine', id: 8 },
-        sink: { type: 'belt', id: 90 }, filters: ['advanced-circuit'] });
-    expect(roundTripped.inserters.find(inserter => inserter.id === 32)?.source).toMatchObject({ id: 22,
-        pickup_layout: 'bend-right-upstream', pickup_capture: capture });
-});
-
-it('suggests no more than the output belt carries: nine automation science assemblers make 248.006 a second onto a belt of 240', async () => {
-    const machines = Array.from({ length: 9 }, (_, i) => ({ id: i + 1, recipe: 'automation-science-pack', crafting_speed: 68.890625,
-        productivity: 100, prototype: 'assembling-machine-3' }));
-    const pasted = await ask({
-        kind: 'pasted-entities', sidecar_version: LATEST_SIDECAR_VERSION, drills: [], chests: [], machines,
-        suggested_target: { recipe: 'automation-science-pack', items_per_second: 248.00625000000002, copies: 1 },
-        belts: [{ id: 2, type: 'turbo-transport-belt', lanes: [{ ingredient: 'automation-science-pack', stack_size: 4 }] }],
-        inserters: machines.map(machine => ({ id: machine.id, source: { type: 'machine', id: machine.id }, sink: { type: 'belt', id: 2 },
-            prototype: 'stack-inserter', quality: 'legendary' })),
-    });
-    expect(pasted.suggested_target).toEqual({ _tag: 'Some', value: {
-        target: { item: 'automation-science-pack', items_per_second: 240, copies: 1 }, source: 'mod',
-        belt_limit: { belt_id: 2, machines_per_second: 248.00625000000002 } } });
-});
-
-it('suggests the most the build can hold where an input lane allows less than the output belt, and the page then finds no rate above it', async () => {
-    const machines = Array.from({ length: 9 }, (_, i) => ({ id: i + 1, recipe: 'automation-science-pack', crafting_speed: 68.890625,
-        productivity: 100, prototype: 'assembling-machine-3' }));
-    const pickup = { type: 'belt', id: 1, near_lane: 2, pickup_length: 1, pickup_layout: 'side-straight', pickup_capture: { status: 'supported',
-        entity_type: 'transport-belt', entity_name: 'fast-transport-belt', sidecar_version: LATEST_SIDECAR_VERSION, model: 'belt', model_version: 2 } };
-    const pasted = await ask({
-        kind: 'pasted-entities', sidecar_version: LATEST_SIDECAR_VERSION, drills: [], chests: [], machines,
-        suggested_target: { recipe: 'automation-science-pack', items_per_second: 248.00625000000002, copies: 1 },
-        // a fast input belt: 60 a second of each ingredient, so the build holds at most 120 a second
-        belts: [{ id: 1, type: 'fast-transport-belt', flow_direction: 4, lanes: [{ ingredient: 'iron-gear-wheel', stack_size: 4, lane_end: { kind: 'dead_end' } },
-            { ingredient: 'copper-plate', stack_size: 4, lane_end: { kind: 'dead_end' } }] },
-            { id: 2, type: 'turbo-transport-belt', lanes: [{ ingredient: 'automation-science-pack', stack_size: 4 }] }],
-        inserters: machines.flatMap(machine => [
-            { id: 2 * machine.id - 1, source: pickup, sink: { type: 'machine', id: machine.id }, prototype: 'stack-inserter', quality: 'legendary', stack_size: 16 },
-            { id: 2 * machine.id, source: { type: 'machine', id: machine.id }, sink: { type: 'belt', id: 2 }, prototype: 'stack-inserter', quality: 'legendary', stack_size: 16 },
-        ]),
-    });
-    const suggestion = Option.toNullable(pasted.suggested_target)!;
-    expect(suggestion.target.items_per_second).toBe(120);
-    expect(suggestion.belt_limit).toBeUndefined();
-    expect(suggestion.build_limit?.text).toMatch(/^At most 60 a second of (copper plate|iron gear wheel) reaches the machines that need it/);
-    const config = formDataToConfig(pastedAndSaved(pasted));
-    config.setpoint = targetToFill(suggestion);
-    const most = await ask({ kind: 'target-rate-max', config });
-    expect(isTargetAboveMax(config.setpoint.items_per_second, config.setpoint.copies, rateMaxOf(null, { max: most, current: true }))).toBe(false);
-    expect(most?.limit).toBeNull();
 });
 
 describe('repeated units: Check clocks them as given and offers the recomputed conversion; query failure', () => {
@@ -309,12 +205,12 @@ it('replays detailed activity through the real worker query without changing the
 });
 
 describe('a captured inserter kind, quality and filter mode', () => {
-    // An export of the current Sidecar (its pickups captured as 0.11.0 captures them): a legendary stack inserter picks up from a straight belt, a normal fast inserter empties the machine
+    // A build file (its pickup captured as the Sidecar 0.11.0 captured it): a legendary stack inserter picks up from a straight belt, a normal fast inserter empties the machine
     const pickup = { type: 'belt', id: 1, near_lane: 1, pickup_length: 1, pickup_layout: 'side-straight', pickup_capture: { status: 'supported',
         entity_type: 'transport-belt', entity_name: 'turbo-transport-belt', sidecar_version: '0.11.0', model: 'belt', model_version: 2 } };
     const exported = (input: object = {}, output: object = {}) => ({
-        kind: 'pasted-entities' as const, sidecar_version: LATEST_SIDECAR_VERSION, suggested_target: undefined, drills: [],
-        machines: [{ id: 1, recipe: 'iron-gear-wheel', crafting_speed: 1, productivity: 0, type: 'machine' }],
+        format: 1, setpoint: { item: 'iron-gear-wheel', items_per_second: 1, copies: 1 },
+        machines: [{ id: 1, recipe: 'iron-gear-wheel', crafting_speed: 1, productivity: 0 }],
         inserters: [
             { source: pickup, sink: { type: 'machine', id: 1 }, prototype: 'stack-inserter', quality: 'legendary', stack_size: 16, ...input },
             { source: { type: 'machine', id: 1 }, sink: { type: 'chest', id: 1 }, prototype: 'fast-inserter', quality: 'normal', stack_size: 4, ...output },
@@ -322,13 +218,13 @@ describe('a captured inserter kind, quality and filter mode', () => {
         belts: [{ id: 1, type: 'turbo-transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 4, lane_end: { kind: 'infinite' } }] }],
         chests: [{ id: 1, type: 'infinity-chest', remove_unfiltered_items: true }],
     });
-    /** Paste into a new build, save it and reload it the way the page does */
-    const pastedSavedReloaded = async (query: ReturnType<typeof exported>) => {
-        const pasted = await ask(query);
-        expect(pasted.guidance).toMatchObject({ _tag: 'None' });
-        const saved = formDataToConfig(pastedAndSaved(pasted));
-        expect((await ask({ kind: 'saved-config', config: { format: 1, ...saved } })).problem).toBeNull();
-        return { ...formDataToConfig(configToFormData(saved)), setpoint: { item: 'iron-gear-wheel', items_per_second: 1, copies: 1 } } as Config;
+    /** Open the file, save the build and reload it the way the page does */
+    const openedSavedReloaded = async (file: ReturnType<typeof exported>) => {
+        const opened = await ask({ kind: 'config-file', config: file });
+        const text = serializeConfig(configToFormData(opened));
+        const reloaded = await ask({ kind: 'saved-config', config: readSavedBuild(text) });
+        expect(reloaded.problem).toBeNull();
+        return formDataToConfig(reloaded.form as ConfigFormData);
     };
     // read as a whitelist, the blacklist would leave the gears without an output inserter and offer a new belt for them
     const blacklist = { filters: ['iron-plate'], filter_mode: 'blacklist' };
@@ -341,8 +237,8 @@ describe('a captured inserter kind, quality and filter mode', () => {
             refusal: 'Inserter 1: picking up from a belt with a normal long-handed-inserter is not supported yet' },
         { name: 'a blacklist on the output inserter', output: blacklist, kept: [{}, blacklist],
             refusal: 'Inserter 2: `filter_mode` "blacklist" is refused' },
-    ])('keeps $name through paste, save and reload, and refuses it live and in Check only when out of scope', async ({ input, output, kept, refusal }) => {
-        const config = await pastedSavedReloaded(exported(input, output));
+    ])('keeps $name through a file, save and reload, and refuses it live and in Check only when out of scope', async ({ input, output, kept, refusal }) => {
+        const config = await openedSavedReloaded(exported(input, output));
         expect(config.inserters).toMatchObject(kept);
         const blocking = listed(await coverageOf(config), config.machines).filter(issue => issue.blocksGeneration);
         expect(blocking.map(({ source, text }) => ({ source, text }))).toEqual(refusal ? [{ source: 'engine', text: expect.stringContaining(refusal) }] : []);
@@ -351,13 +247,13 @@ describe('a captured inserter kind, quality and filter mode', () => {
     });
 
     it('lists the refused blacklist once when a Check stopped at the same refusal', async () => {
-        const config = await pastedSavedReloaded(exported({}, blacklist));
+        const config = await openedSavedReloaded(exported({}, blacklist));
         const checked = await send({ type: 'validate', requestId: 54, config }) as ValidationFailedResponse;
         expect(listed(await coverageOf(config), config.machines, { message: checked.message })).toHaveLength(1);
     });
 
     it('Check shows the refused blacklist as a refusal, not as an internal error', async () => {
-        const config = await pastedSavedReloaded(exported({}, blacklist));
+        const config = await openedSavedReloaded(exported({}, blacklist));
         const checked = await send({ type: 'validate', requestId: 55, config }) as ValidationFailedResponse;
         expect(checked.message).toContain('`filter_mode` "blacklist" is refused');
         expect(checked.internal).toBeUndefined();
@@ -603,7 +499,7 @@ it('loads an imported build file that carries the former Fractional swings overr
         .toEqual(await ask({ kind: 'config-file', config: { format: 1, ...config, overrides: {} } }));
 });
 
-it("gives the crafting machines, fills a prototype's rule on import and paste, and warns live of a machine that cannot make its recipe", async () => {
+it("gives the crafting machines, fills a prototype's rule on import, and warns live of a machine that cannot make its recipe", async () => {
     const lookups = await ask({ kind: 'lookups' });
     expect(lookups.craftingMachines.machines.map(machine => machine.name)).toContain('cryogenic-plant');
     expect(lookups.craftingMachines.recipeCategories['lithium-plate']).toEqual(['smelting']);
@@ -613,15 +509,12 @@ it("gives the crafting machines, fills a prototype's rule on import and paste, a
         setpoint: { item: 'iron-plate', items_per_second: 1, copies: 1 },
         machines: [furnace], inserters: [], belts: [],
     };
-    // a former type is read as the machine, in a build file, a saved build and a paste from an older Sidecar
+    // a former type is read as the machine, in a build file and a saved build
     const typed = { id: 1, recipe: 'iron-plate', crafting_speed: 2, productivity: 0, type: 'furnace' };
     expect((await ask({ kind: 'config-file', config: { format: 1, ...config, machines: [typed] } })).machines[0]).toEqual(furnace);
     const saved = await ask({ kind: 'saved-config', config: { format: 1, ...config, machines: [{ ...typed, _uuid: 'm' }, { ...furnace, id: 2, type: 'machine' }] } });
     expect(saved.problem).toBeNull();
     expect((saved.form as { machines: unknown[] }).machines).toEqual([{ ...furnace, _uuid: 'm', _prototype_source: 'recipe' }, { ...furnace, id: 2 }]);
-    const pasted = await ask({ kind: 'pasted-entities', machines: [typed, { ...furnace, id: 2 }], drills: [], inserters: [], belts: [], chests: [] } as Extract<EngineQuery, { kind: 'pasted-entities' }>);
-    expect(pasted.machines).toEqual([furnace, { ...furnace, id: 2 }]);
-    expect(pasted.picked_machines).toEqual([1]);
 
     const live = await coverageOf({ ...config, machines: [{ ...furnace, prototype: 'cryogenic-plant' }] } as Config);
     expect(live.machinePrototypes.map(issue => issue.kind)).toEqual(['recipe-not-made']);
@@ -965,7 +858,6 @@ describe('a pasted blueprint', () => {
         // a short list: what waits on the answer is not in it yet
         expect(first.drills).toEqual([]);
         expect(first.guidance).toEqual(Option.none);
-        expect('picked_machines' in first).toBe(false);
 
         const answers = { [first.questions[0].key]: 'iron-ore' };
         const second = await pastedOf(iron, answers);
