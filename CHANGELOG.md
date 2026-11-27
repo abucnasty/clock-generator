@@ -11,6 +11,9 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 
 ## [Unreleased]
 
+### Changed
+- generation: builds whose copies share lanes take less time to generate
+
 ## [0.32.0] - 2026-11-26
 
 ### Added

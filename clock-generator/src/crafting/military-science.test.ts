@@ -116,5 +116,13 @@ describe("the military science sample", () => {
                 data: { fewer_copies: null, other_clock: { id: "coordinated_sources", label: "Coordinated Sources: 2 output swings each output cycle", window_cycle_ticks: 80 } },
             });
         });
+
+        // the rate judge of the clock that falls short goes on to four times the long run (36,000 ticks): one run of the copies
+        // to there, the run of one copy alone and the run without the output belt, each of 144,000 ticks
+        it("judges the copies on the shared lanes in three runs of four times the long run", () => {
+            const judged = rows.filter(row => row.maker === "derived" && row.purpose === "shared_lane_check" && row.loop === "simulate_step");
+            expect({ runs: judged.reduce((sum, row) => sum + row.runs, 0), ticks: judged.reduce((sum, row) => sum + row.ticks, 0) })
+                .toEqual({ runs: 3, ticks: 432_000 });
+        });
     });
 });
