@@ -321,6 +321,44 @@ describe('a pasted blueprint', () => {
         expect(next.setpoint.item).toBe('iron-plate');
     });
 
+    it('shows one setpoint row after the questions, the machine values under Machines, and the notes last', async () => {
+        const { user } = Render();
+        await pasteText(iron);
+        const dialog = await dialogOpen();
+        const follows = (first: Element, second: Element) => (first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
+        const setpoint = within(dialog).getByRole('group', { name: 'Setpoint' });
+        expect(follows(within(dialog).getByRole('group', { name: 'Questions' }), setpoint)).toBe(true);
+        await user.click(within(dialog).getByRole('button', { name: /iron.ore/i }));
+        const machines = await screen.findByRole('checkbox', { name: /^Machines \(/ });
+        // the setpoint is shown once: its checkbox, item, rate and copies in one row
+        expect(within(dialog).getAllByRole('group', { name: 'Setpoint' })).toHaveLength(1);
+        expect(within(dialog).queryByRole('checkbox', { name: /^Setpoint:/ })).toBeNull();
+        expect(within(setpoint).getByRole('checkbox', { name: 'Setpoint' })).toBeDefined();
+        expect(within(dialog).getAllByRole('combobox', { name: 'Setpoint item' })).toHaveLength(1);
+        const values = within(dialog).getByRole('group', { name: 'Machine values' });
+        const box = (name: string) => dialog.querySelector(`[data-paste-category="${name}"]`)!;
+        expect(box('machines').contains(values)).toBe(true);
+        const notes = await within(dialog).findByRole('region', { name: 'Notes' });
+        const order = [setpoint, machines, values, box('drills'), box('inserters'), box('belts'), box('chests'), notes];
+        order.slice(1).forEach((element, index) => expect(follows(order[index], element), `row ${index + 1} before row ${index}`).toBe(true));
+        expect(follows(box('chests'), notes)).toBe(true);
+    });
+
+    it('asks the worker again when the user picks another setpoint item', async () => {
+        const { user } = Render();
+        await pasteText(iron);
+        const dialog = await dialogOpen();
+        await user.click(within(dialog).getByRole('button', { name: /iron.ore/i }));
+        await vi.waitFor(() => expect(lastBlueprintQuery().inputs.setpoint).toEqual({ item: 'iron-plate', copies: 1 }));
+        const before = asked('pasted-blueprint').length;
+        await user.click(within(within(dialog).getByRole('group', { name: 'Setpoint' })).getByRole('combobox', { name: 'Setpoint item' }));
+        await user.click(await screen.findByRole('option', { name: /^stone/i }));
+        await vi.waitFor(() => expect(asked('pasted-blueprint').length).toBe(before + 1));
+        expect(lastBlueprintQuery().inputs.setpoint).toEqual({ item: 'stone', copies: 1 });
+        // the row is ticked for the item the user chose
+        expect(within(within(dialog).getByRole('group', { name: 'Setpoint' })).getByRole<HTMLInputElement>('checkbox', { name: 'Setpoint' }).checked).toBe(true);
+    });
+
     it('marks a value that rests on no read of the game "please check", beside the entity it is about', async () => {
         const { user } = Render();
         await pasteText(iron);

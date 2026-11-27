@@ -47,7 +47,7 @@ import { importReduction, type ImportReduction } from '../utils/importReduction'
 import { formDataToConfig } from '../utils/configForm/configMapping';
 import { PickupGeometrySummary } from './PickupGeometrySummary';
 import type { PickupCaptureWarning } from '../utils/sidecarExport';
-import { BlueprintImportPanel, type MachineOverrides } from './BlueprintImportPanel';
+import { BlueprintImportPanel, BlueprintMachineValues, BlueprintNotes, BlueprintSetpointRow, type MachineOverrides } from './BlueprintImportPanel';
 import { BLUEPRINT_FAILED_PROMPT, BLUEPRINT_PROMPTS, isJsonText } from '../utils/blueprintPaste';
 import { openProfileStore, TEMPLATES } from '../utils/researchProfiles';
 import { pageStorage, researchChoiceOf } from '../utils/researchLine';
@@ -879,14 +879,12 @@ export function ConfigImportExport({
                     }} />}
                 {pendingImport?.blueprint?.failed && <Alert severity="error" sx={{ mb: 2 }}>{BLUEPRINT_FAILED_PROMPT.text}</Alert>}
                 {pendingImport?.blueprint && !pendingImport.reduction && (
-                    <BlueprintImportPanel pasted={pendingImport.blueprint.pasted} machines={pendingImport.machines}
+                    <BlueprintImportPanel pasted={pendingImport.blueprint.pasted}
                         profiles={profileStore.entries()} profileId={pendingImport.blueprint.profileId}
                         onProfileChange={id => { profileStore.select(id); changeBlueprint({ profileId: id }); }}
                         answers={pendingImport.blueprint.answers}
                         onAnswer={(key, value) => changeBlueprint({ answers: { ...pendingImport.blueprint!.answers, [key]: value } })}
-                        itemNames={itemNames} setpoint={pendingImport.blueprint.setpoint} onSetpointChange={setpoint => changeBlueprint({ setpoint })}
-                        onOverride={(number, field, value) => changeBlueprint({ overrides: { ...pendingImport.blueprint!.overrides,
-                            [number]: { ...pendingImport.blueprint!.overrides[number], [field]: value } } })} />
+                        itemNames={itemNames} />
                 )}
                 {pendingImport && !pendingImport.reduction && (
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
@@ -899,24 +897,33 @@ export function ConfigImportExport({
                                 Captured Inserter {inserter.id ?? i + 1}: {sideLoadedDropMessage(inserter.sink.drop_capture.tiles)}
                             </Typography>] : [])}
                         {preview?.geometryProblem && <Alert severity="error">{preview.geometryProblem}</Alert>}
-                        {pendingImport.fill ? (
+                        {pendingImport.fill || pendingImport.blueprint ? (
                             <Box>
-                                <FormControlLabel
-                                    control={
-                                        <Checkbox
-                                            checked={importSelections.target}
-                                            onChange={() => handleSelectionChange('target')}
-                                            slotProps={{ input: { 'aria-describedby': maximumTargetNote(pendingImport.fill.source) ? `${TARGET_CAPTION_ID} ${TARGET_MAXIMUM_ID}` : TARGET_CAPTION_ID } }}
-                                        />
-                                    }
-                                    label={targetRowLabel(pendingImport.fill.values, recipeLabel)}
-                                />
-                                <Typography id={TARGET_CAPTION_ID} variant="body2" color="text.secondary" sx={{ ml: 4 }}>
-                                    {targetRowCaption(pendingImport.fill.source, pendingImport.fill.beltLimit, pendingImport.fill.buildLimit)}
-                                    {currentTarget.item !== '' && ` ${replacesTargetNote(currentTarget, recipeLabel)}`}
-                                </Typography>
-                                {maximumTargetNote(pendingImport.fill.source) && <Typography id={TARGET_MAXIMUM_ID} variant="body2" color="text.secondary" sx={{ ml: 4 }}>
-                                    {maximumTargetNote(pendingImport.fill.source)}
+                                {pendingImport.blueprint
+                                    ? <BlueprintSetpointRow setpoint={pendingImport.blueprint.setpoint} onSetpointChange={setpoint => changeBlueprint({ setpoint })} itemNames={itemNames}
+                                        checked={importSelections.target} onToggle={() => handleSelectionChange('target')}
+                                        describedBy={pendingImport.fill ? (maximumTargetNote(pendingImport.fill.source) ? `${TARGET_CAPTION_ID} ${TARGET_MAXIMUM_ID}` : TARGET_CAPTION_ID) : undefined} />
+                                    : pendingImport.fill && <FormControlLabel
+                                        control={
+                                            <Checkbox
+                                                checked={importSelections.target}
+                                                onChange={() => handleSelectionChange('target')}
+                                                slotProps={{ input: { 'aria-describedby': maximumTargetNote(pendingImport.fill.source) ? `${TARGET_CAPTION_ID} ${TARGET_MAXIMUM_ID}` : TARGET_CAPTION_ID } }}
+                                            />
+                                        }
+                                        label={targetRowLabel(pendingImport.fill.values, recipeLabel)}
+                                    />}
+                                {pendingImport.fill && <>
+                                    <Typography id={TARGET_CAPTION_ID} variant="body2" color="text.secondary" sx={{ ml: 4 }}>
+                                        {targetRowCaption(pendingImport.fill.source, pendingImport.fill.beltLimit, pendingImport.fill.buildLimit)}
+                                        {currentTarget.item !== '' && ` ${replacesTargetNote(currentTarget, recipeLabel)}`}
+                                    </Typography>
+                                    {maximumTargetNote(pendingImport.fill.source) && <Typography id={TARGET_MAXIMUM_ID} variant="body2" color="text.secondary" sx={{ ml: 4 }}>
+                                        {maximumTargetNote(pendingImport.fill.source)}
+                                    </Typography>}
+                                </>}
+                                {!pendingImport.fill && currentTarget.item === '' && <Typography variant="body2" color="text.secondary" sx={{ ml: 4 }}>
+                                    {NO_TARGET_NOTE}
                                 </Typography>}
                             </Box>
                         ) : (
@@ -945,6 +952,10 @@ export function ConfigImportExport({
                                     <Typography id={`paste-${row.category}-counts`} variant="body2" color="text.secondary" sx={{ ml: 4 }}>
                                         {consequence}
                                     </Typography>
+                                    {row.category === 'machines' && row.replacing && pendingImport.blueprint
+                                        && <BlueprintMachineValues pasted={pendingImport.blueprint.pasted} machines={pendingImport.machines}
+                                            onOverride={(number, field, value) => changeBlueprint({ overrides: { ...pendingImport.blueprint!.overrides,
+                                                [number]: { ...pendingImport.blueprint!.overrides[number], [field]: value } } })} />}
                                 </Box>
                             );
                         })}
@@ -977,6 +988,7 @@ export function ConfigImportExport({
                                 {currentForm.overrides && <Typography variant="body2" sx={{ overflowWrap: 'anywhere' }}>Retained run overrides: {JSON.stringify(currentForm.overrides)}.</Typography>}
                             </Box>
                         </Disclosure>
+                        {pendingImport.blueprint && <BlueprintNotes pasted={pendingImport.blueprint.pasted} />}
                     </Box>
                 )}
             </AppDialog>
