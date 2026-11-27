@@ -50,7 +50,7 @@ import type { PickupCaptureWarning } from '../utils/sidecarExport';
 import { BlueprintImportPanel, type MachineOverrides } from './BlueprintImportPanel';
 import { BLUEPRINT_FAILED_PROMPT, BLUEPRINT_PROMPTS, isJsonText } from '../utils/blueprintPaste';
 import { openProfileStore, TEMPLATES } from '../utils/researchProfiles';
-import type { StorageLike } from '../utils/buildLibrary';
+import { pageStorage, researchChoiceOf } from '../utils/researchLine';
 import type { ImportInputs } from 'clock-generator/browser';
 import type { PastedBlueprint } from '../worker/types';
 
@@ -59,17 +59,6 @@ const TARGET_CAPTION_ID = 'paste-target-caption';
 const TARGET_MAXIMUM_ID = 'paste-target-maximum';
 const EXAMPLE_FAILED_MESSAGE = 'Could not load the example. Check your connection and try again.';
 const freshImportSelections = (): ImportSelections => ({ target: false, machines: true, drills: true, inserters: true, belts: true, chests: true });
-
-/** The page's localStorage, reached only inside the calls: in some browsers merely reading `localStorage` throws */
-const pageStorage: StorageLike = {
-    getItem: key => window.localStorage.getItem(key),
-    setItem: (key, value) => window.localStorage.setItem(key, value),
-    removeItem: key => window.localStorage.removeItem(key),
-    key: i => window.localStorage.key(i),
-    get length() {
-        return window.localStorage.length;
-    },
-};
 
 /**
  * A pasted blueprint while the confirm dialog is open: the text, what the user chose and typed, and the import's last
@@ -366,7 +355,7 @@ export function ConfigImportExport({
     const blueprintAskRef = useRef(0);
     const askBlueprint = useCallback((session: Pick<BlueprintSession, 'text' | 'answers' | 'profileId' | 'setpoint'>) => {
         const entry = profileStore.find(session.profileId) ?? profileStore.find(TEMPLATES[0].id)!;
-        const research: ImportInputs['research'] = { profile: entry.name, template: entry.isTemplate ? entry.id as typeof TEMPLATES[number]['id'] : entry.template, bonuses: entry.bonuses };
+        const research: ImportInputs['research'] = researchChoiceOf(entry);
         return askEngine({ kind: 'pasted-blueprint', text: session.text, inputs: {
             research, answers: session.answers, setpoint: { ...(session.setpoint.item !== '' && { item: session.setpoint.item }), copies: session.setpoint.copies },
         } });
@@ -408,6 +397,8 @@ export function ConfigImportExport({
 
     /** Reads a pasted blueprint through the import and opens the confirm dialog for it, or says why it could not */
     const startBlueprintPaste = useCallback(async (text: string, request: number): Promise<PastePrompt | null> => {
+        // the profiles as the profiles dialog left them
+        profileStore.reload();
         const lastUsed = profileStore.snapshot().lastUsed;
         const profileId = lastUsed !== null && profileStore.find(lastUsed) ? lastUsed : TEMPLATES[0].id;
         const suggested = currentTarget.item === '';
