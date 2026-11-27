@@ -55,11 +55,13 @@ const beltsOf = (result: { build: ResearchBuild }) => result.build.belts as unkn
 const within = (actual: unknown, expected: number) => expect(Math.abs((actual as number) - expected)).toBeLessThan(1e-6);
 
 describe("the fixture rows", () => {
-    // reads of a game save: a level row gives the research in full, a bound row only a lower bound on it
-    it.each([
-        ["a big mining drill, mining level 8000", "big-mining-drill", 79990, 79990.00000001134],
-        ["an electric mining drill, mining level 8002", "electric-mining-drill", 80010, 80010.00000001132],
-    ])("gives the read of %s", (_name, type, bonus, read) => {
+    // nine reads of a game save: a row that is read in full gives the research exactly, a row at the cap gives a lower bound on it
+    const DRILLS: [string, string, number, number][] = [
+        ["a big mining drill", "big-mining-drill", 79990, 79990.00000001134],
+        ["a second big mining drill", "big-mining-drill", 79990, 79990.00000001134],
+        ["an electric mining drill", "electric-mining-drill", 80010, 80010.00000001132],
+    ];
+    it.each(DRILLS)("gives the read of %s", (_name, type, bonus, read) => {
         const result = applyResearch(build({ drills: [drill(1, type)] }), baseOf({ drills: [{ id: 1, productivity: 0 }] }),
             choiceOf({ mining_drill_productivity_bonus: bonus }), DATA);
         within(drillsOf(result)[0].productivity, read);
@@ -71,11 +73,14 @@ describe("the fixture rows", () => {
         within(chestsOf(result)[0].productivity, 10);
     });
 
-    it.each([
-        ["a steel furnace", "steel-plate", 0, 300],
-        ["a foundry of low density structure", "low-density-structure", 50, 250],
+    const BOUNDS: [string, string, number, number][] = [
+        ["a furnace of steel plate", "steel-plate", 0, 300],
+        ["a foundry of low density structure", "casting-low-density-structure", 50, 250],
+        ["a second foundry of low density structure", "casting-low-density-structure", 50, 250],
         ["a cryogenic plant of plastic bars", "plastic-bar", 0, 300],
-    ])("gives 300 for %s, with research at the lower bound and at 1000", (_name, recipe, base, lowest) => {
+        ["a second cryogenic plant of plastic bars", "plastic-bar", 0, 300],
+    ];
+    it.each(BOUNDS)("gives 300 for %s, with research at the lower bound and at 1000", (_name, recipe, base, lowest) => {
         for (const research of [lowest, 1000]) {
             const result = applyResearch(build({ machines: [machine(1, recipe)] }), baseOf({ machines: [{ id: 1, recipe, productivity: base }] }),
                 choiceOf({ recipes: { [recipe]: { productivity_bonus: research } } }), DATA);
