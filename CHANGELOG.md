@@ -20,6 +20,9 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 - simulation: game data now comes from Factorio 2.1.24
 - generation: builds whose copies share lanes take less time to generate
 
+### Fixed
+- ui: the note on drops landing on each other now follows output belts and partial copies
+
 ## [0.32.0] - 2026-11-26
 
 ### Added
