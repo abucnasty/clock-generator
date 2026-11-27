@@ -276,7 +276,7 @@ describe("a key made from the description of the build", () => {
         }
     });
 
-    it("asks the game again for the description when a file of the folder that describes the build changes, and not for a file outside it", async () => {
+    it("asks the game again for the description when a file of the folder that describes the build changes, and when a recorder file outside it changes", async () => {
         const game = environment();
         expect((await keyed(game, DESCRIPTION)).asked).toBe(1);
         expect((await keyed(game, DESCRIPTION)).asked).toBe(0);
