@@ -109,7 +109,7 @@ describe("a crafting machine below the cap", () => {
         expect(machinesOf(result)[0].productivity).toBe(200);
     });
 
-    it("writes 0 where the base and the research sum below 0", () => {
+    it("writes 0 over the build's own value where the base and the research are both 0", () => {
         const result = applyResearch(build({ machines: [machine(1, "iron-gear-wheel", 5)] }),
             baseOf({ machines: [{ id: 1, recipe: "iron-gear-wheel", productivity: 0 }] }),
             choiceOf({ recipes: { "iron-gear-wheel": { productivity_bonus: 0 } } }), DATA);
