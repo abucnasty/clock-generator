@@ -18,7 +18,22 @@ for _, entity in pairs(entities) do
 end
 -- the inserters of a staged start (options.staged) are built in the tick the probe runs in and know their targets a tick later: they are counted by the host
 assert(options.staged or (#outputs == 1 and #fills == 2 and #takes == 2), "expected 1 output, 2 fill and 2 machine-feeding inserters on the wagon")
-assert(drill.drop_target == wagon, "the drill drops into the wagon")
+-- A staged start may hold the drill until the opening, and a drill that has not run yet has no drop target: it is then read
+-- in the run, before the first stop of the drill or else at the end, and a run in which it never has one fails (report.drill_drop)
+local drill_drop = {}
+local function read_drill_drop(t)
+    if drill_drop.tick ~= nil then return end
+    local target = drill.drop_target
+    if target == nil then return end
+    drill_drop.tick, drill_drop.unit_number, drill_drop.type, drill_drop.into_wagon = t, target.unit_number, target.type, target == wagon
+end
+if options.staged and drill.drop_target == nil then
+    drill_drop.at_opening = false
+else
+    assert(drill.drop_target == wagon, "the drill drops into the wagon")
+    drill_drop.at_opening = true
+    read_drill_drop(0)
+end
 local sink = capture.find_one(entities, function(entity) return entity.type == "infinity-container" end, "sink")
 assert(sink.remove_unfiltered_items, "a sink that removes")
 local cargo = wagon.get_inventory(defines.inventory.cargo_wagon)
@@ -33,9 +48,17 @@ local function contents()
     for _, content in pairs(cargo.get_contents()) do out[content.name] = (out[content.name] or 0) + content.count end
     return out
 end
-local report = {events = {}, output_full_ticks = {}, initial = {
+local report = {events = {}, drill_drop = drill_drop, output_full_ticks = {}, initial = {
     wagon = contents(), output_units = units(outputs), fill_units = units(fills), take_units = units(takes),
     drill_unit = drill.unit_number, wagon_unit = wagon.unit_number}}
+local function check_drill_drop()
+    read_drill_drop(report.protocol.ended)
+    if drill_drop.tick == nil then
+        report.protocol.error = "the drill never had a drop target in the run, so it never dropped into the wagon"
+    elseif not drill_drop.into_wagon then
+        report.protocol.error = "the drill drops into " .. drill_drop.type .. ", not the wagon"
+    end
+end
 local function event(t, action) table.insert(report.events, {tick = t, action = action, wagon = contents()}) end
 local furnaces = {}
 for _, entity in pairs(entities) do
@@ -46,6 +69,7 @@ local function stop_drill()
         kind = "stop drill",
         -- the ore in the wagon goes with the cut (abucnasty, 2026-11-03); its plates and steel stay, being downstream of the ore
         start = function(t)
+            read_drill_drop(t)
             drill.disabled_by_script = true
             local removed = cargo.remove{name = "iron-ore", count = 1000000}
             table.insert(report.events, {tick = t, action = "stop-drill", removed = removed, wagon = contents()})
@@ -76,6 +100,7 @@ local function run(finals, waited)
         window = options.window, expected = options.expected, baseline = options.baseline, cap = options.cap,
         disturbances = {stop_drill(), block, stop_drill()},
         report = report, output = "clock-speed.json", settle = settle,
+        done = check_drill_drop,
         each_tick = function()
             for _, furnace in ipairs(furnaces) do
                 if furnace.status == defines.entity_status.full_output then
