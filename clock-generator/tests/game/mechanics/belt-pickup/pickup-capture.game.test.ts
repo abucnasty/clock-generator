@@ -5,13 +5,13 @@ import path from "path";
 import { expect, test } from "vitest";
 import { recordInFactorio } from "../../../../src/harness/factorio-harness";
 
-// Factorio permits require only while parsing control.lua. Load the same Sidecar sources into test-local closures.
+// Factorio permits require only while parsing control.lua. Load the same sources of the recorder's describing Lua into test-local closures.
 const modules = ["types", "helpers", "pickup-supply", "drop-merge", "suggested-target", "extraction", "export"];
 const captureModules = `local capture_modules, require = {}, nil
 require = function(name) return assert(capture_modules[name], name) end
 ` + modules.map(name => {
-    const source = fs.readFileSync(path.join(REPOSITORY_ROOT, `clock-generator-sidecar/scripts/${name}.lua`), "utf8");
-    return `capture_modules["__clock-generator-sidecar__.scripts.${name}"] = (function()\n${source}\nend)() or true\n`;
+    const source = fs.readFileSync(path.join(REPOSITORY_ROOT, `clock-generator-recorder/scripts/describe/${name}.lua`), "utf8");
+    return `capture_modules["__clock-generator-recorder__.scripts.describe.${name}"] = (function()\n${source}\nend)() or true\n`;
 }).join("");
 
 test("Sidecar classifies supported pickups, explains unclassified captures and exports inserter identity", async context => {
@@ -27,9 +27,9 @@ test("Sidecar classifies supported pickups, explains unclassified captures and e
             seed: [], unclocked: true, game_speed: 1000, watch: false, timeout_seconds: 180, log() {},
             lua: captureModules + `
 local entities, surface = ...
-local h = require("__clock-generator-sidecar__.scripts.helpers")
-local extraction = require("__clock-generator-sidecar__.scripts.extraction")
-local export = require("__clock-generator-sidecar__.scripts.export")
+local h = require("__clock-generator-recorder__.scripts.describe.helpers")
+local extraction = require("__clock-generator-recorder__.scripts.describe.extraction")
+local export = require("__clock-generator-recorder__.scripts.describe.export")
 local function belt(name, x, y, direction, endpoint)
     return assert(surface.create_entity{name = name, position = {x, y}, direction = direction, type = endpoint, force = "player"})
 end
@@ -106,7 +106,7 @@ assert(input and input.source.pickup_length == 1 and input.source.pickup_layout 
 assert(supported.inserters[input.id].source.pickup_layout == "side-straight")
 local provenance = supported.inserters[input.id].source.pickup_capture
 assert(provenance.status == "supported" and provenance.model == "belt" and provenance.model_version == 2)
-assert(provenance.entity_type == "transport-belt" and provenance.sidecar_version == script.active_mods["clock-generator-sidecar"])
+assert(provenance.entity_type == "transport-belt")
 -- Exercise the export boundary with an unclassified capture: geometry must stay absent and IDs match the JSON.
 input.inserter.source.pickup_length = nil
 input.inserter.source.pickup_problem = "bend"
@@ -123,7 +123,7 @@ assert(unknown.inserters[input.id].source.pickup_capture.model == nil)
 
 -- Side-loading checks only: these inserted stacks do not measure pickup timing. Picking up from a belt tile that
 -- another belt side-loads onto, as one stream or two merging, is out of scope, as splitters are.
-local supply = require("__clock-generator-sidecar__.scripts.pickup-supply")
+local supply = require("__clock-generator-recorder__.scripts.describe.pickup-supply")
 for index, entry in ipairs(directions) do
     local direction, dx, dy = entry[1], entry[2], entry[3]
     local x, y = 210 + index * 8, 160

@@ -6,14 +6,23 @@ import path from "path";
 import { expect, test } from "vitest";
 import { recordInFactorio } from "../../../../src/harness/factorio-harness";
 
-// Factorio permits require only while parsing control.lua. Load the same Sidecar sources into test-local closures.
+// Factorio permits require only while parsing control.lua. Load the same sources of the recorder's describing Lua into test-local closures.
 const modules = ["types", "helpers", "pickup-supply", "drop-merge", "suggested-target", "extraction", "export"];
 const captureModules = `local capture_modules, require = {}, nil
 require = function(name) return assert(capture_modules[name], name) end
 ` + modules.map(name => {
-    const source = fs.readFileSync(path.join(REPOSITORY_ROOT, `clock-generator-sidecar/scripts/${name}.lua`), "utf8");
-    return `capture_modules["__clock-generator-sidecar__.scripts.${name}"] = (function()\n${source}\nend)() or true\n`;
+    const source = fs.readFileSync(path.join(REPOSITORY_ROOT, `clock-generator-recorder/scripts/describe/${name}.lua`), "utf8");
+    return `capture_modules["__clock-generator-recorder__.scripts.describe.${name}"] = (function()\n${source}\nend)() or true\n`;
 }).join("");
+
+/** The value without any `sidecar_version` */
+function withoutVersions(value: unknown): unknown {
+    if (Array.isArray(value)) return value.map(withoutVersions);
+    if (value !== null && typeof value === "object") {
+        return Object.fromEntries(Object.entries(value).filter(([name]) => name !== "sidecar_version").map(([name, item]) => [name, withoutVersions(item)]));
+    }
+    return value;
+}
 
 const SCAFFOLD = path.join(path.dirname(ConfigPaths.LITHIUM_PLATE_80_SILO_CHEST), "lithium-plate-80-silo-chest.scaffold");
 
@@ -56,8 +65,8 @@ test("Sidecar marks a drop that side-loads onto a belt fed from behind, and no o
             work_dir: scratch,
             lua: captureModules + `
 local entities, surface = ...
-local extraction = require("__clock-generator-sidecar__.scripts.extraction")
-local export = require("__clock-generator-sidecar__.scripts.export")
+local extraction = require("__clock-generator-recorder__.scripts.describe.extraction")
+local export = require("__clock-generator-recorder__.scripts.describe.export")
 local report = {}
 local function note(case, text) table.insert(report, case .. ": " .. text) end
 
@@ -220,7 +229,6 @@ for index, entry in ipairs(exported.inserters) do
     if capture then
         marked_count = marked_count + 1
         assert(capture.status == "side-loaded" and capture.tiles == 3)
-        assert(capture.sidecar_version == script.active_mods["clock-generator-sidecar"])
     end
 end
 assert(marked_count == 1, "one drop is marked in the export")
@@ -242,7 +250,8 @@ helpers.write_file("sideload-drop-cases.txt", table.concat(report, "\\n") .. "\\
         const sample = path.join(path.dirname(ConfigPaths.LITHIUM_PLATE_80_SILO_CHEST), "lithium-plate-80-silo-chest.sidecar-export.json");
         const exported = JSON.parse(fs.readFileSync(path.join(scratch, "script-output", "lithium-plate-80-silo-chest.sidecar-export.json"), "utf8"));
         if (process.env.SIDELOAD_DROP_WRITE_SAMPLE) fs.writeFileSync(sample, JSON.stringify(exported, null, 2) + "\n");
-        expect(exported).toEqual(JSON.parse(fs.readFileSync(sample, "utf8")));
+        // the sample is the export of the Sidecar, which stamps its version where the recorder's copy of the Lua does not
+        expect(withoutVersions(exported)).toEqual(withoutVersions(JSON.parse(fs.readFileSync(sample, "utf8"))));
         expect(Object.keys(read).sort()).toEqual(Object.keys(EXPECTED_CASES).sort());
     } finally {
         fs.rmSync(scratch, { recursive: true, force: true });

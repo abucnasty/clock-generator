@@ -3,8 +3,8 @@
 -- one or two inserters and the assembler they fill; the copies stand along the line. At the end every build is exported
 -- as the Sidecar's selection of its entities.
 local entities, surface = ...
-local extraction = require("__clock-generator-sidecar__.scripts.extraction")
-local export = require("__clock-generator-sidecar__.scripts.export")
+local extraction = require("__clock-generator-recorder__.scripts.describe.extraction")
+local export = require("__clock-generator-recorder__.scripts.describe.export")
 
 local force = game.forces.player
 local N, E, S, W = defines.direction.north, defines.direction.east, defines.direction.south, defines.direction.west

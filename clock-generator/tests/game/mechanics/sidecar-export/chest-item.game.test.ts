@@ -6,13 +6,13 @@ import path from "path";
 import { expect, test } from "vitest";
 import { recordInFactorio } from "../../../../src/harness/factorio-harness";
 
-// Factorio permits require only while parsing control.lua. Load the same Sidecar sources into test-local closures.
+// Factorio permits require only while parsing control.lua. Load the same sources of the recorder's describing Lua into test-local closures.
 const modules = ["types", "helpers", "pickup-supply", "drop-merge", "suggested-target", "extraction", "export"];
 const captureModules = `local capture_modules, require = {}, nil
 require = function(name) return assert(capture_modules[name], name) end
 ` + modules.map(name => {
-    const source = fs.readFileSync(path.join(REPOSITORY_ROOT, `clock-generator-sidecar/scripts/${name}.lua`), "utf8");
-    return `capture_modules["__clock-generator-sidecar__.scripts.${name}"] = (function()\n${source}\nend)() or true\n`;
+    const source = fs.readFileSync(path.join(REPOSITORY_ROOT, `clock-generator-recorder/scripts/describe/${name}.lua`), "utf8");
+    return `capture_modules["__clock-generator-recorder__.scripts.describe.${name}"] = (function()\n${source}\nend)() or true\n`;
 }).join("");
 
 // any small build will do: the cases are built on their own ground
@@ -48,8 +48,8 @@ test("Sidecar exports an empty buffer chest with the item the inserters and dril
             work_dir: scratch,
             lua: captureModules + `
 local entities, surface = ...
-local extraction = require("__clock-generator-sidecar__.scripts.extraction")
-local export = require("__clock-generator-sidecar__.scripts.export")
+local extraction = require("__clock-generator-recorder__.scripts.describe.extraction")
+local export = require("__clock-generator-recorder__.scripts.describe.export")
 local report = {}
 local function note(case, text) table.insert(report, case .. ": " .. text) end
 local E, W = defines.direction.east, defines.direction.west

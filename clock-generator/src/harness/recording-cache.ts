@@ -56,9 +56,10 @@ export interface CacheEnvironment {
     /** The folders of the mods the harness copies in, by the name they are installed under; `.zip` files in them are not copied */
     mods: Record<string, string>;
     /**
-     * The folders of the mods that turn what the game holds into the description of a build (the Sidecar), by the name they are
-     * installed under; copied in like `mods`. Their files are not part of the key of a recording, only what they produced for the
-     * build is (see describedRecordingKey): a change to them that leaves the description as it was keeps every recording.
+     * The folders of the Lua that turns what the game holds into the description of a build, by a name of the folder. Each is a
+     * folder of a mod in `mods` (the recorder's `scripts/describe/`), so the harness copies it in with that mod. Its files are
+     * not part of the fingerprint of that mod and so not of the key of a recording, only what they produced for the build is
+     * (see describedRecordingKey): a change to them that leaves the description as it was keeps every recording.
      */
     transforms?: Record<string, string>;
     /** The source files of the harness that decide what the game is given and what is kept of what it answers */
@@ -157,10 +158,19 @@ async function dataFingerprint(folder: string): Promise<string> {
     return sha256(canonicalJson(files.map((file, index) => [file.relative, sizes[index]])));
 }
 
-/** The names and contents of every file of a folder that is copied into the game, but for `.zip` files, as the harness copies it */
-async function modFingerprint(folder: string): Promise<string> {
-    const files = (await filesBelow(folder)).filter(file => !file.full.endsWith(".zip"));
+/**
+ * The names and contents of every file of a folder that is copied into the game, but for `.zip` files, as the harness copies it,
+ * and for the files below the folders in `left_out` (a folder of the Lua that describes a build, which is keyed on what it makes)
+ */
+async function modFingerprint(folder: string, left_out: string[] = []): Promise<string> {
+    const files = (await filesBelow(folder)).filter(file => !file.full.endsWith(".zip") && !left_out.some(out => isBelow(out, file.full)));
     return sha256(canonicalJson(await Promise.all(files.map(async file => [file.relative, await fileSha256(file.full)]))));
+}
+
+/** Whether `file` is a folder's own or below it */
+function isBelow(folder: string, file: string): boolean {
+    const relative = path.relative(path.resolve(folder), path.resolve(file));
+    return relative !== "" && !relative.startsWith("..") && !path.isAbsolute(relative);
 }
 
 /** The options a key is made of: all of them but the ones that only say where or how the run goes */
@@ -178,11 +188,12 @@ export interface RecordingCacheKey {
     parts: Record<string, unknown>;
 }
 
-/** The parts of the key that do not depend on the mods that transform: all but `description` */
+/** The parts of the key that do not depend on the Lua that describes the build: all but `description` */
 async function baseParts(options: Partial<HarnessOptions>, environment: CacheEnvironment, history: string[]): Promise<Record<string, unknown>> {
+    const described_by = Object.values(environment.transforms ?? {});
     const mods: Record<string, string> = {};
     for (const [name, folder] of Object.entries(environment.mods)) {
-        mods[name] = await modFingerprint(folder);
+        mods[name] = await modFingerprint(folder, described_by);
     }
     const sources: Record<string, string> = {};
     for (const file of environment.host_sources) {
@@ -205,7 +216,7 @@ async function baseParts(options: Partial<HarnessOptions>, environment: CacheEnv
  * the harness, the protocol, and every option of the run that is not a place to write to (scaffold, clock and its schedule,
  * config, probe script, seeds, ticks and the rest, so an option added later is part of the key without being named). `history`
  * is the keys of the recordings made before this one in the same game, when a game makes more than one: what a build leaves
- * behind is what the next is built on. `description` is the hash of what the transforming mods produced for the build (see
+ * behind is what the next is built on. `description` is the hash of what the Lua that describes the build produced for it (see
  * buildFacts), left out when the environment has none. Throws when any of it cannot be read or told.
  */
 export async function recordingCacheKey(options: Partial<HarnessOptions>, environment: CacheEnvironment, history: string[] = [], description?: string): Promise<RecordingCacheKey> {
@@ -217,11 +228,11 @@ export async function recordingCacheKey(options: Partial<HarnessOptions>, enviro
 }
 
 /**
- * What the transforming mods (the Sidecar) made of a build, as far as it decides what a recording measures: which inserters the
+ * What the Lua that describes a build (the recorder's `scripts/describe/`) made of it, as far as it decides what a recording measures: which inserters the
  * config's are matched to and wired as, and which entities get tracks, with their ids, sources and sinks, belts and lanes. The
- * suggested target and the version of the mod (stamped on the config and on every pickup and drop capture) are what the Sidecar offers or says of itself and a person decides or reads: the
- * target a recording is judged against reaches the key through the config and the clock. `sidecar` is the same export as a
- * player gets it, `movers` is the game's own facts about the build: neither is left to this to hash.
+ * suggested target and the version stamp (on the config and on every pickup and drop capture) are what it offers or says of itself and a person decides or reads: the
+ * target a recording is judged against reaches the key through the config and the clock. `movers` is the game's own facts about
+ * the build: it is not left to this to hash.
  */
 export function buildFacts(described: Record<string, unknown>): Record<string, unknown> {
     const { suggested_target: _target, ...config } = (described.config ?? {}) as Record<string, unknown>;
@@ -232,7 +243,7 @@ export function buildFacts(described: Record<string, unknown>): Record<string, u
     }) as Record<string, unknown>;
 }
 
-/** The value without any `sidecar_version`: the Sidecar stamps its version on the config and on each pickup and drop capture */
+/** The value without any `sidecar_version`: the stamp that an export made by the Sidecar carries on the config and on each pickup and drop capture */
 function withoutVersions(value: unknown): unknown {
     if (Array.isArray(value)) {
         return value.map(withoutVersions);
@@ -243,7 +254,7 @@ function withoutVersions(value: unknown): unknown {
     return value;
 }
 
-/** The hash of what the transforming mods made of a build (see buildFacts) */
+/** The hash of what the Lua that describes a build made of it (see buildFacts) */
 export function descriptionHash(described: Record<string, unknown>): string {
     return sha256(canonicalJson(buildFacts(described)));
 }
@@ -253,10 +264,10 @@ function descriptionFile(store: string, id: string): string {
 }
 
 /**
- * The key of a recording when the mods that transform are keyed on what they make of the build and not on their files. The
+ * The key of a recording when the Lua that describes a build is keyed on what it makes of the build and not on its files. The
  * description is asked of the game (`describe`, a run that builds and describes and records nothing) once for the same
- * game, save, options and files of the transforming mods; the answer is kept under the store, in `descriptions`, and read back
- * the next time. So a change to the transforming mods costs one such run per build, and a build whose description came out
+ * game, save, options and files of that Lua; the answer is kept under the store, in `descriptions`, and read back
+ * the next time. So a change to that Lua costs one such run per build, and a build whose description came out
  * the same keeps its key and its recording. "refresh" asks the game again.
  */
 export async function describedRecordingKey(

@@ -17,7 +17,7 @@ needed; preserve an existing `.env`. Set `FACTORIO_PATH` to an executable or ins
 `FACTORIO_HARNESS_SAVE=resources/clock_generator_staging.zip`. Use Factorio with the staging save's dependencies
 (including Space Age for these pickups). Current pickup calibration used Factorio 2.1.21, legendary stack inserters,
 fully researched hand/belt stack capacity and a powered editor surface. The committed staging save supplies the
-prepared surface; the harness copies the repository's recorder and sidecar mods. It always works on a copy of the save.
+prepared surface; the harness copies the repository's recorder mod. It always works on a copy of the save.
 
 ## Select a check
 
@@ -95,7 +95,7 @@ one build), and the window cycle time must not decide how long a check runs. One
 A game test that asks for a recording the game already made does not start the game again. `recordInFactorio` keeps each
 recording under a key and reads it back when the key is the same; the test's own assertions run on it as on a fresh one.
 The key is a hash of everything the game is given: the game's executable and the names and sizes of its data files, the
-save, the recorder mod, what the Sidecar made of the build (below), the harness's own sources, a protocol number, and every
+save, the recorder mod (but for its `scripts/describe/` folder), what that Lua made of the build (below), the harness's own sources, a protocol number, and every
 option of the run but where it writes to (scaffold, clock and its schedule, config, probe script with the helpers it
 composes, seeds, ticks, speed and the rest, so an option added later is in the key without being named). A game that makes
 several builds one after the other (`CachedHarnessSession`) keys each build on the builds before it. What cannot be read or
@@ -117,15 +117,17 @@ watched run is never read or kept, and a hit leaves no game log (`work_dir` gets
   `scripts/rule-count-game-check.js` do; `scripts/native/run-lane.sh` sets `CLOCK_RECORDING_CACHE=off` in record mode. A native
   check that proves a new clock in the game uses one of these.
 
-The Sidecar's files are not in the key, what it made of the build is: the Sidecar turns what the game holds into the config's
-terms, and a recording is judged on that. The harness asks the game once to build the build and describe it, with nothing
-recorded (`HarnessSession.describeBuild`), hashes the facts that decide what is measured (the config's machines, belts and lanes,
-chests and drills, the inserters with their sources and sinks, near lane and pickup layout, what is tracked and what is left out;
-not the suggested target, the Sidecar's version or its player view) and keeps the hash in `descriptions/` of the store, under a key
-of the same inputs with the Sidecar's files. A change to the Sidecar costs that one run for each build the next time the build is
-asked for (a game start, the build and its warm-up, no recording); a build whose description came out the same keeps its key and
-its recording, and only the builds whose description changed record again. `CLOCK_RECORDING_CACHE=refresh` asks the game again
-for the description too.
+The files of the recorder's `scripts/describe/` folder are not in the key, what they made of the build is: that Lua turns what
+the game holds into the config's terms, and a recording is judged on that. The harness asks the game once to build the build and
+describe it, with nothing recorded (`HarnessSession.describeBuild`), hashes the facts that decide what is measured (the config's
+machines, belts and lanes, chests and drills, the inserters with their sources and sinks, near lane and pickup layout, what is
+tracked and what is left out; not the suggested target or any version stamp) and keeps the hash in `descriptions/` of the store,
+under a key of the same inputs with the fingerprint of the `scripts/describe/` files. A change to those files costs that one run
+for each build the next time the build is asked for (a game start, the build and its warm-up, no recording); a build whose
+description came out the same keeps its key and its recording, and only the builds whose description changed record again.
+`CLOCK_RECORDING_CACHE=refresh` asks the game again for the description too. Only `recorder.lua` calls into that folder, and
+only through the calls that `recorder.describe` makes (`tests/recorder/describe-boundary.test.ts` checks it): a call made in
+every tick would change a recording without changing its key. Any other file of the recorder is in the key.
 
 A change to the key's other inputs makes a miss, which runs the game as before and stores the result. The harness's sources are
 part of the key, so a change to `src/harness/` starts every recording again; the files outside it that the harness depends on
