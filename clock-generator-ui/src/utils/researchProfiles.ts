@@ -69,11 +69,37 @@ export const TEMPLATES: readonly Template[] = [
         setYours: { mining: false, recipes: false },
     },
     {
-        // every research that has a last level: two levels of mining productivity, the inserter and bulk capacity, the belt
-        // stack size; every recipe productivity research is endless, so it adds none
+        // the numbers of all the research that has a last step (mining 20 %, inserter 3, bulk inserter 11, belt 3) and, for each
+        // recipe that research changes, 300 %, the most a recipe can have. The id stays as first stored: a saved profile and
+        // a saved build name it.
         id: 'all-finite-research',
         name: 'All finite research',
-        bonuses: { mining_drill_productivity_bonus: 20, inserter_stack_size_bonus: 3, bulk_inserter_capacity_bonus: 11, belt_stack_size_bonus: 3, recipes: {} },
+        bonuses: {
+            mining_drill_productivity_bonus: 20,
+            inserter_stack_size_bonus: 3,
+            bulk_inserter_capacity_bonus: 11,
+            belt_stack_size_bonus: 3,
+            recipes: {
+                'carbonic-asteroid-crushing': { productivity_bonus: 300 },
+                'oxide-asteroid-crushing': { productivity_bonus: 300 },
+                'metallic-asteroid-crushing': { productivity_bonus: 300 },
+                'advanced-carbonic-asteroid-crushing': { productivity_bonus: 300 },
+                'advanced-oxide-asteroid-crushing': { productivity_bonus: 300 },
+                'advanced-metallic-asteroid-crushing': { productivity_bonus: 300 },
+                'processing-unit': { productivity_bonus: 300 },
+                'scrap-recycling': { productivity_bonus: 300 },
+                'steel-plate': { productivity_bonus: 300 },
+                'casting-steel': { productivity_bonus: 300 },
+                'low-density-structure': { productivity_bonus: 300 },
+                'casting-low-density-structure': { productivity_bonus: 300 },
+                'plastic-bar': { productivity_bonus: 300 },
+                'bioplastic': { productivity_bonus: 300 },
+                'rocket-fuel': { productivity_bonus: 300 },
+                'rocket-fuel-from-jelly': { productivity_bonus: 300 },
+                'ammonia-rocket-fuel': { productivity_bonus: 300 },
+                'rocket-part': { productivity_bonus: 300 },
+            },
+        },
         setYours: { mining: true, recipes: true },
     },
 ];
