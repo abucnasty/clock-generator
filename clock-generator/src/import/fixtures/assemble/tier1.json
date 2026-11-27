@@ -1,0 +1,1264 @@
+{
+ "comment": "The 8 tier 1 builds: the blueprint, the read, the frame (read = blueprint + translation), the force numbers (in the shape of a research profile's bonuses: percent and items) with the productivity rows that fix them, the setpoint the import is given, and the read's rows that are not compared because the read holds no value.",
+ "builds": [
+  {
+   "name": "iron",
+   "blueprint": "resources/config-samples/smelting/iron-plate/iron-plate-80-car-chest.scaffold",
+   "read": "reads/iron.json",
+   "read_kind": "export",
+   "sidecar_version": "0.12.0",
+   "removed_hand_values": [],
+   "frame": {
+    "transform": "identity",
+    "translation": {
+     "x": 774,
+     "y": 625
+    }
+   },
+   "research": {
+    "profile": "iron force",
+    "template": null,
+    "bonuses": {
+     "mining_drill_productivity_bonus": 79990.00000001134,
+     "inserter_stack_size_bonus": 3,
+     "bulk_inserter_capacity_bonus": 11,
+     "belt_stack_size_bonus": 3,
+     "recipes": {}
+    }
+   },
+   "research_undetermined": [
+    "inserter_stack_size_bonus"
+   ],
+   "productivity_rows": [
+    {
+     "entity_number": 1,
+     "prototype": "big-mining-drill",
+     "recipe": "mining (iron-ore)",
+     "class": "level",
+     "base": 0.0,
+     "read": 79990.00000001134,
+     "source": "productivity.tsv:3"
+    },
+    {
+     "entity_number": 15,
+     "prototype": "electric-furnace",
+     "recipe": "iron-plate",
+     "class": "zero",
+     "base": 50.0,
+     "read": 50.0,
+     "source": "productivity.tsv:4"
+    },
+    {
+     "entity_number": 16,
+     "prototype": "electric-furnace",
+     "recipe": "iron-plate",
+     "class": "zero",
+     "base": 50.0,
+     "read": 50.0,
+     "source": "productivity.tsv:5"
+    }
+   ],
+   "setpoint": {
+    "item": "iron-plate",
+    "copies": 1
+   },
+   "not_held": [
+    {
+     "kind": "inserter",
+     "entity_number": 14,
+     "field": "belt_direction",
+     "class": "not in the read",
+     "detail": "ins 14: derived 0, read none (version 0.12.0, before the field)",
+     "source": "geometry-rows.tsv:23"
+    },
+    {
+     "kind": "inserter",
+     "entity_number": 14,
+     "field": "drop_capture.tiles",
+     "class": "not in the read",
+     "detail": "ins 14: derived None, read none (version 0.12.0, before the field)",
+     "source": "geometry-rows.tsv:24"
+    },
+    {
+     "kind": "inserter",
+     "entity_number": 17,
+     "field": "belt_direction",
+     "class": "not in the read",
+     "detail": "ins 17: derived 0, read none (version 0.12.0, before the field)",
+     "source": "geometry-rows.tsv:32"
+    },
+    {
+     "kind": "inserter",
+     "entity_number": 17,
+     "field": "drop_capture.tiles",
+     "class": "not in the read",
+     "detail": "ins 17: derived None, read none (version 0.12.0, before the field)",
+     "source": "geometry-rows.tsv:33"
+    },
+    {
+     "kind": "belt",
+     "read_belt": 1,
+     "line": 1,
+     "field": "lane_end",
+     "class": "not in the read",
+     "detail": "belt 1 line 1: derived None, read none",
+     "source": "geometry-rows.tsv:38"
+    },
+    {
+     "kind": "belt",
+     "read_belt": 1,
+     "line": 2,
+     "field": "lane_end",
+     "class": "not in the read",
+     "detail": "belt 1 line 2: derived None, read none",
+     "source": "geometry-rows.tsv:39"
+    },
+    {
+     "kind": "belt",
+     "read_belt": 1,
+     "field": "flow_direction",
+     "class": "not in the read",
+     "detail": "belt 1: derived None (pickup_way; the export puts the copy spacing's way where it has one)",
+     "source": "geometry-rows.tsv:40"
+    }
+   ]
+  },
+  {
+   "name": "lithium",
+   "blueprint": "resources/config-samples/smelting/lithium-plate/lithium-plate-80-silo-chest.scaffold",
+   "read": "reads/lithium.json",
+   "read_kind": "export",
+   "sidecar_version": "0.15.1",
+   "removed_hand_values": [],
+   "frame": {
+    "transform": "identity",
+    "translation": {
+     "x": 836,
+     "y": 649
+    }
+   },
+   "research": {
+    "profile": "lithium force",
+    "template": null,
+    "bonuses": {
+     "mining_drill_productivity_bonus": 0,
+     "inserter_stack_size_bonus": 3,
+     "bulk_inserter_capacity_bonus": 11,
+     "belt_stack_size_bonus": 3,
+     "recipes": {
+      "rocket-part": {
+       "productivity_bonus": 10.0
+      }
+     }
+    }
+   },
+   "research_undetermined": [
+    "mining_drill_productivity_bonus",
+    "inserter_stack_size_bonus"
+   ],
+   "productivity_rows": [
+    {
+     "entity_number": 12,
+     "prototype": "cryogenic-plant",
+     "recipe": "lithium",
+     "class": "zero",
+     "base": 200.0,
+     "read": 200.0,
+     "source": "productivity.tsv:6"
+    },
+    {
+     "entity_number": 13,
+     "prototype": "cryogenic-plant",
+     "recipe": "lithium",
+     "class": "zero",
+     "base": 200.0,
+     "read": 200.0,
+     "source": "productivity.tsv:7"
+    },
+    {
+     "entity_number": 23,
+     "prototype": "electric-furnace",
+     "recipe": "lithium-plate",
+     "class": "zero",
+     "base": 50.0,
+     "read": 50.0,
+     "source": "productivity.tsv:8"
+    },
+    {
+     "entity_number": 24,
+     "prototype": "electric-furnace",
+     "recipe": "lithium-plate",
+     "class": "zero",
+     "base": 50.0,
+     "read": 50.0,
+     "source": "productivity.tsv:9"
+    },
+    {
+     "entity_number": 30,
+     "prototype": "rocket-silo",
+     "recipe": "rocket-part",
+     "class": "level",
+     "base": 0.0,
+     "read": 10.0,
+     "source": "productivity.tsv:10"
+    },
+    {
+     "entity_number": 32,
+     "prototype": "electric-furnace",
+     "recipe": "lithium-plate",
+     "class": "zero",
+     "base": 50.0,
+     "read": 50.0,
+     "source": "productivity.tsv:11"
+    },
+    {
+     "entity_number": 33,
+     "prototype": "electric-furnace",
+     "recipe": "lithium-plate",
+     "class": "zero",
+     "base": 50.0,
+     "read": 50.0,
+     "source": "productivity.tsv:12"
+    },
+    {
+     "entity_number": 47,
+     "prototype": "electric-furnace",
+     "recipe": "lithium-plate",
+     "class": "zero",
+     "base": 50.0,
+     "read": 50.0,
+     "source": "productivity.tsv:13"
+    },
+    {
+     "entity_number": 48,
+     "prototype": "electric-furnace",
+     "recipe": "lithium-plate",
+     "class": "zero",
+     "base": 50.0,
+     "read": 50.0,
+     "source": "productivity.tsv:14"
+    }
+   ],
+   "setpoint": {
+    "item": "lithium-plate",
+    "copies": 1
+   },
+   "not_held": [
+    {
+     "kind": "belt",
+     "read_belt": 1,
+     "line": 1,
+     "field": "lane_end",
+     "class": "not in the read",
+     "detail": "belt 1 line 1: derived None, read none",
+     "source": "geometry-rows.tsv:181"
+    },
+    {
+     "kind": "belt",
+     "read_belt": 1,
+     "line": 2,
+     "field": "lane_end",
+     "class": "not in the read",
+     "detail": "belt 1 line 2: derived None, read none",
+     "source": "geometry-rows.tsv:182"
+    },
+    {
+     "kind": "belt",
+     "read_belt": 1,
+     "field": "flow_direction",
+     "class": "not in the read",
+     "detail": "belt 1: derived None (pickup_way; the export puts the copy spacing's way where it has one)",
+     "source": "geometry-rows.tsv:183"
+    }
+   ]
+  },
+  {
+   "name": "steel",
+   "blueprint": "resources/config-samples/smelting/steel-plate/steel-plate-26-wagon-chest.scaffold",
+   "read": "reads/steel.json",
+   "read_kind": "export",
+   "sidecar_version": "0.12.0",
+   "removed_hand_values": [],
+   "frame": {
+    "transform": "identity",
+    "translation": {
+     "x": 746,
+     "y": 624
+    }
+   },
+   "research": {
+    "profile": "steel force",
+    "template": null,
+    "bonuses": {
+     "mining_drill_productivity_bonus": 79990.00000001134,
+     "inserter_stack_size_bonus": 3,
+     "bulk_inserter_capacity_bonus": 11,
+     "belt_stack_size_bonus": 3,
+     "recipes": {
+      "steel-plate": {
+       "productivity_bonus": 300.0
+      }
+     }
+    }
+   },
+   "research_undetermined": [
+    "inserter_stack_size_bonus"
+   ],
+   "productivity_rows": [
+    {
+     "entity_number": 1,
+     "prototype": "big-mining-drill",
+     "recipe": "mining (iron-ore)",
+     "class": "level",
+     "base": 0.0,
+     "read": 79990.00000001134,
+     "source": "productivity.tsv:15"
+    },
+    {
+     "entity_number": 16,
+     "prototype": "electric-furnace",
+     "recipe": "steel-plate",
+     "class": "bound",
+     "base": 0.0,
+     "read": 300.0,
+     "source": "productivity.tsv:16"
+    },
+    {
+     "entity_number": 18,
+     "prototype": "electric-furnace",
+     "recipe": "iron-plate",
+     "class": "zero",
+     "base": 50.0,
+     "read": 50.0,
+     "source": "productivity.tsv:17"
+    }
+   ],
+   "setpoint": {
+    "item": "steel-plate",
+    "copies": 1
+   },
+   "not_held": [
+    {
+     "kind": "inserter",
+     "entity_number": 10,
+     "field": "belt_direction",
+     "class": "not in the read",
+     "detail": "ins 10: derived 4, read none (version 0.12.0, before the field)",
+     "source": "geometry-rows.tsv:215"
+    },
+    {
+     "kind": "inserter",
+     "entity_number": 10,
+     "field": "drop_capture.tiles",
+     "class": "not in the read",
+     "detail": "ins 10: derived None, read none (version 0.12.0, before the field)",
+     "source": "geometry-rows.tsv:216"
+    },
+    {
+     "kind": "belt",
+     "read_belt": 1,
+     "line": 2,
+     "field": "lane_end",
+     "class": "not in the read",
+     "detail": "belt 1 line 2: derived None, read none",
+     "source": "geometry-rows.tsv:237"
+    },
+    {
+     "kind": "belt",
+     "read_belt": 1,
+     "field": "flow_direction",
+     "class": "not in the read",
+     "detail": "belt 1: derived None (pickup_way; the export puts the copy spacing's way where it has one)",
+     "source": "geometry-rows.tsv:238"
+    }
+   ]
+  },
+  {
+   "name": "logistic-240",
+   "blueprint": "resources/config-samples/science/logistic/logistic-240.scaffold",
+   "read": "reads/logistic-240.json",
+   "read_kind": "config",
+   "sidecar_version": "0.15.0",
+   "removed_hand_values": [
+    {
+     "path": "belts[].flow_direction",
+     "leaves": 1
+    },
+    {
+     "path": "belts[].lanes[].ingredient",
+     "leaves": 4
+    },
+    {
+     "path": "belts[].lanes[].lane_end.kind",
+     "leaves": 2
+    },
+    {
+     "path": "belts[].lanes[].underground_entrances[]",
+     "leaves": 2
+    },
+    {
+     "path": "output_belt.splitter.input_priority",
+     "leaves": 1
+    },
+    {
+     "path": "output_belt.splitter.output_priority",
+     "leaves": 1
+    },
+    {
+     "path": "output_belt.stretches[].points[].drop",
+     "leaves": 11
+    },
+    {
+     "path": "output_belt.stretches[].points[].lane",
+     "leaves": 17
+    },
+    {
+     "path": "output_belt.stretches[].points[].lane_end.kind",
+     "leaves": 1
+    },
+    {
+     "path": "output_belt.stretches[].points[].layout",
+     "leaves": 6
+    },
+    {
+     "path": "output_belt.stretches[].points[].left_curves",
+     "leaves": 6
+    },
+    {
+     "path": "output_belt.stretches[].points[].right_curves",
+     "leaves": 5
+    },
+    {
+     "path": "output_belt.stretches[].points[].side_load.stretch",
+     "leaves": 6
+    },
+    {
+     "path": "output_belt.stretches[].points[].splitter_input",
+     "leaves": 1
+    },
+    {
+     "path": "output_belt.stretches[].points[].splitter_output",
+     "leaves": 2
+    },
+    {
+     "path": "output_belt.stretches[].points[].tiles",
+     "leaves": 19
+    },
+    {
+     "path": "setpoint.copies",
+     "leaves": 1
+    },
+    {
+     "path": "setpoint.copy_offset.x",
+     "leaves": 1
+    },
+    {
+     "path": "setpoint.copy_offset.y",
+     "leaves": 1
+    },
+    {
+     "path": "setpoint.item",
+     "leaves": 1
+    },
+    {
+     "path": "setpoint.items_per_second",
+     "leaves": 1
+    }
+   ],
+   "frame": {
+    "transform": "identity",
+    "translation": {
+     "x": 0,
+     "y": 0
+    }
+   },
+   "research": {
+    "profile": "logistic-240 force",
+    "template": null,
+    "bonuses": {
+     "mining_drill_productivity_bonus": 0,
+     "inserter_stack_size_bonus": 3,
+     "bulk_inserter_capacity_bonus": 11,
+     "belt_stack_size_bonus": 3,
+     "recipes": {}
+    }
+   },
+   "research_undetermined": [
+    "mining_drill_productivity_bonus",
+    "inserter_stack_size_bonus"
+   ],
+   "productivity_rows": [
+    {
+     "entity_number": 76,
+     "prototype": "assembling-machine-3",
+     "recipe": "logistic-science-pack",
+     "class": "zero",
+     "base": 100.0,
+     "read": 100.0,
+     "source": "productivity.tsv:27"
+    }
+   ],
+   "setpoint": {
+    "item": "logistic-science-pack",
+    "copies": 11
+   },
+   "not_held": [
+    {
+     "kind": "belt",
+     "read_belt": 2,
+     "line": 1,
+     "field": "lane_end",
+     "class": "hand value",
+     "detail": "belt 2 line 1: derived dead_end, config dead_end (changed after the export; fits)",
+     "source": "geometry-rows.tsv:470"
+    },
+    {
+     "kind": "belt",
+     "read_belt": 2,
+     "line": 2,
+     "field": "lane_end",
+     "class": "hand value",
+     "detail": "belt 2 line 2: derived dead_end, config dead_end (changed after the export; fits)",
+     "source": "geometry-rows.tsv:471"
+    },
+    {
+     "kind": "belt",
+     "read_belt": 2,
+     "field": "flow_direction",
+     "class": "hand value",
+     "detail": "belt 2: derived 4, config 4 (fits)",
+     "source": "geometry-rows.tsv:472"
+    },
+    {
+     "kind": "belt",
+     "read_belt": 1,
+     "line": 1,
+     "field": "lane_end",
+     "class": "not in the read",
+     "detail": "belt 1 line 1: derived None, read none",
+     "source": "geometry-rows.tsv:473"
+    },
+    {
+     "kind": "belt",
+     "read_belt": 1,
+     "line": 2,
+     "field": "lane_end",
+     "class": "not in the read",
+     "detail": "belt 1 line 2: derived None, read none",
+     "source": "geometry-rows.tsv:474"
+    },
+    {
+     "kind": "belt",
+     "read_belt": 1,
+     "field": "flow_direction",
+     "class": "not in the read",
+     "detail": "belt 1: derived None (pickup_way; the export puts the copy spacing's way where it has one)",
+     "source": "geometry-rows.tsv:475"
+    },
+    {
+     "kind": "belt",
+     "read_belt": 2,
+     "lane": 1,
+     "field": "lane item",
+     "class": "hand value",
+     "detail": "belt 2 lane 1",
+     "source": "flows-with-ores.tsv:25"
+    },
+    {
+     "kind": "belt",
+     "read_belt": 2,
+     "lane": 2,
+     "field": "lane item",
+     "class": "hand value",
+     "detail": "belt 2 lane 2",
+     "source": "flows-with-ores.tsv:26"
+    },
+    {
+     "kind": "belt",
+     "read_belt": 1,
+     "lane": 1,
+     "field": "lane item",
+     "class": "hand value",
+     "detail": "belt 1 lane 1",
+     "source": "flows-with-ores.tsv:27"
+    },
+    {
+     "kind": "belt",
+     "read_belt": 1,
+     "lane": 2,
+     "field": "lane item",
+     "class": "hand value",
+     "detail": "belt 1 lane 2",
+     "source": "flows-with-ores.tsv:28"
+    }
+   ]
+  },
+  {
+   "name": "stone-brick-120",
+   "blueprint": "resources/config-samples/smelting/stone-brick/stone-brick-120-drill-direct-insert.scaffold",
+   "read": "reads/stone-brick-120.json",
+   "read_kind": "config",
+   "sidecar_version": null,
+   "removed_hand_values": [
+    {
+     "path": "setpoint.copies",
+     "leaves": 1
+    },
+    {
+     "path": "setpoint.item",
+     "leaves": 1
+    },
+    {
+     "path": "setpoint.items_per_second",
+     "leaves": 1
+    }
+   ],
+   "frame": {
+    "transform": "identity",
+    "translation": {
+     "x": 0,
+     "y": 0
+    }
+   },
+   "research": {
+    "profile": "stone-brick-120 force",
+    "template": null,
+    "bonuses": {
+     "mining_drill_productivity_bonus": 80010.00000001132,
+     "inserter_stack_size_bonus": 3,
+     "bulk_inserter_capacity_bonus": 11,
+     "belt_stack_size_bonus": 3,
+     "recipes": {}
+    }
+   },
+   "research_undetermined": [
+    "inserter_stack_size_bonus"
+   ],
+   "productivity_rows": [
+    {
+     "entity_number": 3,
+     "prototype": "electric-mining-drill",
+     "recipe": "mining (stone)",
+     "class": "level",
+     "base": 0.0,
+     "read": 80010.00000001132,
+     "source": "productivity.tsv:49"
+    },
+    {
+     "entity_number": 6,
+     "prototype": "electric-furnace",
+     "recipe": "stone-brick",
+     "class": "zero",
+     "base": 50.0,
+     "read": 50.0,
+     "source": "productivity.tsv:50"
+    }
+   ],
+   "setpoint": {
+    "item": "stone-brick",
+    "copies": 3
+   },
+   "not_held": [
+    {
+     "kind": "belt",
+     "read_belt": 1,
+     "line": 1,
+     "field": "lane_end",
+     "class": "not in the read",
+     "detail": "belt 1 line 1: derived None, read none",
+     "source": "geometry-rows.tsv:487"
+    },
+    {
+     "kind": "belt",
+     "read_belt": 1,
+     "line": 2,
+     "field": "lane_end",
+     "class": "not in the read",
+     "detail": "belt 1 line 2: derived None, read none",
+     "source": "geometry-rows.tsv:488"
+    },
+    {
+     "kind": "belt",
+     "read_belt": 1,
+     "field": "flow_direction",
+     "class": "not in the read",
+     "detail": "belt 1: derived None (pickup_way; the export puts the copy spacing's way where it has one)",
+     "source": "geometry-rows.tsv:489"
+    }
+   ]
+  },
+  {
+   "name": "electromagnetic-240",
+   "blueprint": "resources/config-samples/science/electromagnetic/electromagnetic-240-recycler-belt-fed.scaffold",
+   "read": "reads/electromagnetic-240.json",
+   "read_kind": "config",
+   "sidecar_version": "0.15.0",
+   "removed_hand_values": [
+    {
+     "path": "belts[].flow_direction",
+     "leaves": 4
+    },
+    {
+     "path": "belts[].lanes[].lane_end.kind",
+     "leaves": 8
+    },
+    {
+     "path": "setpoint.copies",
+     "leaves": 1
+    },
+    {
+     "path": "setpoint.copy_offset.x",
+     "leaves": 1
+    },
+    {
+     "path": "setpoint.copy_offset.y",
+     "leaves": 1
+    },
+    {
+     "path": "setpoint.item",
+     "leaves": 1
+    },
+    {
+     "path": "setpoint.items_per_second",
+     "leaves": 1
+    }
+   ],
+   "frame": {
+    "transform": "identity",
+    "translation": {
+     "x": 994,
+     "y": 748
+    }
+   },
+   "research": {
+    "profile": "electromagnetic-240 force",
+    "template": null,
+    "bonuses": {
+     "mining_drill_productivity_bonus": 0,
+     "inserter_stack_size_bonus": 3,
+     "bulk_inserter_capacity_bonus": 11,
+     "belt_stack_size_bonus": 3,
+     "recipes": {}
+    }
+   },
+   "research_undetermined": [
+    "mining_drill_productivity_bonus",
+    "inserter_stack_size_bonus"
+   ],
+   "productivity_rows": [
+    {
+     "entity_number": 67,
+     "prototype": "electromagnetic-plant",
+     "recipe": "electromagnetic-science-pack",
+     "class": "zero",
+     "base": 175.0,
+     "read": 175.0,
+     "source": "productivity.tsv:51"
+    },
+    {
+     "entity_number": 68,
+     "prototype": "recycler",
+     "recipe": "processing-unit-recycling",
+     "class": "zero",
+     "base": 0.0,
+     "read": 0.0,
+     "source": "productivity.tsv:52"
+    },
+    {
+     "entity_number": 88,
+     "prototype": "electromagnetic-plant",
+     "recipe": "supercapacitor",
+     "class": "zero",
+     "base": 175.0,
+     "read": 175.0,
+     "source": "productivity.tsv:53"
+    },
+    {
+     "entity_number": 109,
+     "prototype": "electromagnetic-plant",
+     "recipe": "electromagnetic-science-pack",
+     "class": "zero",
+     "base": 175.0,
+     "read": 175.0,
+     "source": "productivity.tsv:54"
+    }
+   ],
+   "setpoint": {
+    "item": "electromagnetic-science-pack",
+    "copies": 5
+   },
+   "not_held": [
+    {
+     "kind": "belt",
+     "read_belt": 1,
+     "line": 1,
+     "field": "lane_end",
+     "class": "hand value",
+     "detail": "belt 1 line 1: derived dead_end, config dead_end (changed after the export; fits)",
+     "source": "geometry-rows.tsv:607"
+    },
+    {
+     "kind": "belt",
+     "read_belt": 1,
+     "line": 2,
+     "field": "lane_end",
+     "class": "hand value",
+     "detail": "belt 1 line 2: derived dead_end, config dead_end (changed after the export; fits)",
+     "source": "geometry-rows.tsv:608"
+    },
+    {
+     "kind": "belt",
+     "read_belt": 1,
+     "field": "flow_direction",
+     "class": "hand value",
+     "detail": "belt 1: derived 4, config 4 (fits)",
+     "source": "geometry-rows.tsv:609"
+    },
+    {
+     "kind": "belt",
+     "read_belt": 3,
+     "line": 2,
+     "field": "lane_end",
+     "class": "not in the read",
+     "detail": "belt 3 line 2: derived None, read none",
+     "source": "geometry-rows.tsv:610"
+    },
+    {
+     "kind": "belt",
+     "read_belt": 3,
+     "field": "flow_direction",
+     "class": "not in the read",
+     "detail": "belt 3: derived None (pickup_way; the export puts the copy spacing's way where it has one)",
+     "source": "geometry-rows.tsv:611"
+    },
+    {
+     "kind": "belt",
+     "read_belt": 2,
+     "line": 1,
+     "field": "lane_end",
+     "class": "hand value",
+     "detail": "belt 2 line 1: derived dead_end, config dead_end (changed after the export; fits)",
+     "source": "geometry-rows.tsv:612"
+    },
+    {
+     "kind": "belt",
+     "read_belt": 2,
+     "line": 2,
+     "field": "lane_end",
+     "class": "hand value",
+     "detail": "belt 2 line 2: derived dead_end, config dead_end (changed after the export; fits)",
+     "source": "geometry-rows.tsv:613"
+    },
+    {
+     "kind": "belt",
+     "read_belt": 2,
+     "field": "flow_direction",
+     "class": "hand value",
+     "detail": "belt 2: derived 4, config 4 (fits)",
+     "source": "geometry-rows.tsv:614"
+    },
+    {
+     "kind": "belt",
+     "read_belt": 4,
+     "line": 1,
+     "field": "lane_end",
+     "class": "hand value",
+     "detail": "belt 4 line 1: derived dead_end, config dead_end (changed after the export; fits)",
+     "source": "geometry-rows.tsv:615"
+    },
+    {
+     "kind": "belt",
+     "read_belt": 4,
+     "line": 2,
+     "field": "lane_end",
+     "class": "hand value",
+     "detail": "belt 4 line 2: derived dead_end, config dead_end (changed after the export; fits)",
+     "source": "geometry-rows.tsv:616"
+    },
+    {
+     "kind": "belt",
+     "read_belt": 4,
+     "field": "flow_direction",
+     "class": "hand value",
+     "detail": "belt 4: derived None, config 4 (differs)",
+     "source": "geometry-rows.tsv:617"
+    },
+    {
+     "kind": "belt",
+     "read_belt": 5,
+     "line": 1,
+     "field": "lane_end",
+     "class": "hand value",
+     "detail": "belt 5 line 1: derived dead_end, config dead_end (changed after the export; fits)",
+     "source": "geometry-rows.tsv:618"
+    },
+    {
+     "kind": "belt",
+     "read_belt": 5,
+     "line": 2,
+     "field": "lane_end",
+     "class": "hand value",
+     "detail": "belt 5 line 2: derived dead_end, config dead_end (changed after the export; fits)",
+     "source": "geometry-rows.tsv:619"
+    },
+    {
+     "kind": "belt",
+     "read_belt": 5,
+     "field": "flow_direction",
+     "class": "hand value",
+     "detail": "belt 5: derived 4, config 4 (fits)",
+     "source": "geometry-rows.tsv:620"
+    }
+   ]
+  },
+  {
+   "name": "productivity-module-80",
+   "blueprint": "resources/config-samples/intermediates/productivity-module/productivity-module-80-chest-chain.scaffold",
+   "read": "reads/productivity-module-80.json",
+   "read_kind": "config",
+   "sidecar_version": "0.13.0",
+   "removed_hand_values": [
+    {
+     "path": "belts[].flow_direction",
+     "leaves": 1
+    },
+    {
+     "path": "belts[].lanes[].lane_end.kind",
+     "leaves": 1
+    },
+    {
+     "path": "belts[].lanes[].sharing",
+     "leaves": 1
+    },
+    {
+     "path": "setpoint.copies",
+     "leaves": 1
+    },
+    {
+     "path": "setpoint.item",
+     "leaves": 1
+    },
+    {
+     "path": "setpoint.items_per_second",
+     "leaves": 1
+    }
+   ],
+   "frame": {
+    "transform": "identity",
+    "translation": {
+     "x": 0,
+     "y": 0
+    }
+   },
+   "research": {
+    "profile": "productivity-module-80 force",
+    "template": null,
+    "bonuses": {
+     "mining_drill_productivity_bonus": 0,
+     "inserter_stack_size_bonus": 3,
+     "bulk_inserter_capacity_bonus": 11,
+     "belt_stack_size_bonus": 3,
+     "recipes": {
+      "plastic-bar": {
+       "productivity_bonus": 300.0
+      }
+     }
+    }
+   },
+   "research_undetermined": [
+    "mining_drill_productivity_bonus",
+    "inserter_stack_size_bonus"
+   ],
+   "productivity_rows": [
+    {
+     "entity_number": 15,
+     "prototype": "cryogenic-plant",
+     "recipe": "plastic-bar",
+     "class": "bound",
+     "base": 0.0,
+     "read": 300.0,
+     "source": "productivity.tsv:59"
+    },
+    {
+     "entity_number": 16,
+     "prototype": "foundry",
+     "recipe": "casting-copper-cable",
+     "class": "zero",
+     "base": 150.0,
+     "read": 150.0,
+     "source": "productivity.tsv:60"
+    },
+    {
+     "entity_number": 35,
+     "prototype": "foundry",
+     "recipe": "casting-iron",
+     "class": "zero",
+     "base": 150.0,
+     "read": 150.0,
+     "source": "productivity.tsv:61"
+    },
+    {
+     "entity_number": 41,
+     "prototype": "electromagnetic-plant",
+     "recipe": "advanced-circuit",
+     "class": "zero",
+     "base": 175.0,
+     "read": 175.0,
+     "source": "productivity.tsv:62"
+    },
+    {
+     "entity_number": 42,
+     "prototype": "electromagnetic-plant",
+     "recipe": "electronic-circuit",
+     "class": "zero",
+     "base": 175.0,
+     "read": 175.0,
+     "source": "productivity.tsv:63"
+    },
+    {
+     "entity_number": 54,
+     "prototype": "foundry",
+     "recipe": "casting-copper-cable",
+     "class": "zero",
+     "base": 150.0,
+     "read": 150.0,
+     "source": "productivity.tsv:64"
+    },
+    {
+     "entity_number": 61,
+     "prototype": "electromagnetic-plant",
+     "recipe": "productivity-module",
+     "class": "zero",
+     "base": 50.0,
+     "read": 50.0,
+     "source": "productivity.tsv:65"
+    },
+    {
+     "entity_number": 62,
+     "prototype": "electromagnetic-plant",
+     "recipe": "electronic-circuit",
+     "class": "zero",
+     "base": 175.0,
+     "read": 175.0,
+     "source": "productivity.tsv:66"
+    },
+    {
+     "entity_number": 80,
+     "prototype": "foundry",
+     "recipe": "casting-iron",
+     "class": "zero",
+     "base": 150.0,
+     "read": 150.0,
+     "source": "productivity.tsv:67"
+    }
+   ],
+   "setpoint": {
+    "item": "productivity-module",
+    "copies": 6
+   },
+   "not_held": [
+    {
+     "kind": "inserter",
+     "entity_number": 66,
+     "field": "belt_direction",
+     "class": "not in the read",
+     "detail": "ins 66: derived 4, read none (version 0.13.0, before the field)",
+     "source": "geometry-rows.tsv:648"
+    },
+    {
+     "kind": "belt",
+     "read_belt": 1,
+     "line": 2,
+     "field": "lane_end",
+     "class": "hand value",
+     "detail": "belt 1 line 2: derived dead_end, config dead_end (changed after the export; fits)",
+     "source": "geometry-rows.tsv:752"
+    },
+    {
+     "kind": "belt",
+     "read_belt": 1,
+     "field": "flow_direction",
+     "class": "hand value",
+     "detail": "belt 1: derived 4, config 4 (fits)",
+     "source": "geometry-rows.tsv:753"
+    },
+    {
+     "kind": "belt",
+     "read_belt": 2,
+     "line": 1,
+     "field": "lane_end",
+     "class": "not in the read",
+     "detail": "belt 2 line 1: derived None, read none",
+     "source": "geometry-rows.tsv:754"
+    },
+    {
+     "kind": "belt",
+     "read_belt": 2,
+     "line": 2,
+     "field": "lane_end",
+     "class": "not in the read",
+     "detail": "belt 2 line 2: derived None, read none",
+     "source": "geometry-rows.tsv:755"
+    },
+    {
+     "kind": "belt",
+     "read_belt": 2,
+     "field": "flow_direction",
+     "class": "not in the read",
+     "detail": "belt 2: derived None (pickup_way; the export puts the copy spacing's way where it has one)",
+     "source": "geometry-rows.tsv:756"
+    }
+   ]
+  },
+  {
+   "name": "utility-320",
+   "blueprint": "resources/config-samples/science/utility/utility-320-metered-takers.scaffold",
+   "read": "reads/utility-320.json",
+   "read_kind": "capture",
+   "sidecar_version": "0.16.0",
+   "removed_hand_values": [],
+   "frame": {
+    "transform": "identity",
+    "translation": {
+     "x": 2,
+     "y": 84
+    }
+   },
+   "research": {
+    "profile": "utility-320 force",
+    "template": null,
+    "bonuses": {
+     "mining_drill_productivity_bonus": 0,
+     "inserter_stack_size_bonus": 3,
+     "bulk_inserter_capacity_bonus": 11,
+     "belt_stack_size_bonus": 3,
+     "recipes": {
+      "casting-low-density-structure": {
+       "productivity_bonus": 250.0
+      },
+      "plastic-bar": {
+       "productivity_bonus": 300.0
+      }
+     }
+    }
+   },
+   "research_undetermined": [
+    "mining_drill_productivity_bonus",
+    "inserter_stack_size_bonus"
+   ],
+   "productivity_rows": [
+    {
+     "entity_number": 66,
+     "prototype": "assembling-machine-3",
+     "recipe": "utility-science-pack",
+     "class": "zero",
+     "base": 100.0,
+     "read": 100.0,
+     "source": "productivity.tsv:18"
+    },
+    {
+     "entity_number": 67,
+     "prototype": "assembling-machine-3",
+     "recipe": "utility-science-pack",
+     "class": "zero",
+     "base": 100.0,
+     "read": 100.0,
+     "source": "productivity.tsv:19"
+    },
+    {
+     "entity_number": 93,
+     "prototype": "foundry",
+     "recipe": "casting-low-density-structure",
+     "class": "bound",
+     "base": 50.0,
+     "read": 300.0,
+     "source": "productivity.tsv:20"
+    },
+    {
+     "entity_number": 117,
+     "prototype": "assembling-machine-3",
+     "recipe": "utility-science-pack",
+     "class": "zero",
+     "base": 100.0,
+     "read": 100.0,
+     "source": "productivity.tsv:21"
+    },
+    {
+     "entity_number": 120,
+     "prototype": "cryogenic-plant",
+     "recipe": "plastic-bar",
+     "class": "bound",
+     "base": 0.0,
+     "read": 300.0,
+     "source": "productivity.tsv:22"
+    },
+    {
+     "entity_number": 126,
+     "prototype": "assembling-machine-3",
+     "recipe": "utility-science-pack",
+     "class": "zero",
+     "base": 100.0,
+     "read": 100.0,
+     "source": "productivity.tsv:23"
+    },
+    {
+     "entity_number": 156,
+     "prototype": "foundry",
+     "recipe": "casting-low-density-structure",
+     "class": "bound",
+     "base": 50.0,
+     "read": 300.0,
+     "source": "productivity.tsv:24"
+    },
+    {
+     "entity_number": 177,
+     "prototype": "assembling-machine-3",
+     "recipe": "utility-science-pack",
+     "class": "zero",
+     "base": 100.0,
+     "read": 100.0,
+     "source": "productivity.tsv:25"
+    },
+    {
+     "entity_number": 178,
+     "prototype": "assembling-machine-3",
+     "recipe": "utility-science-pack",
+     "class": "zero",
+     "base": 100.0,
+     "read": 100.0,
+     "source": "productivity.tsv:26"
+    }
+   ],
+   "setpoint": {
+    "item": "utility-science-pack",
+    "copies": 1
+   },
+   "not_held": [
+    {
+     "kind": "belt",
+     "read_belt": 1,
+     "field": "flow_direction",
+     "class": "not in the read",
+     "detail": "belt 1: derived None (pickup_way; the export puts the copy spacing's way where it has one)",
+     "source": "geometry-rows.tsv:440"
+    },
+    {
+     "kind": "belt",
+     "read_belt": 3,
+     "field": "flow_direction",
+     "class": "not in the read",
+     "detail": "belt 3: derived None (pickup_way; the export puts the copy spacing's way where it has one)",
+     "source": "geometry-rows.tsv:443"
+    },
+    {
+     "kind": "belt",
+     "read_belt": 2,
+     "field": "flow_direction",
+     "class": "not in the read",
+     "detail": "belt 2: derived None (pickup_way; the export puts the copy spacing's way where it has one)",
+     "source": "geometry-rows.tsv:446"
+    }
+   ]
+  }
+ ]
+}
