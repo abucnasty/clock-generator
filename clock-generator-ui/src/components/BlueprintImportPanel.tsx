@@ -142,7 +142,8 @@ function QuestionRow({ question, entity, answer, onAnswer, itemNames }: {
                 <FactorioIcon name={item} size={20} alt="" />
             </IconButton>)}
         </Box>
-        <ItemSelector label={text} inputAriaLabel={text} value={answer ?? null} size="small" minWidth={220} placeholder={ANOTHER_ITEM}
+        {/* the question is said once, on the row; the field's own name still says whose it is */}
+        <ItemSelector label={ANOTHER_ITEM} inputAriaLabel={text} value={answer ?? null} size="small" minWidth={220}
             priority={{ label: FOUND_IN_BLUEPRINT, ids: question.candidates }} options={[...new Set([...question.candidates, ...itemNames])]}
             onChange={value => { if (value !== null) onAnswer(value); }} />
     </Box>;
