@@ -82,7 +82,9 @@ node resources/filter-raw.js --dump=<write-data>/script-output/data-raw-dump.jso
 enables the mods that ship with the game (every folder beside `base` in `data`: space-age, quality, elevated-rails,
 recycler), the way the harness sets a game up (`src/harness/factorio-harness.ts`). The dump itself is not committed.
 Factorio 2.1 renamed the ore melting recipes (`iron-ore-melting`, `copper-ore-melting`) and gives a recipe a list of
-crafting categories; the filter writes that list for any version of the dump.
+crafting categories; the filter writes that list for any version of the dump. After a refresh, check the recipe list of the
+All template in `clock-generator-ui/src/utils/researchProfiles.ts` against the `change-recipe-productivity` effects of the
+dump, because no test can see them in the filtered data.
 
 ## Usage
 

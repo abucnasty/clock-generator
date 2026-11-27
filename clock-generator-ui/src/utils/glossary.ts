@@ -214,8 +214,9 @@ export const GLOSSARY: readonly GlossaryEntry[] = [
     {
         id: 'template',
         term: 'Template',
-        definition: 'A research profile that the page ships. Its numbers are fixed. There are two: No research, and All finite '
-            + 'research. Make a profile from a template, and use Revert to go back to its numbers.',
+        definition: 'A research profile that the page ships. Its numbers are fixed. There are two: No research, and All '
+            + 'research, which holds 300 % for every recipe that productivity research changes, the most a recipe can have. '
+            + 'Make a profile from a template, and use Revert to go back to its numbers.',
         insteadOf: 'default (for a template), preset',
     },
     {

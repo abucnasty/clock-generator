@@ -4,6 +4,7 @@ import {
     BLUEPRINT_COPY_STEPS, BLUEPRINT_FAILED_PROMPT, BLUEPRINT_PROMPTS, entityName, isJsonText, noteText, notReadText, numbersUsedText, productivityText, questionText,
     readText, SHARING_ANSWER_TEXT, speedText,
 } from './blueprintPaste';
+import { TEMPLATES } from './researchProfiles';
 
 const name = (id: string) => ({ beacon: 'Beacon', 'constant-combinator': 'Constant combinator' } as Record<string, string>)[id] ?? id;
 
@@ -52,12 +53,17 @@ describe('the blueprint paste\'s words', () => {
         const row: ImportSpeed = { list: 'machines', id: 3, beacons: 8, modules: 4, productivity: { base: 50, modules: 0, research: 250, cap: 300 } };
         expect(speedText(199.75, row)).toBe('speed 199.75 (8 beacons, 4 modules)');
         expect(productivityText(300, row)).toBe('productivity 300 % = base 50 + modules 0 + research 250, at most 300');
+        expect(productivityText(300, { ...row, productivity: { base: 50, modules: 0, research: 300, cap: 300 } })).toBe('productivity 300 % = base 50 + modules 0 + research 300, at most 300');
         expect(productivityText(10, { ...row, productivity: { base: 0, modules: 10, research: 0, cap: null } })).toBe('productivity 10 % = base 0 + modules 10 + research 0');
     });
 
     it('gives the numbers a profile uses as the hands and the lane they give', () => {
         expect(numbersUsedText({ mining_drill_productivity_bonus: 79990, inserter_stack_size_bonus: 3, bulk_inserter_capacity_bonus: 11, belt_stack_size_bonus: 3, recipes: {} }))
             .toBe('mining +79990 %, stack inserter 16, bulk inserter 12, inserter 4, belt stacks 4');
+    });
+
+    it('counts the 18 recipes of the All template in the numbers a profile uses', () => {
+        expect(numbersUsedText(TEMPLATES[1].bonuses)).toBe('mining +20 %, stack inserter 16, bulk inserter 12, inserter 4, belt stacks 4, 18 recipes with research productivity');
     });
 
     it('copies a blueprint in two steps, with no Sidecar', () => {

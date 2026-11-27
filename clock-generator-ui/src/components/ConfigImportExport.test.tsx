@@ -383,10 +383,10 @@ describe('a pasted blueprint', () => {
         const dialog = await dialogOpen();
         const before = asked('pasted-blueprint').length;
         await user.click(within(dialog).getByRole('combobox', { name: 'Research profile' }));
-        await user.click(await screen.findByRole('option', { name: /All finite research/ }));
+        await user.click(await screen.findByRole('option', { name: /All research/ }));
         await screen.findByText(/Numbers used: mining \+20 %/);
         expect(asked('pasted-blueprint').length).toBe(before + 1);
-        expect(lastBlueprintQuery().inputs.research).toMatchObject({ profile: 'All finite research', template: 'all-finite-research', bonuses: { mining_drill_productivity_bonus: 20 } });
+        expect(lastBlueprintQuery().inputs.research).toMatchObject({ profile: 'All research', template: 'all-finite-research', bonuses: { mining_drill_productivity_bonus: 20 } });
         expect(JSON.parse(window.localStorage.getItem('clock-generator-research-profiles')!).lastUsed).toBe('all-finite-research');
     });
 
