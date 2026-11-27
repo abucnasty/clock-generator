@@ -18,7 +18,7 @@ import { decodeBlueprint } from "./decode";
 import { flowsOf, type BuildFlows, type FlowsData, type FlowsInputs } from "./flows";
 import { geometryOf, type Basis, type Based, type BuildGeometry, type GeometryData, type GeometryRow, type PickupProblem } from "./geometry";
 import { idsOf, type BuildIds, type IdsData } from "./ids";
-import type { DropLane, DropPosition, GeometryNoteField, ImportBuild, ImportInputs, ImportNote, ImportOutcome, ImportQuestion, NoteCode, OutputLine, QuestionKind, ReadKind } from "./outcome";
+import type { DropLane, DropPosition, GeometryNoteField, ImportBuild, ImportEntity, ImportList, ImportSpeed, ImportInputs, ImportNote, ImportOutcome, ImportQuestion, NoteCode, OutputLine, QuestionKind, ReadKind } from "./outcome";
 import { isPleaseCheck, READ_KINDS, SHARING_ANSWERS } from "./outcome";
 import { speedsOf, type SpeedData, type SpeedResult } from "./speeds";
 import { worldOf, type BuildWorld, type PrototypeRow, type WorldData, type WorldProblemCode } from "./world";
@@ -165,6 +165,7 @@ const compareText = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
 /** The game's filters that block a slot: no item may go into it */
 const BLOCKING_FILTERS: readonly string[] = ["no-item", "deconstruction-planner"];
 const QUESTION_ORDER: readonly QuestionKind[] = ["drill-ore", "lane-item", "lane-sharing"];
+const SPEED_LISTS: readonly ImportSpeed["list"][] = ["machines", "drills", "chests"];
 const MACHINE_TYPES: readonly string[] = ["assembling-machine", "furnace"];
 const CHEST_TYPES: readonly string[] = ["container", "logistic-container", "linked-container", "infinity-container"];
 const VEHICLE_TYPES: readonly string[] = ["car", "cargo-wagon"];
@@ -371,8 +372,20 @@ function assemble(entities: readonly BlueprintEntityRead[], inputs: ImportInputs
         } as unknown as BeltConfig;
     });
 
+    // ------------------------------------------------ a buffer chest whose limit leaves it no slot: left out, with the inserters at it
+    const storageOf = (e: BlueprintEntityRead): number => e.bar ?? e.inventory?.bar ?? (own(data.chest, e.name) as { inventory_size?: number } | undefined)?.inventory_size ?? 0;
+    const noSlots = new Set(ids.chests.filter((c) => c.chest_type === "buffer-chest" && storageOf(entityOf.get(c.entity_number)!) <= 0).map((c) => c.id));
+    for (const c of ids.chests) if (noSlots.has(c.id)) notes.add("chest:no-slots", c.entity_number);
+    const atNoSlots = (end: { type: string; id: number }) => end.type === "chest" && noSlots.has(end.id);
+    const keptInserters = ids.inserters.filter((i) => {
+        if (atNoSlots(i.source)) notes.add(LEFT_OUT_INSERTER_NOTES.pickup, i.entity_number);
+        if (atNoSlots(i.sink)) notes.add(LEFT_OUT_INSERTER_NOTES.drop, i.entity_number);
+        return !atNoSlots(i.source) && !atNoSlots(i.sink);
+    });
+    const keptChests = ids.chests.filter((c) => !noSlots.has(c.id));
+
     // ------------------------------------------------ inserters (b, e)
-    const inserters: InserterConfig[] = ids.inserters.map((i) => {
+    const inserters: InserterConfig[] = keptInserters.map((i) => {
         const e = entityOf.get(i.entity_number)!;
         let source: Record<string, unknown> = { type: i.source.type, id: i.source.id };
         if (i.source.type === "belt") {
@@ -431,7 +444,7 @@ function assemble(entities: readonly BlueprintEntityRead[], inputs: ImportInputs
     // ------------------------------------------------ chests (b)
     const slotFiltersOf = (e: BlueprintEntityRead) => itemsOfFilters(e.inventory?.filters, () => notes.add("filter-no-item:inventory", e.entity_number))
         .map((row) => (BLOCKING_FILTERS.includes(row.item as string) ? { slot: row.index, blocked: true as const } : { slot: row.index, item: row.item as string }));
-    const chests: ChestConfig[] = ids.chests.map((c): ChestConfig => {
+    const chests: ChestConfig[] = keptChests.map((c): ChestConfig => {
         const e = entityOf.get(c.entity_number)!;
         if (c.chest_type === "infinity-chest") {
             const filters = [...(e.infinity?.filters ?? [])].map((f) => ({ item_name: f.item, request_count: f.count ?? 0 })).sort((a, b) => compareText(a.item_name, b.item_name));
@@ -457,8 +470,7 @@ function assemble(entities: readonly BlueprintEntityRead[], inputs: ImportInputs
                 position: position(e),
             } as ChestConfig;
         }
-        const storage_size = e.bar ?? e.inventory?.bar ?? (own(data.chest, e.name) as { inventory_size?: number } | undefined)?.inventory_size ?? 0;
-        return { type: "buffer-chest", id: c.id, storage_size, item_filter: c.items[0] ?? "", prototype: e.name, position: position(e) };
+        return { type: "buffer-chest", id: c.id, storage_size: storageOf(e), item_filter: c.items[0] ?? "", prototype: e.name, position: position(e) };
     });
 
     // ------------------------------------------------ the filters that are not written: a splitter's or loader's with no item
@@ -509,11 +521,11 @@ function assemble(entities: readonly BlueprintEntityRead[], inputs: ImportInputs
         drills: drills.map((d) => ({ id: d.id, productivity: d.productivity })),
         silos: chests.flatMap((c) => {
             if (c.type !== "rocket-silo") return [];
-            const e = entityOf.get(ids.chests.find((x) => x.id === c.id)!.entity_number)!;
+            const e = entityOf.get(keptChests.find((x) => x.id === c.id)!.entity_number)!;
             const recipe = e.recipe ?? own(data.rocket_silo, e.name)?.fixed_recipe ?? "";
             return [{ id: c.id, recipe, productivity: c.productivity ?? 0 }];
         }),
-        inserters: ids.inserters.map((i) => {
+        inserters: keptInserters.map((i) => {
             const override = entityOf.get(i.entity_number)?.override_stack_size;
             return { id: i.id, ...(override !== undefined && override > 0 && { stack_size: override }) };
         }),
@@ -541,6 +553,40 @@ function assemble(entities: readonly BlueprintEntityRead[], inputs: ImportInputs
     const outputFirsts = [...new Set(geometry.drops.map((d) => lineOfPiece.get(d.piece)).filter((n): n is number => n !== undefined))].sort(byNumber);
     const output_lines: OutputLine[] = outputFirsts.map((first) => ({ first, pieces: [...lineOf.get(first)!.pieces] }));
 
+    // ------------------------------------------------ each entity by its number, and the row of the lists it is
+    const rowOf = new Map<number, { list: ImportList; id: number }>();
+    for (const m of ids.machines) rowOf.set(m.entity_number, { list: "machines", id: m.id });
+    for (const d of ids.drills) rowOf.set(d.entity_number, { list: "drills", id: d.id });
+    for (const i of keptInserters) rowOf.set(i.entity_number, { list: "inserters", id: i.id });
+    for (const c of keptChests) rowOf.set(c.entity_number, { list: "chests", id: c.id });
+    for (const b of ids.belts) for (const n of b.lines) for (const piece of lineOf.get(n)?.pieces ?? []) if (!rowOf.has(piece)) rowOf.set(piece, { list: "belts", id: b.id });
+    const importEntities: ImportEntity[] = [...entities].sort((a, b) => a.entity_number - b.entity_number).map((e) => {
+        const row = rowOf.get(e.entity_number);
+        return { entity_number: e.entity_number, name: e.name, ...(row !== undefined && { row }) };
+    });
+
+    // ------------------------------------------------ what each productivity is made of, for the dialog to show
+    const modulesIn = (e: BlueprintEntityRead) => e.requests.filter((r) => own(data.module, r.item) !== undefined)
+        .reduce((sum, r) => sum + (Number.isInteger(r.count) && (r.count as number) > 0 ? (r.count as number) : 1), 0);
+    const baseEffect = (row: { effect_receiver?: { base_effect?: { productivity?: number } } } | undefined) => 100 * (row?.effect_receiver?.base_effect?.productivity ?? 0);
+    const bonuses = inputs.research.bonuses;
+    const capOf = (recipe: string) => 100 * (own(data.recipe, recipe)?.maximum_productivity ?? 3);
+    const speedRow = (list: ImportSpeed["list"], id: number, n: number, base: number, research: number, cap: number | null): ImportSpeed => {
+        const total = percent(speedOf.get(n)?.productivity);
+        return { list, id, beacons: speedOf.get(n)?.beacons.length ?? 0, modules: modulesIn(entityOf.get(n)!), productivity: { base, modules: total - base, research, cap } };
+    };
+    const importSpeeds: ImportSpeed[] = [
+        ...ids.machines.map((m) => {
+            const recipe = recipeOfMachine(m.entity_number);
+            return speedRow("machines", m.id, m.entity_number, baseEffect(own(data.crafting_machine, entityOf.get(m.entity_number)!.name)), own(bonuses.recipes, recipe)?.productivity_bonus ?? 0, capOf(recipe));
+        }),
+        ...ids.drills.map((d) => speedRow("drills", d.id, d.entity_number, baseEffect(own(data["mining-drill"], entityOf.get(d.entity_number)!.name)), bonuses.mining_drill_productivity_bonus, null)),
+        ...keptChests.filter((c) => c.chest_type === "rocket-silo").map((c) => {
+            const recipe = researched.block.base.silos.find((s) => s.id === c.id)?.recipe ?? "";
+            return speedRow("chests", c.id, c.entity_number, baseEffect(own(data.rocket_silo, entityOf.get(c.entity_number)!.name)), own(bonuses.recipes, recipe)?.productivity_bonus ?? 0, capOf(recipe));
+        }),
+    ].sort((a, b) => SPEED_LISTS.indexOf(a.list) - SPEED_LISTS.indexOf(b.list) || a.id - b.id);
+
     return {
         kind: "build",
         machines: listed.machines,
@@ -556,5 +602,7 @@ function assemble(entities: readonly BlueprintEntityRead[], inputs: ImportInputs
         read: READ_KINDS.filter((kind) => (counts.get(kind) ?? 0) > 0).map((name) => ({ name, count: counts.get(name)! })),
         ignored: [...ignored.entries()].sort((a, b) => compareText(a[0], b[0])).map(([name, count]) => ({ name, count })),
         layout: { drop_lanes, drop_positions, output_lines },
+        entities: importEntities,
+        speeds: importSpeeds,
     };
 }

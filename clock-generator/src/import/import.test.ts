@@ -377,7 +377,47 @@ describe("the 8 builds with reads, each held to its read", () => {
             expect(notes, run.build.name).toEqual(sortedNotes);
             const names = run.outcome.ignored.map((x) => x.name);
             expect(names).toEqual([...names].sort());
+            const numbers = run.outcome.entities.map((e) => e.entity_number);
+            expect(numbers, run.build.name).toEqual([...numbers].sort((a, b) => a - b));
+            const speeds = run.outcome.speeds.map((x) => [["machines", "drills", "chests"].indexOf(x.list), x.id] as const);
+            expect(speeds, run.build.name).toEqual([...speeds].sort((a, b) => a[0] - b[0] || a[1] - b[1]));
         }
+    });
+
+    it("names the entity of every note and question, and the row each listed entity is", () => {
+        for (const run of RUNS) {
+            const { outcome } = run;
+            const known = new Set(outcome.entities.map((e) => e.entity_number));
+            for (const note of outcome.notes) if (note.entity_number !== 0) expect(known.has(note.entity_number), `${run.build.name} note ${note.code}`).toBe(true);
+            for (const list of ["machines", "drills", "inserters", "chests"] as const) {
+                const rows = outcome.entities.flatMap((e) => (e.row?.list === list ? [e.row.id] : []));
+                expect(rows.sort((a, b) => a - b), `${run.build.name} ${list}`).toEqual(outcome[list].map((x) => x.id));
+            }
+            const belts = new Set(outcome.entities.flatMap((e) => (e.row?.list === "belts" ? [e.row.id] : [])));
+            expect([...belts].sort((a, b) => a - b), run.build.name).toEqual(outcome.belts.map((b) => b.id));
+        }
+    });
+
+    it("gives what each productivity is made of, and their sum held to the cap is the value written", () => {
+        for (const run of RUNS) {
+            const { outcome } = run;
+            const written = (list: string, id: number) => list === "machines" ? outcome.machines.find((m) => m.id === id)!.productivity
+                : list === "drills" ? outcome.drills.find((d) => d.id === id)!.productivity : (outcome.chests.find((c) => c.id === id) as { productivity?: number }).productivity ?? 0;
+            const silos = outcome.chests.filter((c) => c.type === "rocket-silo").length;
+            expect(outcome.speeds.length, run.build.name).toBe(outcome.machines.length + outcome.drills.length + silos);
+            for (const row of outcome.speeds) {
+                const { base, modules, research, cap } = row.productivity;
+                const sum = Math.max(0, base + modules + research);
+                expect(written(row.list, row.id), `${run.build.name} ${row.list} ${row.id}`).toBeCloseTo(cap === null ? sum : Math.min(cap, sum), 9);
+                expect(row.beacons).toBeGreaterThanOrEqual(0);
+            }
+            for (const m of outcome.machines) {
+                const base = 100 * (DATA.crafting_machine[m.prototype!]?.effect_receiver?.base_effect?.productivity ?? 0);
+                expect(outcome.speeds.find((x) => x.list === "machines" && x.id === m.id)!.productivity.base, run.build.name).toBe(base);
+            }
+        }
+        expect(RUNS.some((run) => run.outcome.speeds.some((x) => x.beacons > 0 && x.modules > 0))).toBe(true);
+        expect(RUNS.some((run) => run.outcome.speeds.some((x) => x.productivity.base > 0))).toBe(true);
     });
 
     it("gives a configuration that parses, and a supported capture on a belt pickup that the generator takes", () => {
@@ -569,6 +609,22 @@ describe("notes", () => {
         expect(rails.length).toBeGreaterThan(0);
         expect(notesOf(steel.outcome, "world:unknown-name")).toEqual(rails);
         expect(steel.outcome.ignored).toContainEqual({ name: "straight-rail", count: rails.length });
+    });
+
+    it("leaves out a buffer chest whose limit leaves it no slot, and the inserters at it, each with a note", () => {
+        const run = RUNS.find((r) => r.outcome.chests.some((c) => c.type === "buffer-chest" && r.outcome.inserters.some((i) => (i.sink.type === "chest" && i.sink.id === c.id) || (i.source.type === "chest" && i.source.id === c.id))))!;
+        expect(run).toBeDefined();
+        const chest = run.outcome.chests.find((c) => c.type === "buffer-chest" && run.outcome.inserters.some((i) => i.sink.type === "chest" && i.sink.id === c.id || i.source.type === "chest" && i.source.id === c.id))!;
+        const n = run.outcome.entities.find((e) => e.row?.list === "chests" && e.row.id === chest.id)!.entity_number;
+        const build = changed(run.build.name, (es) => { entity(es, n).bar = 0; });
+        expect(build.chests.map((c) => c.position)).not.toContainEqual(chest.position);
+        expect(notesOf(build, "chest:no-slots")).toEqual([n]);
+        const chestIds = new Set(build.chests.map((c) => c.id));
+        for (const i of build.inserters) for (const end of [i.source, i.sink]) if (end.type === "chest") expect(chestIds.has(end.id)).toBe(true);
+        expect([...notesOf(build, "inserter-left-out:drop"), ...notesOf(build, "inserter-left-out:pickup")].length).toBeGreaterThan(0);
+        const parsed = ConfigSchema.safeParse({ setpoint: { item: run.build.setpoint.item, items_per_second: 1, copies: 1 }, machines: build.machines, drills: { configs: build.drills },
+            inserters: build.inserters, belts: build.belts, chests: build.chests, research: build.research });
+        expect(parsed.success ? [] : parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`)).toEqual([]);
     });
 
     it("has a code for every note a step can give", () => {

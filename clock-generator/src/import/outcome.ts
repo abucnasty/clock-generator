@@ -68,6 +68,8 @@ export const NOTE_CODES = [
     "drop:side-loaded",
     // a filter row the blueprint holds with no item: an inserter's or a loader's filters, a wagon's or car's slots, a splitter's filter
     "filter-no-item:filters", "filter-no-item:inventory", "filter-no-item:splitter",
+    // a chest whose limit leaves it no slot: it is left out, with the inserters at it
+    "chest:no-slots",
 ] as const;
 export type NoteCode = (typeof NOTE_CODES)[number];
 
@@ -109,6 +111,32 @@ export interface ImportLayout {
     output_lines: OutputLine[];
 }
 
+/** The lists of the configuration that an entity of the blueprint can be a row of */
+export type ImportList = "machines" | "drills" | "inserters" | "belts" | "chests";
+
+/** An entity of the blueprint by its number: its prototype, and the row of the lists it is, where it is one */
+export interface ImportEntity {
+    entity_number: number;
+    name: string;
+    /** Absent for an entity that is in no list: a beacon, a pole, an inserter left out. Each piece of a belt line names the belt. */
+    row?: { list: ImportList; id: number };
+}
+
+/**
+ * What a machine's, a drill's or a rocket silo's values are made of, for the dialog to show beside them. Productivity is in
+ * percent: the prototype's own effect, what its modules and the beacons in reach give, and what the research gives; the
+ * value written is their sum, held to `cap` (null for a drill, which has none).
+ */
+export interface ImportSpeed {
+    list: "machines" | "drills" | "chests";
+    id: number;
+    /** The beacons in reach that count for it */
+    beacons: number;
+    /** The modules in its own slots */
+    modules: number;
+    productivity: { base: number; modules: number; research: number; cap: number | null };
+}
+
 export interface ImportBuild {
     kind: "build";
     /** The five lists, in the configuration's own types, each sorted by id */
@@ -131,6 +159,10 @@ export interface ImportBuild {
     /** The entities the import does not read, by prototype name */
     ignored: { name: string; count: number }[];
     layout: ImportLayout;
+    /** Every entity of the blueprint, by entity number: what the notes and questions name it by */
+    entities: ImportEntity[];
+    /** By list (machines, drills, chests), then id */
+    speeds: ImportSpeed[];
 }
 
 export type ImportOutcome = { kind: "problem"; problem: ImportProblem } | ImportBuild;
