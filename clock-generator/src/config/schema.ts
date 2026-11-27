@@ -29,6 +29,7 @@ import { migrateMachineTypeStep } from "./migrate-machine-type";
 import { FactorioDataService } from "../data/factorio-data-service";
 import { machinePlacesResults } from "./machine-prototype";
 import { OutputBeltSchema, outputBeltProblems } from "./output-belt";
+import { ResearchBlockSchema } from "./research-block";
 import { withoutOutletWords } from "./infinite-end";
 
 /**
@@ -963,6 +964,7 @@ export const ConfigSchema = z.preprocess(renameTargetOutputToSetpoint, z.preproc
      */
     output_belt: OutputBeltSchema.optional().describe("The output belt: the side belt that each copy's output inserter drops on, and the stretches "
         + "of belt from the copies to the infinite end, in tiles. The run of the copies moves the output on it, and an output blockage shuts its infinite end."),
+    research: ResearchBlockSchema.optional().describe("The research that the values of the build were made with. Nothing reads it when the clock is made."),
 }).superRefine((config, context) => {
     // a setpoint counts one output of one recipe, and the engine counts the one it counts today: a pick of another output,
     // or of a recipe that has no item result, is refused with the code and its data (the page words it)

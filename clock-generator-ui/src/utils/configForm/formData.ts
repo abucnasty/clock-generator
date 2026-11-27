@@ -313,6 +313,8 @@ export interface ConfigFormData {
     overrides?: Config['overrides'];
     /** The output belt as the config states it: the site keeps it and has no editor for it */
     output_belt?: Config['output_belt'];
+    /** The research the values were made with, as the config states it: the site keeps it and has no editor for it */
+    research?: Config['research'];
 }
 
 export const createDefaultConfig = (): ConfigFormData => ({

@@ -145,6 +145,8 @@ export function configToFormData(imported: Config, prototypeSource?: MachineForm
         overrides: imported.overrides,
         // the output belt has no editor: it is kept as it was stated
         ...(imported.output_belt !== undefined && { output_belt: imported.output_belt }),
+        // the research block has no editor either: it is kept as it was stated
+        ...(imported.research !== undefined && { research: imported.research }),
     };
 }
 
