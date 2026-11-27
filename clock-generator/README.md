@@ -68,14 +68,14 @@ A file of your own under `src/` that imports modules directly, not through `inde
 ### Refreshing the game data
 
 `resources/data-filtered.json` is cut from a data dump of the game by `resources/filter-raw.js`, and
-`resources/data-version.json` beside it says which game made the dump (since 0.14.0: Factorio 2.1.21, build 87673; the
+`resources/data-version.json` beside it says which game made the dump (Factorio 2.1.24, build 87808; the
 `npm run calls` header repeats it). To follow a new version of the game, with a locked install of that version (never
 the one that is played; the install is not written to):
 
 ```bash
 factorio --version                                        # the version line
 factorio --config config.ini --mod-directory mods --dump-data
-node resources/filter-raw.js --dump=<write-data>/script-output/data-raw-dump.json --version="Version: 2.1.21 (build 87673, linux64, full)"
+node resources/filter-raw.js --dump=<write-data>/script-output/data-raw-dump.json --weights=<item-weights.json> --version="Version: 2.1.24 (build 87808, linux64, full)"
 ```
 
 `config.ini` names the install's `data` folder as `read-data` and a scratch folder as `write-data`, and `mods/mod-list.json`

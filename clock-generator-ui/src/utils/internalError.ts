@@ -1,7 +1,8 @@
 /** The game data's top-level sections the generator reads; a data file without one is not the generator's */
 export const ENGINE_DATA_SECTIONS = [
     'recipe', 'mining-drill', 'resource', 'inserter', 'quality', 'inserter_research', 'container', 'quality_inventory',
-    'rocket_silo', 'crafting_machine', 'transport_belt', 'item', 'item_prototype', 'item_weight', 'item_order', 'names',
+    'rocket_silo', 'crafting_machine', 'transport_belt', 'beacon', 'module', 'underground_belt', 'splitter', 'loader', 'chest',
+    'entity_footprint', 'item', 'item_prototype', 'item_weight', 'item_order', 'names',
 ] as const;
 
 /** The sections of the engine's list that the loaded data lacks */

@@ -3,7 +3,7 @@
     "What the engine reads from the game's prototypes: the one hand-written list. resources/filter-raw.js keeps these",
     "properties (a class's own and its ancestors') in resources/data-filtered.json for each section built from a listed",
     "class, beside the fields it derives; recipes and resources are kept whole; a class with properties that no section is built from",
-    "must be named in its UNSECTIONED_CLASSES with why (the chests, the loader). Keys are the prototype API's own names",
+    "must be named in its UNSECTIONED_CLASSES with why. Keys are the prototype API's own names",
     "(prototypes as the spec names them, with their Prototype suffix: CraftingMachinePrototype, ResourceEntityPrototype;",
     "the two roots PrototypeBase and Prototype have none), so each looks up in the spec as written.",
     "prototypes: each class with its spec parent (null for the root) and the properties it OWNS in the spec that the",
@@ -21,7 +21,9 @@
     "TechnologyPrototype effects (the inserter research totals), UtilityConstants default_rocket_lift_weight (the silo's",
     "lift_weight when unset), and which raw section each of its sections is read from with which class (items from",
     "ItemPrototype's subclasses too: module, tool, ammo, capsule; the manifest names no typename, the generated file gives",
-    "each class's in a comment).",
+    "each class's in a comment), and the entity_footprint section (the type, collision box and tiles of each grid entity the",
+    "blueprint import reads: EntityPrototype's collision_box, tile_width and tile_height are not listed on it, which would put",
+    "them in every entity section).",
     "$comment entries name the traits that read the class (P4 composition design, 2.4). After an edit, rerun",
     "scripts/prototype-types/generate.mjs (its header says how)."
   ],
@@ -95,7 +97,24 @@
         "quality_affects_module_slots",
         "energy_source",
         "energy_usage",
-        "vector_to_place_result"
+        "vector_to_place_result",
+        "resource_categories"
+      ]
+    },
+    "BeaconPrototype": {
+      "$comment": "Modules (blueprint import): what a beacon gives a machine in its supply area; the profile and the quality bonuses are read with the effectivity",
+      "parent": "EntityWithOwnerPrototype",
+      "properties": [
+        "distribution_effectivity",
+        "distribution_effectivity_bonus_per_quality_level",
+        "supply_area_distance",
+        "profile",
+        "module_slots",
+        "allowed_effects",
+        "allowed_module_categories",
+        "quality_affects_module_slots",
+        "quality_affects_supply_area_distance",
+        "beacon_counter"
       ]
     },
     "InserterPrototype": {
@@ -127,10 +146,20 @@
       "parent": "TransportBeltConnectablePrototype",
       "properties": []
     },
-    "LoaderPrototype": {
-      "$comment": "not modelled; for the planner",
+    "UndergroundBeltPrototype": {
+      "$comment": "Lane (blueprint import): how far an entrance reaches its exit",
       "parent": "TransportBeltConnectablePrototype",
-      "properties": ["max_belt_stack_size", "wait_for_full_stack", "respect_insert_limits", "per_lane_filters", "belt_length"]
+      "properties": ["max_distance"]
+    },
+    "SplitterPrototype": {
+      "$comment": "Lane (blueprint import)",
+      "parent": "TransportBeltConnectablePrototype",
+      "properties": []
+    },
+    "LoaderPrototype": {
+      "$comment": "Lane (blueprint import); the planner reads the rest",
+      "parent": "TransportBeltConnectablePrototype",
+      "properties": ["max_belt_stack_size", "wait_for_full_stack", "respect_insert_limits", "per_lane_filters", "belt_length", "container_distance"]
     },
     "ContainerPrototype": {
       "$comment": "Storage",
@@ -144,6 +173,11 @@
     "InfinityContainerPrototype": {
       "parent": "LogisticContainerPrototype",
       "properties": []
+    },
+    "LinkedContainerPrototype": {
+      "$comment": "Storage (blueprint import): not a ContainerPrototype in the game's prototype API; chests of one link_id share one inventory",
+      "parent": "EntityWithOwnerPrototype",
+      "properties": ["inventory_size", "inventory_type", "inventory_weight_limit"]
     },
     "VehiclePrototype": {
       "parent": "EntityWithOwnerPrototype",
@@ -181,6 +215,20 @@
         "quality_affects_spoil_ticks"
       ]
     },
+    "ModulePrototype": {
+      "$comment": "Modules (blueprint import): a module's own effect and how quality scales each of its effects; its item fields stay in item_prototype",
+      "parent": "ItemPrototype",
+      "properties": [
+        "category",
+        "tier",
+        "effect",
+        "consumption_quality_multiplier",
+        "speed_quality_multiplier",
+        "productivity_quality_multiplier",
+        "pollution_quality_multiplier",
+        "quality_quality_multiplier"
+      ]
+    },
     "RecipePrototype": {
       "$comment": "Production (recipe), Yield, InputLimits",
       "parent": "Prototype",
@@ -210,7 +258,15 @@
         "mining_drill_module_slots_bonus",
         "mining_drill_resource_drain_multiplier",
         "inserter_speed_multiplier",
-        "spoil_ticks_multiplier"
+        "spoil_ticks_multiplier",
+        "beacon_module_slots_bonus",
+        "beacon_power_usage_multiplier",
+        "beacon_supply_area_distance_bonus",
+        "module_consumption_multiplier",
+        "module_speed_multiplier",
+        "module_productivity_multiplier",
+        "module_pollution_multiplier",
+        "module_quality_multiplier"
       ]
     }
   },

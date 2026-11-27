@@ -11,7 +11,8 @@
 // from beside it (resources/data-version.json). What is kept of a prototype is the manifest's (resources/trait-fields.json):
 // each section built from a class the manifest models keeps the properties the manifest lists on that class and its
 // ancestors, where the raw entry has them (their values as the dump gives them, nested ones whole), beside what this
-// script derives for it (a default where the game has one, a field kept in one shape only, a section's own type). A class
+// script derives for it (a default where the game has one, a field kept in one shape only, a section's own type), and the
+// `entity_footprint` section, made from the raw prototypes of the types a pasted blueprint names (not from the manifest). A class
 // the manifest lists properties of that no section is built from is refused unless UNSECTIONED_CLASSES names it. Recipes
 // and resources are kept whole: the locale names and the page read fields of a recipe that the manifest does not list,
 // and a resource travels whole in a generation's results. How to make the
@@ -87,13 +88,9 @@ function isEmptyTable(value) {
 // the manifest lists properties of is never left out unseen
 const sectioned_classes = new Set();
 
-// the manifest's classes with properties that no section is built from, each with why; any other is refused
-const UNSECTIONED_CLASSES = {
-    LoaderPrototype: "not modelled; listed for the planner",
-    ContainerPrototype: "a chest's slots come from its config (a buffer chest's storage_size); a section for the Storage trait to read them from is to come",
-    LogisticContainerPrototype: "a chest (ContainerPrototype)",
-    InfinityContainerPrototype: "a chest (ContainerPrototype)",
-};
+// the manifest's classes with properties that no section is built from, each with why; any other is refused (none now:
+// the loaders and the chests have their sections)
+const UNSECTIONED_CLASSES = {};
 
 /**
  * Refuses a manifest class with properties (its own or inherited) that no section of the output is built from, from it
@@ -132,6 +129,38 @@ function tileSize(prototype) {
         tile_width: prototype.tile_width ?? Math.ceil(right - left),
         tile_height: prototype.tile_height ?? Math.ceil(bottom - top),
     };
+}
+
+// the prototype types whose place on the map a pasted blueprint needs: the machines, belts and chests it can name, and the
+// drills, inserters and beacons beside them (lab: a machine the generator does not model, kept for its tiles only)
+const FOOTPRINT_TYPES = [
+    "assembling-machine", "furnace", "lab", "rocket-silo",
+    "transport-belt", "underground-belt", "splitter", "loader", "loader-1x1",
+    "container", "logistic-container", "linked-container", "infinity-container", "car", "cargo-wagon",
+    "mining-drill", "inserter", "beacon",
+];
+
+/**
+ * The place every prototype of FOOTPRINT_TYPES takes on the map, by name: its type, its collision box (the game's default
+ * of an empty box where the prototype sets none) and its tiles (tileSize). Derived, not a manifest property: the manifest
+ * would put `collision_box`, `tile_width` and `tile_height` on EntityPrototype, and so on every entity section. A name two
+ * of the types share is refused: a blueprint names the entity by its name alone.
+ */
+function entityFootprints(rawData) {
+    const footprints = {};
+    for (const type of FOOTPRINT_TYPES) {
+        for (const [name, prototype] of Object.entries(rawData[type] ?? {})) {
+            if (name in footprints) {
+                throw new Error(`${name} is a ${footprints[name].type} and a ${type}: a blueprint cannot tell them apart`);
+            }
+            footprints[name] = {
+                type,
+                collision_box: prototype.collision_box ?? [[0, 0], [0, 0]],
+                ...tileSize(prototype),
+            };
+        }
+    }
+    return footprints;
 }
 
 /** Every prototype of a raw section with only the manifest's properties of its class */
@@ -327,6 +356,25 @@ function mapRawDataToFilteredFactorioData(rawData) {
 
     // the transport belts: their speed, in tiles per tick
     filtered["transport_belt"] = manifestSection(rawData["transport-belt"], "TransportBeltPrototype");
+
+    // what a pasted blueprint names besides the machines and inserters above, each with the manifest's fields of its
+    // class: the beacons and the modules (what a beacon gives a machine), the underground belts (how far they reach),
+    // the splitters, the loaders (the raw `loader` and `loader-1x1` both have LoaderPrototype's fields) and the chests
+    // (the chest, the logistic chest and the infinity chest from their classes; the linked chest from its own, which
+    // the game's prototype API does not make a ContainerPrototype). The belts keep their `speed` in these sections too.
+    filtered["beacon"] = manifestSection(rawData["beacon"], "BeaconPrototype");
+    filtered["module"] = manifestSection(rawData["module"], "ModulePrototype");
+    filtered["underground_belt"] = manifestSection(rawData["underground-belt"], "UndergroundBeltPrototype");
+    filtered["splitter"] = manifestSection(rawData["splitter"], "SplitterPrototype");
+    filtered["loader"] = {};
+    for (const category of ["loader", "loader-1x1"]) {
+        Object.assign(filtered["loader"], manifestSection(rawData[category], "LoaderPrototype"));
+    }
+    filtered["chest"] = {};
+    for (const [category, class_name] of [["container", "ContainerPrototype"], ["logistic-container", "LogisticContainerPrototype"], ["infinity-container", "InfinityContainerPrototype"], ["linked-container", "LinkedContainerPrototype"]]) {
+        Object.assign(filtered["chest"], manifestSection(rawData[category], class_name));
+    }
+    filtered["entity_footprint"] = entityFootprints(rawData);
 
     filtered["item"] = {};
     filtered["item_prototype"] = {};
