@@ -1,0 +1,1642 @@
+{
+ "about": "The Sidecar reads of seven sample builds, each inserter matched to its blueprint entity by position (the read's frame is the blueprint's moved by `frame`). `hand`: fields changed by hand after the export; `sidecar_version`: the version that wrote the read, null where not stated.",
+ "builds": [
+  {
+   "name": "iron",
+   "scaffold": "smelting/iron-plate/iron-plate-80-car-chest.scaffold",
+   "read": "smelting/iron-plate/iron-plate-80-car-chest.sidecar-export.json",
+   "sidecar_version": "0.12.0",
+   "hand": [],
+   "frame": {
+    "x": 774.0,
+    "y": 625.0
+   },
+   "inserters": [
+    {
+     "entity_number": 7,
+     "id": 1,
+     "source": {
+      "type": "chest",
+      "id": 1
+     },
+     "sink": {
+      "type": "machine",
+      "id": 1
+     }
+    },
+    {
+     "entity_number": 8,
+     "id": 2,
+     "source": {
+      "type": "chest",
+      "id": 1
+     },
+     "sink": {
+      "type": "machine",
+      "id": 2
+     }
+    },
+    {
+     "entity_number": 14,
+     "id": 3,
+     "source": {
+      "type": "machine",
+      "id": 1
+     },
+     "sink": {
+      "type": "belt",
+      "id": 1
+     }
+    },
+    {
+     "entity_number": 17,
+     "id": 4,
+     "source": {
+      "type": "machine",
+      "id": 2
+     },
+     "sink": {
+      "type": "belt",
+      "id": 1
+     }
+    }
+   ],
+   "belts": [
+    {
+     "id": 1,
+     "type": "turbo-transport-belt",
+     "lanes": [
+      null,
+      null
+     ],
+     "sharing": [
+      null,
+      null
+     ]
+    }
+   ]
+  },
+  {
+   "name": "lithium",
+   "scaffold": "smelting/lithium-plate/lithium-plate-80-silo-chest.scaffold",
+   "read": "smelting/lithium-plate/lithium-plate-80-silo-chest.sidecar-export.json",
+   "sidecar_version": "0.15.1",
+   "hand": [],
+   "frame": {
+    "x": 836.0,
+    "y": 649.0
+   },
+   "inserters": [
+    {
+     "entity_number": 7,
+     "id": 1,
+     "source": {
+      "type": "chest",
+      "id": 1
+     },
+     "sink": {
+      "type": "machine",
+      "id": 1
+     }
+    },
+    {
+     "entity_number": 8,
+     "id": 2,
+     "source": {
+      "type": "chest",
+      "id": 2
+     },
+     "sink": {
+      "type": "machine",
+      "id": 2
+     }
+    },
+    {
+     "entity_number": 17,
+     "id": 3,
+     "source": {
+      "type": "machine",
+      "id": 3
+     },
+     "sink": {
+      "type": "belt",
+      "id": 1,
+      "belt_direction": 4
+     }
+    },
+    {
+     "entity_number": 18,
+     "id": 4,
+     "source": {
+      "type": "machine",
+      "id": 1
+     },
+     "sink": {
+      "type": "chest",
+      "id": 3
+     }
+    },
+    {
+     "entity_number": 19,
+     "id": 5,
+     "source": {
+      "type": "machine",
+      "id": 2
+     },
+     "sink": {
+      "type": "chest",
+      "id": 3
+     }
+    },
+    {
+     "entity_number": 20,
+     "id": 6,
+     "source": {
+      "type": "machine",
+      "id": 4
+     },
+     "sink": {
+      "type": "belt",
+      "id": 1,
+      "belt_direction": 4
+     }
+    },
+    {
+     "entity_number": 25,
+     "id": 7,
+     "source": {
+      "type": "chest",
+      "id": 3
+     },
+     "sink": {
+      "type": "machine",
+      "id": 3
+     }
+    },
+    {
+     "entity_number": 26,
+     "id": 8,
+     "source": {
+      "type": "chest",
+      "id": 3
+     },
+     "sink": {
+      "type": "machine",
+      "id": 4
+     }
+    },
+    {
+     "entity_number": 29,
+     "id": 9,
+     "source": {
+      "type": "chest",
+      "id": 3
+     },
+     "sink": {
+      "type": "machine",
+      "id": 5
+     }
+    },
+    {
+     "entity_number": 31,
+     "id": 10,
+     "source": {
+      "type": "chest",
+      "id": 3
+     },
+     "sink": {
+      "type": "machine",
+      "id": 6
+     }
+    },
+    {
+     "entity_number": 36,
+     "id": 11,
+     "source": {
+      "type": "machine",
+      "id": 5
+     },
+     "sink": {
+      "type": "belt",
+      "id": 1,
+      "belt_direction": 4
+     }
+    },
+    {
+     "entity_number": 37,
+     "id": 12,
+     "source": {
+      "type": "machine",
+      "id": 6
+     },
+     "sink": {
+      "type": "belt",
+      "id": 1,
+      "belt_direction": 4
+     }
+    },
+    {
+     "entity_number": 42,
+     "id": 13,
+     "source": {
+      "type": "chest",
+      "id": 3
+     },
+     "sink": {
+      "type": "machine",
+      "id": 7
+     }
+    },
+    {
+     "entity_number": 43,
+     "id": 14,
+     "source": {
+      "type": "chest",
+      "id": 3
+     },
+     "sink": {
+      "type": "machine",
+      "id": 8
+     }
+    },
+    {
+     "entity_number": 53,
+     "id": 15,
+     "source": {
+      "type": "machine",
+      "id": 7
+     },
+     "sink": {
+      "type": "belt",
+      "id": 1,
+      "belt_direction": 0,
+      "drop_capture_tiles": 3
+     }
+    },
+    {
+     "entity_number": 54,
+     "id": 16,
+     "source": {
+      "type": "machine",
+      "id": 8
+     },
+     "sink": {
+      "type": "belt",
+      "id": 1,
+      "belt_direction": 8,
+      "drop_capture_tiles": 3
+     }
+    }
+   ],
+   "belts": [
+    {
+     "id": 1,
+     "type": "turbo-transport-belt",
+     "lanes": [
+      null,
+      null
+     ],
+     "sharing": [
+      null,
+      null
+     ]
+    }
+   ]
+  },
+  {
+   "name": "steel",
+   "scaffold": "smelting/steel-plate/steel-plate-26-wagon-chest.scaffold",
+   "read": "smelting/steel-plate/steel-plate-26-wagon-chest.sidecar-export.json",
+   "sidecar_version": "0.12.0",
+   "hand": [],
+   "frame": {
+    "x": 746.0,
+    "y": 624.0
+   },
+   "inserters": [
+    {
+     "entity_number": 8,
+     "id": 1,
+     "source": {
+      "type": "chest",
+      "id": 2
+     },
+     "sink": {
+      "type": "machine",
+      "id": 1
+     }
+    },
+    {
+     "entity_number": 9,
+     "id": 2,
+     "source": {
+      "type": "machine",
+      "id": 1
+     },
+     "sink": {
+      "type": "chest",
+      "id": 2
+     }
+    },
+    {
+     "entity_number": 10,
+     "id": 3,
+     "source": {
+      "type": "chest",
+      "id": 2
+     },
+     "sink": {
+      "type": "belt",
+      "id": 1
+     }
+    },
+    {
+     "entity_number": 11,
+     "id": 4,
+     "source": {
+      "type": "machine",
+      "id": 2
+     },
+     "sink": {
+      "type": "chest",
+      "id": 2
+     }
+    },
+    {
+     "entity_number": 12,
+     "id": 5,
+     "source": {
+      "type": "chest",
+      "id": 2
+     },
+     "sink": {
+      "type": "machine",
+      "id": 2
+     }
+    }
+   ],
+   "belts": [
+    {
+     "id": 1,
+     "type": "turbo-transport-belt",
+     "lanes": [
+      null
+     ],
+     "sharing": [
+      null
+     ]
+    }
+   ]
+  },
+  {
+   "name": "logistic-240",
+   "scaffold": "science/logistic/logistic-240.scaffold",
+   "read": "science/logistic/logistic-240.json",
+   "sidecar_version": "0.15.0",
+   "hand": [
+    "flow_direction",
+    "lane_end"
+   ],
+   "frame": {
+    "x": 0.0,
+    "y": 0.0
+   },
+   "inserters": [
+    {
+     "entity_number": 67,
+     "id": 2,
+     "source": {
+      "type": "machine",
+      "id": 1
+     },
+     "sink": {
+      "type": "belt",
+      "id": 1,
+      "belt_direction": 4
+     }
+    },
+    {
+     "entity_number": 75,
+     "id": 1,
+     "source": {
+      "type": "belt",
+      "id": 2,
+      "near_lane": 2,
+      "pickup_length": 1,
+      "pickup_layout": "side-straight"
+     },
+     "sink": {
+      "type": "machine",
+      "id": 1
+     }
+    }
+   ],
+   "belts": [
+    {
+     "id": 1,
+     "type": "turbo-transport-belt",
+     "lanes": [
+      null,
+      null
+     ],
+     "sharing": [
+      null,
+      null
+     ]
+    },
+    {
+     "id": 2,
+     "type": "turbo-transport-belt",
+     "lanes": [
+      "dead_end",
+      "dead_end"
+     ],
+     "flow_direction": 4,
+     "sharing": [
+      null,
+      null
+     ]
+    }
+   ]
+  },
+  {
+   "name": "stone-brick-120",
+   "scaffold": "smelting/stone-brick/stone-brick-120-drill-direct-insert.scaffold",
+   "read": "smelting/stone-brick/stone-brick-120-drill-direct-insert.json",
+   "sidecar_version": null,
+   "hand": [],
+   "frame": {
+    "x": 0.0,
+    "y": 0.0
+   },
+   "inserters": [
+    {
+     "entity_number": 9,
+     "id": 1,
+     "source": {
+      "type": "machine",
+      "id": 1
+     },
+     "sink": {
+      "type": "belt",
+      "id": 1,
+      "belt_direction": 8
+     }
+    }
+   ],
+   "belts": [
+    {
+     "id": 1,
+     "type": "turbo-transport-belt",
+     "lanes": [
+      null,
+      null
+     ],
+     "sharing": [
+      null,
+      null
+     ]
+    }
+   ]
+  },
+  {
+   "name": "electromagnetic-240",
+   "scaffold": "science/electromagnetic/electromagnetic-240-recycler-belt-fed.scaffold",
+   "read": "science/electromagnetic/electromagnetic-240-recycler-belt-fed.json",
+   "sidecar_version": "0.15.0",
+   "hand": [
+    "flow_direction",
+    "lane_end"
+   ],
+   "frame": {
+    "x": 994.0,
+    "y": 748.0
+   },
+   "inserters": [
+    {
+     "entity_number": 57,
+     "id": 5,
+     "source": {
+      "type": "belt",
+      "id": 1,
+      "near_lane": 1,
+      "pickup_length": 1,
+      "pickup_layout": "side-straight"
+     },
+     "sink": {
+      "type": "machine",
+      "id": 1
+     }
+    },
+    {
+     "entity_number": 60,
+     "id": 10,
+     "source": {
+      "type": "belt",
+      "id": 2,
+      "near_lane": 2,
+      "pickup_length": 0.5,
+      "pickup_layout": "front-entrance"
+     },
+     "sink": {
+      "type": "machine",
+      "id": 4
+     }
+    },
+    {
+     "entity_number": 61,
+     "id": 9,
+     "source": {
+      "type": "machine",
+      "id": 4
+     },
+     "sink": {
+      "type": "belt",
+      "id": 3,
+      "belt_direction": 12
+     }
+    },
+    {
+     "entity_number": 77,
+     "id": 2,
+     "source": {
+      "type": "chest",
+      "id": 4
+     },
+     "sink": {
+      "type": "chest",
+      "id": 2
+     }
+    },
+    {
+     "entity_number": 79,
+     "id": 4,
+     "source": {
+      "type": "machine",
+      "id": 1
+     },
+     "sink": {
+      "type": "chest",
+      "id": 4
+     }
+    },
+    {
+     "entity_number": 80,
+     "id": 7,
+     "source": {
+      "type": "machine",
+      "id": 3
+     },
+     "sink": {
+      "type": "machine",
+      "id": 1
+     }
+    },
+    {
+     "entity_number": 90,
+     "id": 1,
+     "source": {
+      "type": "chest",
+      "id": 3
+     },
+     "sink": {
+      "type": "chest",
+      "id": 1
+     }
+    },
+    {
+     "entity_number": 92,
+     "id": 3,
+     "source": {
+      "type": "machine",
+      "id": 2
+     },
+     "sink": {
+      "type": "chest",
+      "id": 3
+     }
+    },
+    {
+     "entity_number": 93,
+     "id": 6,
+     "source": {
+      "type": "machine",
+      "id": 3
+     },
+     "sink": {
+      "type": "machine",
+      "id": 2
+     }
+    },
+    {
+     "entity_number": 94,
+     "id": 11,
+     "source": {
+      "type": "belt",
+      "id": 4,
+      "near_lane": 1,
+      "pickup_length": 1,
+      "pickup_layout": "bend-right-upstream"
+     },
+     "sink": {
+      "type": "machine",
+      "id": 3
+     }
+    },
+    {
+     "entity_number": 105,
+     "id": 12,
+     "source": {
+      "type": "belt",
+      "id": 5,
+      "near_lane": 1,
+      "pickup_length": 0.5,
+      "pickup_layout": "side-exit"
+     },
+     "sink": {
+      "type": "machine",
+      "id": 3
+     }
+    },
+    {
+     "entity_number": 116,
+     "id": 8,
+     "source": {
+      "type": "belt",
+      "id": 1,
+      "near_lane": 1,
+      "pickup_length": 1,
+      "pickup_layout": "side-straight"
+     },
+     "sink": {
+      "type": "machine",
+      "id": 2
+     }
+    }
+   ],
+   "belts": [
+    {
+     "id": 1,
+     "type": "turbo-transport-belt",
+     "lanes": [
+      "dead_end",
+      "dead_end"
+     ],
+     "flow_direction": 4,
+     "sharing": [
+      null,
+      null
+     ]
+    },
+    {
+     "id": 2,
+     "type": "turbo-transport-belt",
+     "lanes": [
+      "dead_end",
+      "dead_end"
+     ],
+     "flow_direction": 4,
+     "sharing": [
+      null,
+      null
+     ]
+    },
+    {
+     "id": 3,
+     "type": "turbo-transport-belt",
+     "lanes": [
+      null
+     ],
+     "sharing": [
+      null
+     ]
+    },
+    {
+     "id": 4,
+     "type": "turbo-transport-belt",
+     "lanes": [
+      "dead_end",
+      "dead_end"
+     ],
+     "flow_direction": 4,
+     "sharing": [
+      null,
+      null
+     ]
+    },
+    {
+     "id": 5,
+     "type": "turbo-transport-belt",
+     "lanes": [
+      "dead_end",
+      "dead_end"
+     ],
+     "flow_direction": 4,
+     "sharing": [
+      null,
+      null
+     ]
+    }
+   ]
+  },
+  {
+   "name": "productivity-module-80",
+   "scaffold": "intermediates/productivity-module/productivity-module-80-chest-chain.scaffold",
+   "read": "intermediates/productivity-module/productivity-module-80-chest-chain.json",
+   "sidecar_version": "0.13.0",
+   "hand": [
+    "flow_direction",
+    "lane_end",
+    "sharing"
+   ],
+   "frame": {
+    "x": 0.0,
+    "y": 0.0
+   },
+   "inserters": [
+    {
+     "entity_number": 20,
+     "id": 1,
+     "source": {
+      "type": "belt",
+      "id": 1,
+      "near_lane": 2,
+      "pickup_length": 0.5,
+      "pickup_layout": "side-exit"
+     },
+     "sink": {
+      "type": "machine",
+      "id": 1
+     }
+    },
+    {
+     "entity_number": 21,
+     "id": 4,
+     "source": {
+      "type": "machine",
+      "id": 1
+     },
+     "sink": {
+      "type": "chest",
+      "id": 2
+     }
+    },
+    {
+     "entity_number": 22,
+     "id": 3,
+     "source": {
+      "type": "machine",
+      "id": 4
+     },
+     "sink": {
+      "type": "chest",
+      "id": 1
+     }
+    },
+    {
+     "entity_number": 32,
+     "id": 6,
+     "source": {
+      "type": "chest",
+      "id": 2
+     },
+     "sink": {
+      "type": "machine",
+      "id": 2
+     }
+    },
+    {
+     "entity_number": 33,
+     "id": 5,
+     "source": {
+      "type": "chest",
+      "id": 1
+     },
+     "sink": {
+      "type": "machine",
+      "id": 2
+     }
+    },
+    {
+     "entity_number": 40,
+     "id": 11,
+     "source": {
+      "type": "machine",
+      "id": 7
+     },
+     "sink": {
+      "type": "machine",
+      "id": 5
+     }
+    },
+    {
+     "entity_number": 43,
+     "id": 9,
+     "source": {
+      "type": "machine",
+      "id": 5
+     },
+     "sink": {
+      "type": "machine",
+      "id": 2
+     }
+    },
+    {
+     "entity_number": 44,
+     "id": 12,
+     "source": {
+      "type": "machine",
+      "id": 8
+     },
+     "sink": {
+      "type": "machine",
+      "id": 5
+     }
+    },
+    {
+     "entity_number": 46,
+     "id": 7,
+     "source": {
+      "type": "machine",
+      "id": 2
+     },
+     "sink": {
+      "type": "chest",
+      "id": 3
+     }
+    },
+    {
+     "entity_number": 56,
+     "id": 8,
+     "source": {
+      "type": "chest",
+      "id": 3
+     },
+     "sink": {
+      "type": "machine",
+      "id": 3
+     }
+    },
+    {
+     "entity_number": 59,
+     "id": 13,
+     "source": {
+      "type": "machine",
+      "id": 8
+     },
+     "sink": {
+      "type": "machine",
+      "id": 6
+     }
+    },
+    {
+     "entity_number": 60,
+     "id": 10,
+     "source": {
+      "type": "machine",
+      "id": 6
+     },
+     "sink": {
+      "type": "machine",
+      "id": 3
+     }
+    },
+    {
+     "entity_number": 63,
+     "id": 14,
+     "source": {
+      "type": "machine",
+      "id": 9
+     },
+     "sink": {
+      "type": "machine",
+      "id": 6
+     }
+    },
+    {
+     "entity_number": 66,
+     "id": 2,
+     "source": {
+      "type": "machine",
+      "id": 3
+     },
+     "sink": {
+      "type": "belt",
+      "id": 2
+     }
+    }
+   ],
+   "belts": [
+    {
+     "id": 1,
+     "type": "turbo-transport-belt",
+     "lanes": [
+      "dead_end"
+     ],
+     "flow_direction": 4,
+     "sharing": [
+      "per_copy"
+     ]
+    },
+    {
+     "id": 2,
+     "type": "turbo-transport-belt",
+     "lanes": [
+      null,
+      null
+     ],
+     "sharing": [
+      null,
+      null
+     ]
+    }
+   ]
+  }
+ ],
+ "lane_end_builds": [
+  {
+   "name": "utility-320",
+   "scaffold": "science/utility/utility-320-metered-takers.scaffold",
+   "read": "science/utility/utility-320-metered-takers.json",
+   "sidecar_version": "0.16.0",
+   "hand": [],
+   "frame": null,
+   "inserters": [
+    {
+     "entity_number": 54,
+     "id": 2,
+     "source": {
+      "type": "belt",
+      "id": 5,
+      "near_lane": 1,
+      "pickup_length": 1,
+      "pickup_layout": "side-straight"
+     },
+     "sink": {
+      "type": "machine",
+      "id": 1
+     }
+    },
+    {
+     "entity_number": 60,
+     "id": 1,
+     "source": {
+      "type": "machine",
+      "id": 1
+     },
+     "sink": {
+      "type": "belt",
+      "id": 4,
+      "belt_direction": 0
+     }
+    },
+    {
+     "entity_number": 61,
+     "id": 3,
+     "source": {
+      "type": "belt",
+      "id": 5,
+      "near_lane": 1,
+      "pickup_length": 1,
+      "pickup_layout": "side-straight"
+     },
+     "sink": {
+      "type": "machine",
+      "id": 2
+     }
+    },
+    {
+     "entity_number": 75,
+     "id": 4,
+     "source": {
+      "type": "machine",
+      "id": 2
+     },
+     "sink": {
+      "type": "belt",
+      "id": 4,
+      "belt_direction": 8
+     }
+    },
+    {
+     "entity_number": 78,
+     "id": 5,
+     "source": {
+      "type": "machine",
+      "id": 3
+     },
+     "sink": {
+      "type": "machine",
+      "id": 1
+     }
+    },
+    {
+     "entity_number": 79,
+     "id": 6,
+     "source": {
+      "type": "machine",
+      "id": 3
+     },
+     "sink": {
+      "type": "machine",
+      "id": 2
+     }
+    },
+    {
+     "entity_number": 104,
+     "id": 7,
+     "source": {
+      "type": "belt",
+      "id": 1,
+      "near_lane": 2,
+      "pickup_length": 1,
+      "pickup_layout": "side-straight"
+     },
+     "sink": {
+      "type": "machine",
+      "id": 4
+     }
+    },
+    {
+     "entity_number": 105,
+     "id": 8,
+     "source": {
+      "type": "machine",
+      "id": 4
+     },
+     "sink": {
+      "type": "machine",
+      "id": 3
+     }
+    },
+    {
+     "entity_number": 106,
+     "id": 9,
+     "source": {
+      "type": "machine",
+      "id": 3
+     },
+     "sink": {
+      "type": "machine",
+      "id": 5
+     }
+    },
+    {
+     "entity_number": 115,
+     "id": 11,
+     "source": {
+      "type": "machine",
+      "id": 6
+     },
+     "sink": {
+      "type": "belt",
+      "id": 3,
+      "belt_direction": 12
+     }
+    },
+    {
+     "entity_number": 121,
+     "id": 10,
+     "source": {
+      "type": "belt",
+      "id": 5,
+      "near_lane": 1,
+      "pickup_length": 1,
+      "pickup_layout": "side-straight"
+     },
+     "sink": {
+      "type": "machine",
+      "id": 5
+     }
+    },
+    {
+     "entity_number": 129,
+     "id": 13,
+     "source": {
+      "type": "machine",
+      "id": 5
+     },
+     "sink": {
+      "type": "belt",
+      "id": 4,
+      "belt_direction": 12
+     }
+    },
+    {
+     "entity_number": 133,
+     "id": 12,
+     "source": {
+      "type": "belt",
+      "id": 2,
+      "near_lane": 2,
+      "pickup_length": 1,
+      "pickup_layout": "side-straight"
+     },
+     "sink": {
+      "type": "machine",
+      "id": 6
+     }
+    },
+    {
+     "entity_number": 139,
+     "id": 14,
+     "source": {
+      "type": "machine",
+      "id": 7
+     },
+     "sink": {
+      "type": "machine",
+      "id": 6
+     }
+    },
+    {
+     "entity_number": 140,
+     "id": 15,
+     "source": {
+      "type": "machine",
+      "id": 4
+     },
+     "sink": {
+      "type": "machine",
+      "id": 7
+     }
+    },
+    {
+     "entity_number": 167,
+     "id": 16,
+     "source": {
+      "type": "machine",
+      "id": 7
+     },
+     "sink": {
+      "type": "machine",
+      "id": 8
+     }
+    },
+    {
+     "entity_number": 168,
+     "id": 17,
+     "source": {
+      "type": "machine",
+      "id": 7
+     },
+     "sink": {
+      "type": "machine",
+      "id": 9
+     }
+    },
+    {
+     "entity_number": 171,
+     "id": 18,
+     "source": {
+      "type": "machine",
+      "id": 8
+     },
+     "sink": {
+      "type": "belt",
+      "id": 3,
+      "belt_direction": 8
+     }
+    },
+    {
+     "entity_number": 179,
+     "id": 19,
+     "source": {
+      "type": "machine",
+      "id": 9
+     },
+     "sink": {
+      "type": "belt",
+      "id": 3,
+      "belt_direction": 0
+     }
+    },
+    {
+     "entity_number": 189,
+     "id": 20,
+     "source": {
+      "type": "belt",
+      "id": 2,
+      "near_lane": 2,
+      "pickup_length": 1,
+      "pickup_layout": "side-straight"
+     },
+     "sink": {
+      "type": "machine",
+      "id": 8
+     }
+    },
+    {
+     "entity_number": 191,
+     "id": 21,
+     "source": {
+      "type": "belt",
+      "id": 2,
+      "near_lane": 2,
+      "pickup_length": 1,
+      "pickup_layout": "side-straight"
+     },
+     "sink": {
+      "type": "machine",
+      "id": 9
+     }
+    }
+   ],
+   "belts": [
+    {
+     "id": 1,
+     "type": "express-transport-belt",
+     "lanes": [
+      "dead_end",
+      "dead_end"
+     ],
+     "flow_direction": 4,
+     "sharing": [
+      null,
+      null
+     ]
+    },
+    {
+     "id": 2,
+     "type": "turbo-transport-belt",
+     "lanes": [
+      "dead_end",
+      "dead_end"
+     ],
+     "flow_direction": 8,
+     "sharing": [
+      null,
+      null
+     ]
+    },
+    {
+     "id": 3,
+     "type": "turbo-transport-belt",
+     "lanes": [
+      null
+     ],
+     "sharing": [
+      null
+     ]
+    },
+    {
+     "id": 4,
+     "type": "turbo-transport-belt",
+     "lanes": [
+      null,
+      null
+     ],
+     "sharing": [
+      null,
+      null
+     ]
+    },
+    {
+     "id": 5,
+     "type": "turbo-transport-belt",
+     "lanes": [
+      "dead_end",
+      "dead_end"
+     ],
+     "flow_direction": 8,
+     "sharing": [
+      null,
+      null
+     ]
+    }
+   ]
+  }
+ ],
+ "copies": [
+  {
+   "name": "grenade-240 full build",
+   "blueprint": "intermediates/grenade/grenade-240-fills-belt-exactly-full-build.blueprint",
+   "config": "intermediates/grenade/grenade-240-fills-belt-exactly.json",
+   "frame": {
+    "x": 0.0,
+    "y": 0.0
+   },
+   "copies": 7,
+   "copy_offset": {
+    "x": 12,
+    "y": 0
+   },
+   "inserters": [
+    {
+     "entity_number": 63,
+     "id": 1,
+     "source": {
+      "type": "machine",
+      "id": 1
+     },
+     "sink": {
+      "type": "belt",
+      "id": 1,
+      "belt_direction": 12,
+      "drop": {
+       "lane": 2,
+       "position": 3
+      }
+     }
+    },
+    {
+     "entity_number": 79,
+     "id": 2,
+     "source": {
+      "type": "machine",
+      "id": 2
+     },
+     "sink": {
+      "type": "belt",
+      "id": 1,
+      "belt_direction": 12,
+      "drop": {
+       "lane": 2,
+       "position": 0
+      }
+     }
+    },
+    {
+     "entity_number": 74,
+     "id": 3,
+     "source": {
+      "type": "machine",
+      "id": 3
+     },
+     "sink": {
+      "type": "machine",
+      "id": 2
+     }
+    },
+    {
+     "entity_number": 69,
+     "id": 4,
+     "source": {
+      "type": "machine",
+      "id": 3
+     },
+     "sink": {
+      "type": "machine",
+      "id": 1
+     }
+    },
+    {
+     "entity_number": 75,
+     "id": 5,
+     "source": {
+      "type": "machine",
+      "id": 3
+     },
+     "sink": {
+      "type": "machine",
+      "id": 5
+     }
+    },
+    {
+     "entity_number": 70,
+     "id": 6,
+     "source": {
+      "type": "machine",
+      "id": 3
+     },
+     "sink": {
+      "type": "machine",
+      "id": 4
+     }
+    },
+    {
+     "entity_number": 66,
+     "id": 7,
+     "source": {
+      "type": "machine",
+      "id": 4
+     },
+     "sink": {
+      "type": "belt",
+      "id": 1,
+      "belt_direction": 12,
+      "drop": {
+       "lane": 1,
+       "position": 3
+      }
+     }
+    },
+    {
+     "entity_number": 84,
+     "id": 8,
+     "source": {
+      "type": "machine",
+      "id": 5
+     },
+     "sink": {
+      "type": "belt",
+      "id": 1,
+      "belt_direction": 12,
+      "drop": {
+       "lane": 1,
+       "position": 0
+      }
+     }
+    }
+   ],
+   "belts": [
+    {
+     "id": 1,
+     "flow_direction": null,
+     "sharing": [
+      null,
+      null
+     ]
+    }
+   ]
+  },
+  {
+   "name": "military-240",
+   "blueprint": "science/military/military-240.scaffold",
+   "config": "science/military/military-240.json",
+   "frame": {
+    "x": -726.0,
+    "y": 17.0
+   },
+   "copies": 5,
+   "copy_offset": {
+    "x": 9,
+    "y": 0
+   },
+   "inserters": [
+    {
+     "entity_number": 102,
+     "id": 1,
+     "source": {
+      "type": "machine",
+      "id": 1
+     },
+     "sink": {
+      "type": "belt",
+      "id": 1
+     }
+    },
+    {
+     "entity_number": 113,
+     "id": 2,
+     "source": {
+      "type": "machine",
+      "id": 2
+     },
+     "sink": {
+      "type": "belt",
+      "id": 2
+     }
+    },
+    {
+     "entity_number": 115,
+     "id": 3,
+     "source": {
+      "type": "machine",
+      "id": 3
+     },
+     "sink": {
+      "type": "machine",
+      "id": 1
+     }
+    },
+    {
+     "entity_number": 118,
+     "id": 4,
+     "source": {
+      "type": "machine",
+      "id": 4
+     },
+     "sink": {
+      "type": "machine",
+      "id": 2
+     }
+    },
+    {
+     "entity_number": 126,
+     "id": 5,
+     "source": {
+      "type": "belt",
+      "id": 3,
+      "near_lane": 1
+     },
+     "sink": {
+      "type": "machine",
+      "id": 1
+     }
+    },
+    {
+     "entity_number": 132,
+     "id": 6,
+     "source": {
+      "type": "belt",
+      "id": 4,
+      "near_lane": 2
+     },
+     "sink": {
+      "type": "machine",
+      "id": 2
+     }
+    },
+    {
+     "entity_number": 92,
+     "id": 7,
+     "source": {
+      "type": "belt",
+      "id": 5,
+      "near_lane": 1
+     },
+     "sink": {
+      "type": "machine",
+      "id": 3
+     }
+    },
+    {
+     "entity_number": 97,
+     "id": 8,
+     "source": {
+      "type": "belt",
+      "id": 6,
+      "near_lane": 2
+     },
+     "sink": {
+      "type": "machine",
+      "id": 4
+     }
+    },
+    {
+     "entity_number": 116,
+     "id": 9,
+     "source": {
+      "type": "machine",
+      "id": 5
+     },
+     "sink": {
+      "type": "machine",
+      "id": 3
+     }
+    },
+    {
+     "entity_number": 117,
+     "id": 10,
+     "source": {
+      "type": "machine",
+      "id": 5
+     },
+     "sink": {
+      "type": "machine",
+      "id": 4
+     }
+    }
+   ],
+   "belts": [
+    {
+     "id": 1,
+     "flow_direction": null,
+     "sharing": [
+      null
+     ]
+    },
+    {
+     "id": 2,
+     "flow_direction": null,
+     "sharing": [
+      null
+     ]
+    },
+    {
+     "id": 3,
+     "flow_direction": 4,
+     "sharing": [
+      "shared",
+      "shared"
+     ]
+    },
+    {
+     "id": 4,
+     "flow_direction": 4,
+     "sharing": [
+      "shared",
+      "shared"
+     ]
+    },
+    {
+     "id": 5,
+     "flow_direction": 4,
+     "sharing": [
+      "per_copy",
+      "per_copy"
+     ]
+    },
+    {
+     "id": 6,
+     "flow_direction": 4,
+     "sharing": [
+      "per_copy",
+      "per_copy"
+     ]
+    }
+   ]
+  }
+ ]
+}

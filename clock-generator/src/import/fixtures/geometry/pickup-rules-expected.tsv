@@ -1,0 +1,2197 @@
+cell	row	layout	facing	mirrored	inserter	field	expected	read	check
+B001	pickups-static	side-straight	0	False	7	pickup_target	5	game	agree
+B001	pickups-static	side-straight	0	False	7	piece_shape	straight	game	agree
+B001	pickups-static	side-straight	0	False	7	line_length_1	1	game	agree
+B001	pickups-static	side-straight	0	False	7	line_length_2	1	game	agree
+B001	pickups-static	side-straight	0	False	7	near_lane	1	sidecar	agree
+B001	pickups-static	side-straight	0	False	7	pickup_length	1	sidecar	agree
+B001	pickups-static	side-straight	0	False	7	pickup_layout	side-straight	sidecar	agree
+B001	pickups-static	side-straight	0	False	7	pickup_problem	nil	sidecar	agree
+B002	pickups-static	side-straight	0	True	12	pickup_target	10	game	agree
+B002	pickups-static	side-straight	0	True	12	piece_shape	straight	game	agree
+B002	pickups-static	side-straight	0	True	12	line_length_1	1	game	agree
+B002	pickups-static	side-straight	0	True	12	line_length_2	1	game	agree
+B002	pickups-static	side-straight	0	True	12	near_lane	1	sidecar	agree
+B002	pickups-static	side-straight	0	True	12	pickup_length	1	sidecar	agree
+B002	pickups-static	side-straight	0	True	12	pickup_layout	side-straight	sidecar	agree
+B002	pickups-static	side-straight	0	True	12	pickup_problem	nil	sidecar	agree
+B003	pickups-static	side-straight	4	False	17	pickup_target	15	game	agree
+B003	pickups-static	side-straight	4	False	17	piece_shape	straight	game	agree
+B003	pickups-static	side-straight	4	False	17	line_length_1	1	game	agree
+B003	pickups-static	side-straight	4	False	17	line_length_2	1	game	agree
+B003	pickups-static	side-straight	4	False	17	near_lane	1	sidecar	agree
+B003	pickups-static	side-straight	4	False	17	pickup_length	1	sidecar	agree
+B003	pickups-static	side-straight	4	False	17	pickup_layout	side-straight	sidecar	agree
+B003	pickups-static	side-straight	4	False	17	pickup_problem	nil	sidecar	agree
+B004	pickups-static	side-straight	4	True	22	pickup_target	20	game	agree
+B004	pickups-static	side-straight	4	True	22	piece_shape	straight	game	agree
+B004	pickups-static	side-straight	4	True	22	line_length_1	1	game	agree
+B004	pickups-static	side-straight	4	True	22	line_length_2	1	game	agree
+B004	pickups-static	side-straight	4	True	22	near_lane	1	sidecar	agree
+B004	pickups-static	side-straight	4	True	22	pickup_length	1	sidecar	agree
+B004	pickups-static	side-straight	4	True	22	pickup_layout	side-straight	sidecar	agree
+B004	pickups-static	side-straight	4	True	22	pickup_problem	nil	sidecar	agree
+B005	pickups-static	side-straight	8	False	27	pickup_target	25	game	agree
+B005	pickups-static	side-straight	8	False	27	piece_shape	straight	game	agree
+B005	pickups-static	side-straight	8	False	27	line_length_1	1	game	agree
+B005	pickups-static	side-straight	8	False	27	line_length_2	1	game	agree
+B005	pickups-static	side-straight	8	False	27	near_lane	1	sidecar	agree
+B005	pickups-static	side-straight	8	False	27	pickup_length	1	sidecar	agree
+B005	pickups-static	side-straight	8	False	27	pickup_layout	side-straight	sidecar	agree
+B005	pickups-static	side-straight	8	False	27	pickup_problem	nil	sidecar	agree
+B006	pickups-static	side-straight	8	True	32	pickup_target	30	game	agree
+B006	pickups-static	side-straight	8	True	32	piece_shape	straight	game	agree
+B006	pickups-static	side-straight	8	True	32	line_length_1	1	game	agree
+B006	pickups-static	side-straight	8	True	32	line_length_2	1	game	agree
+B006	pickups-static	side-straight	8	True	32	near_lane	1	sidecar	agree
+B006	pickups-static	side-straight	8	True	32	pickup_length	1	sidecar	agree
+B006	pickups-static	side-straight	8	True	32	pickup_layout	side-straight	sidecar	agree
+B006	pickups-static	side-straight	8	True	32	pickup_problem	nil	sidecar	agree
+B007	pickups-static	side-straight	12	False	37	pickup_target	35	game	agree
+B007	pickups-static	side-straight	12	False	37	piece_shape	straight	game	agree
+B007	pickups-static	side-straight	12	False	37	line_length_1	1	game	agree
+B007	pickups-static	side-straight	12	False	37	line_length_2	1	game	agree
+B007	pickups-static	side-straight	12	False	37	near_lane	1	sidecar	agree
+B007	pickups-static	side-straight	12	False	37	pickup_length	1	sidecar	agree
+B007	pickups-static	side-straight	12	False	37	pickup_layout	side-straight	sidecar	agree
+B007	pickups-static	side-straight	12	False	37	pickup_problem	nil	sidecar	agree
+B008	pickups-static	side-straight	12	True	42	pickup_target	40	game	agree
+B008	pickups-static	side-straight	12	True	42	piece_shape	straight	game	agree
+B008	pickups-static	side-straight	12	True	42	line_length_1	1	game	agree
+B008	pickups-static	side-straight	12	True	42	line_length_2	1	game	agree
+B008	pickups-static	side-straight	12	True	42	near_lane	1	sidecar	agree
+B008	pickups-static	side-straight	12	True	42	pickup_length	1	sidecar	agree
+B008	pickups-static	side-straight	12	True	42	pickup_layout	side-straight	sidecar	agree
+B008	pickups-static	side-straight	12	True	42	pickup_problem	nil	sidecar	agree
+B009	pickups-static	side-straight	0	False	47	pickup_target	45	game	agree
+B009	pickups-static	side-straight	0	False	47	piece_shape	straight	game	agree
+B009	pickups-static	side-straight	0	False	47	line_length_1	1	game	agree
+B009	pickups-static	side-straight	0	False	47	line_length_2	1	game	agree
+B009	pickups-static	side-straight	0	False	47	near_lane	2	sidecar	agree
+B009	pickups-static	side-straight	0	False	47	pickup_length	1	sidecar	agree
+B009	pickups-static	side-straight	0	False	47	pickup_layout	side-straight	sidecar	agree
+B009	pickups-static	side-straight	0	False	47	pickup_problem	nil	sidecar	agree
+B010	pickups-static	side-straight	0	True	52	pickup_target	50	game	agree
+B010	pickups-static	side-straight	0	True	52	piece_shape	straight	game	agree
+B010	pickups-static	side-straight	0	True	52	line_length_1	1	game	agree
+B010	pickups-static	side-straight	0	True	52	line_length_2	1	game	agree
+B010	pickups-static	side-straight	0	True	52	near_lane	2	sidecar	agree
+B010	pickups-static	side-straight	0	True	52	pickup_length	1	sidecar	agree
+B010	pickups-static	side-straight	0	True	52	pickup_layout	side-straight	sidecar	agree
+B010	pickups-static	side-straight	0	True	52	pickup_problem	nil	sidecar	agree
+B011	pickups-static	side-straight	4	False	57	pickup_target	55	game	agree
+B011	pickups-static	side-straight	4	False	57	piece_shape	straight	game	agree
+B011	pickups-static	side-straight	4	False	57	line_length_1	1	game	agree
+B011	pickups-static	side-straight	4	False	57	line_length_2	1	game	agree
+B011	pickups-static	side-straight	4	False	57	near_lane	2	sidecar	agree
+B011	pickups-static	side-straight	4	False	57	pickup_length	1	sidecar	agree
+B011	pickups-static	side-straight	4	False	57	pickup_layout	side-straight	sidecar	agree
+B011	pickups-static	side-straight	4	False	57	pickup_problem	nil	sidecar	agree
+B012	pickups-static	side-straight	4	True	62	pickup_target	60	game	agree
+B012	pickups-static	side-straight	4	True	62	piece_shape	straight	game	agree
+B012	pickups-static	side-straight	4	True	62	line_length_1	1	game	agree
+B012	pickups-static	side-straight	4	True	62	line_length_2	1	game	agree
+B012	pickups-static	side-straight	4	True	62	near_lane	2	sidecar	agree
+B012	pickups-static	side-straight	4	True	62	pickup_length	1	sidecar	agree
+B012	pickups-static	side-straight	4	True	62	pickup_layout	side-straight	sidecar	agree
+B012	pickups-static	side-straight	4	True	62	pickup_problem	nil	sidecar	agree
+B013	pickups-static	side-straight	8	False	67	pickup_target	65	game	agree
+B013	pickups-static	side-straight	8	False	67	piece_shape	straight	game	agree
+B013	pickups-static	side-straight	8	False	67	line_length_1	1	game	agree
+B013	pickups-static	side-straight	8	False	67	line_length_2	1	game	agree
+B013	pickups-static	side-straight	8	False	67	near_lane	2	sidecar	agree
+B013	pickups-static	side-straight	8	False	67	pickup_length	1	sidecar	agree
+B013	pickups-static	side-straight	8	False	67	pickup_layout	side-straight	sidecar	agree
+B013	pickups-static	side-straight	8	False	67	pickup_problem	nil	sidecar	agree
+B014	pickups-static	side-straight	8	True	72	pickup_target	70	game	agree
+B014	pickups-static	side-straight	8	True	72	piece_shape	straight	game	agree
+B014	pickups-static	side-straight	8	True	72	line_length_1	1	game	agree
+B014	pickups-static	side-straight	8	True	72	line_length_2	1	game	agree
+B014	pickups-static	side-straight	8	True	72	near_lane	2	sidecar	agree
+B014	pickups-static	side-straight	8	True	72	pickup_length	1	sidecar	agree
+B014	pickups-static	side-straight	8	True	72	pickup_layout	side-straight	sidecar	agree
+B014	pickups-static	side-straight	8	True	72	pickup_problem	nil	sidecar	agree
+B015	pickups-static	side-straight	12	False	77	pickup_target	75	game	agree
+B015	pickups-static	side-straight	12	False	77	piece_shape	straight	game	agree
+B015	pickups-static	side-straight	12	False	77	line_length_1	1	game	agree
+B015	pickups-static	side-straight	12	False	77	line_length_2	1	game	agree
+B015	pickups-static	side-straight	12	False	77	near_lane	2	sidecar	agree
+B015	pickups-static	side-straight	12	False	77	pickup_length	1	sidecar	agree
+B015	pickups-static	side-straight	12	False	77	pickup_layout	side-straight	sidecar	agree
+B015	pickups-static	side-straight	12	False	77	pickup_problem	nil	sidecar	agree
+B016	pickups-static	side-straight	12	True	82	pickup_target	80	game	agree
+B016	pickups-static	side-straight	12	True	82	piece_shape	straight	game	agree
+B016	pickups-static	side-straight	12	True	82	line_length_1	1	game	agree
+B016	pickups-static	side-straight	12	True	82	line_length_2	1	game	agree
+B016	pickups-static	side-straight	12	True	82	near_lane	2	sidecar	agree
+B016	pickups-static	side-straight	12	True	82	pickup_length	1	sidecar	agree
+B016	pickups-static	side-straight	12	True	82	pickup_layout	side-straight	sidecar	agree
+B016	pickups-static	side-straight	12	True	82	pickup_problem	nil	sidecar	agree
+B017	pickups-static	side-entrance	0	False	88	pickup_target	85	game	agree
+B017	pickups-static	side-entrance	0	False	88	underground_pair	86	game	agree
+B017	pickups-static	side-entrance	0	False	88	line_length_1	0.5	game	agree
+B017	pickups-static	side-entrance	0	False	88	line_length_2	0.5	game	agree
+B017	pickups-static	side-entrance	0	False	88	line_length_3	3	game	no reference
+B017	pickups-static	side-entrance	0	False	88	line_length_4	3	game	no reference
+B017	pickups-static	side-entrance	0	False	88	near_lane	1	sidecar	agree
+B017	pickups-static	side-entrance	0	False	88	pickup_length	0.5	sidecar	agree
+B017	pickups-static	side-entrance	0	False	88	pickup_layout	side-entrance	sidecar	agree
+B017	pickups-static	side-entrance	0	False	88	pickup_problem	nil	sidecar	agree
+B018	pickups-static	side-entrance	0	True	94	pickup_target	91	game	agree
+B018	pickups-static	side-entrance	0	True	94	underground_pair	92	game	agree
+B018	pickups-static	side-entrance	0	True	94	line_length_1	0.5	game	agree
+B018	pickups-static	side-entrance	0	True	94	line_length_2	0.5	game	agree
+B018	pickups-static	side-entrance	0	True	94	line_length_3	3	game	no reference
+B018	pickups-static	side-entrance	0	True	94	line_length_4	3	game	no reference
+B018	pickups-static	side-entrance	0	True	94	near_lane	1	sidecar	agree
+B018	pickups-static	side-entrance	0	True	94	pickup_length	0.5	sidecar	agree
+B018	pickups-static	side-entrance	0	True	94	pickup_layout	side-entrance	sidecar	agree
+B018	pickups-static	side-entrance	0	True	94	pickup_problem	nil	sidecar	agree
+B019	pickups-static	side-entrance	4	False	100	pickup_target	97	game	agree
+B019	pickups-static	side-entrance	4	False	100	underground_pair	98	game	agree
+B019	pickups-static	side-entrance	4	False	100	line_length_1	0.5	game	agree
+B019	pickups-static	side-entrance	4	False	100	line_length_2	0.5	game	agree
+B019	pickups-static	side-entrance	4	False	100	line_length_3	3	game	no reference
+B019	pickups-static	side-entrance	4	False	100	line_length_4	3	game	no reference
+B019	pickups-static	side-entrance	4	False	100	near_lane	1	sidecar	agree
+B019	pickups-static	side-entrance	4	False	100	pickup_length	0.5	sidecar	agree
+B019	pickups-static	side-entrance	4	False	100	pickup_layout	side-entrance	sidecar	agree
+B019	pickups-static	side-entrance	4	False	100	pickup_problem	nil	sidecar	agree
+B020	pickups-static	side-entrance	4	True	106	pickup_target	103	game	agree
+B020	pickups-static	side-entrance	4	True	106	underground_pair	104	game	agree
+B020	pickups-static	side-entrance	4	True	106	line_length_1	0.5	game	agree
+B020	pickups-static	side-entrance	4	True	106	line_length_2	0.5	game	agree
+B020	pickups-static	side-entrance	4	True	106	line_length_3	3	game	no reference
+B020	pickups-static	side-entrance	4	True	106	line_length_4	3	game	no reference
+B020	pickups-static	side-entrance	4	True	106	near_lane	1	sidecar	agree
+B020	pickups-static	side-entrance	4	True	106	pickup_length	0.5	sidecar	agree
+B020	pickups-static	side-entrance	4	True	106	pickup_layout	side-entrance	sidecar	agree
+B020	pickups-static	side-entrance	4	True	106	pickup_problem	nil	sidecar	agree
+B021	pickups-static	side-entrance	8	False	112	pickup_target	109	game	agree
+B021	pickups-static	side-entrance	8	False	112	underground_pair	110	game	agree
+B021	pickups-static	side-entrance	8	False	112	line_length_1	0.5	game	agree
+B021	pickups-static	side-entrance	8	False	112	line_length_2	0.5	game	agree
+B021	pickups-static	side-entrance	8	False	112	line_length_3	3	game	no reference
+B021	pickups-static	side-entrance	8	False	112	line_length_4	3	game	no reference
+B021	pickups-static	side-entrance	8	False	112	near_lane	1	sidecar	agree
+B021	pickups-static	side-entrance	8	False	112	pickup_length	0.5	sidecar	agree
+B021	pickups-static	side-entrance	8	False	112	pickup_layout	side-entrance	sidecar	agree
+B021	pickups-static	side-entrance	8	False	112	pickup_problem	nil	sidecar	agree
+B022	pickups-static	side-entrance	8	True	118	pickup_target	115	game	agree
+B022	pickups-static	side-entrance	8	True	118	underground_pair	116	game	agree
+B022	pickups-static	side-entrance	8	True	118	line_length_1	0.5	game	agree
+B022	pickups-static	side-entrance	8	True	118	line_length_2	0.5	game	agree
+B022	pickups-static	side-entrance	8	True	118	line_length_3	3	game	no reference
+B022	pickups-static	side-entrance	8	True	118	line_length_4	3	game	no reference
+B022	pickups-static	side-entrance	8	True	118	near_lane	1	sidecar	agree
+B022	pickups-static	side-entrance	8	True	118	pickup_length	0.5	sidecar	agree
+B022	pickups-static	side-entrance	8	True	118	pickup_layout	side-entrance	sidecar	agree
+B022	pickups-static	side-entrance	8	True	118	pickup_problem	nil	sidecar	agree
+B023	pickups-static	side-entrance	12	False	124	pickup_target	121	game	agree
+B023	pickups-static	side-entrance	12	False	124	underground_pair	122	game	agree
+B023	pickups-static	side-entrance	12	False	124	line_length_1	0.5	game	agree
+B023	pickups-static	side-entrance	12	False	124	line_length_2	0.5	game	agree
+B023	pickups-static	side-entrance	12	False	124	line_length_3	3	game	no reference
+B023	pickups-static	side-entrance	12	False	124	line_length_4	3	game	no reference
+B023	pickups-static	side-entrance	12	False	124	near_lane	1	sidecar	agree
+B023	pickups-static	side-entrance	12	False	124	pickup_length	0.5	sidecar	agree
+B023	pickups-static	side-entrance	12	False	124	pickup_layout	side-entrance	sidecar	agree
+B023	pickups-static	side-entrance	12	False	124	pickup_problem	nil	sidecar	agree
+B024	pickups-static	side-entrance	12	True	130	pickup_target	127	game	agree
+B024	pickups-static	side-entrance	12	True	130	underground_pair	128	game	agree
+B024	pickups-static	side-entrance	12	True	130	line_length_1	0.5	game	agree
+B024	pickups-static	side-entrance	12	True	130	line_length_2	0.5	game	agree
+B024	pickups-static	side-entrance	12	True	130	line_length_3	3	game	no reference
+B024	pickups-static	side-entrance	12	True	130	line_length_4	3	game	no reference
+B024	pickups-static	side-entrance	12	True	130	near_lane	1	sidecar	agree
+B024	pickups-static	side-entrance	12	True	130	pickup_length	0.5	sidecar	agree
+B024	pickups-static	side-entrance	12	True	130	pickup_layout	side-entrance	sidecar	agree
+B024	pickups-static	side-entrance	12	True	130	pickup_problem	nil	sidecar	agree
+B025	pickups-static	side-entrance	0	False	136	pickup_target	133	game	agree
+B025	pickups-static	side-entrance	0	False	136	underground_pair	134	game	agree
+B025	pickups-static	side-entrance	0	False	136	line_length_1	0.5	game	agree
+B025	pickups-static	side-entrance	0	False	136	line_length_2	0.5	game	agree
+B025	pickups-static	side-entrance	0	False	136	line_length_3	3	game	no reference
+B025	pickups-static	side-entrance	0	False	136	line_length_4	3	game	no reference
+B025	pickups-static	side-entrance	0	False	136	near_lane	2	sidecar	agree
+B025	pickups-static	side-entrance	0	False	136	pickup_length	0.5	sidecar	agree
+B025	pickups-static	side-entrance	0	False	136	pickup_layout	side-entrance	sidecar	agree
+B025	pickups-static	side-entrance	0	False	136	pickup_problem	nil	sidecar	agree
+B026	pickups-static	side-entrance	0	True	142	pickup_target	139	game	agree
+B026	pickups-static	side-entrance	0	True	142	underground_pair	140	game	agree
+B026	pickups-static	side-entrance	0	True	142	line_length_1	0.5	game	agree
+B026	pickups-static	side-entrance	0	True	142	line_length_2	0.5	game	agree
+B026	pickups-static	side-entrance	0	True	142	line_length_3	3	game	no reference
+B026	pickups-static	side-entrance	0	True	142	line_length_4	3	game	no reference
+B026	pickups-static	side-entrance	0	True	142	near_lane	2	sidecar	agree
+B026	pickups-static	side-entrance	0	True	142	pickup_length	0.5	sidecar	agree
+B026	pickups-static	side-entrance	0	True	142	pickup_layout	side-entrance	sidecar	agree
+B026	pickups-static	side-entrance	0	True	142	pickup_problem	nil	sidecar	agree
+B027	pickups-static	side-entrance	4	False	148	pickup_target	145	game	agree
+B027	pickups-static	side-entrance	4	False	148	underground_pair	146	game	agree
+B027	pickups-static	side-entrance	4	False	148	line_length_1	0.5	game	agree
+B027	pickups-static	side-entrance	4	False	148	line_length_2	0.5	game	agree
+B027	pickups-static	side-entrance	4	False	148	line_length_3	3	game	no reference
+B027	pickups-static	side-entrance	4	False	148	line_length_4	3	game	no reference
+B027	pickups-static	side-entrance	4	False	148	near_lane	2	sidecar	agree
+B027	pickups-static	side-entrance	4	False	148	pickup_length	0.5	sidecar	agree
+B027	pickups-static	side-entrance	4	False	148	pickup_layout	side-entrance	sidecar	agree
+B027	pickups-static	side-entrance	4	False	148	pickup_problem	nil	sidecar	agree
+B028	pickups-static	side-entrance	4	True	154	pickup_target	151	game	agree
+B028	pickups-static	side-entrance	4	True	154	underground_pair	152	game	agree
+B028	pickups-static	side-entrance	4	True	154	line_length_1	0.5	game	agree
+B028	pickups-static	side-entrance	4	True	154	line_length_2	0.5	game	agree
+B028	pickups-static	side-entrance	4	True	154	line_length_3	3	game	no reference
+B028	pickups-static	side-entrance	4	True	154	line_length_4	3	game	no reference
+B028	pickups-static	side-entrance	4	True	154	near_lane	2	sidecar	agree
+B028	pickups-static	side-entrance	4	True	154	pickup_length	0.5	sidecar	agree
+B028	pickups-static	side-entrance	4	True	154	pickup_layout	side-entrance	sidecar	agree
+B028	pickups-static	side-entrance	4	True	154	pickup_problem	nil	sidecar	agree
+B029	pickups-static	side-entrance	8	False	160	pickup_target	157	game	agree
+B029	pickups-static	side-entrance	8	False	160	underground_pair	158	game	agree
+B029	pickups-static	side-entrance	8	False	160	line_length_1	0.5	game	agree
+B029	pickups-static	side-entrance	8	False	160	line_length_2	0.5	game	agree
+B029	pickups-static	side-entrance	8	False	160	line_length_3	3	game	no reference
+B029	pickups-static	side-entrance	8	False	160	line_length_4	3	game	no reference
+B029	pickups-static	side-entrance	8	False	160	near_lane	2	sidecar	agree
+B029	pickups-static	side-entrance	8	False	160	pickup_length	0.5	sidecar	agree
+B029	pickups-static	side-entrance	8	False	160	pickup_layout	side-entrance	sidecar	agree
+B029	pickups-static	side-entrance	8	False	160	pickup_problem	nil	sidecar	agree
+B030	pickups-static	side-entrance	8	True	166	pickup_target	163	game	agree
+B030	pickups-static	side-entrance	8	True	166	underground_pair	164	game	agree
+B030	pickups-static	side-entrance	8	True	166	line_length_1	0.5	game	agree
+B030	pickups-static	side-entrance	8	True	166	line_length_2	0.5	game	agree
+B030	pickups-static	side-entrance	8	True	166	line_length_3	3	game	no reference
+B030	pickups-static	side-entrance	8	True	166	line_length_4	3	game	no reference
+B030	pickups-static	side-entrance	8	True	166	near_lane	2	sidecar	agree
+B030	pickups-static	side-entrance	8	True	166	pickup_length	0.5	sidecar	agree
+B030	pickups-static	side-entrance	8	True	166	pickup_layout	side-entrance	sidecar	agree
+B030	pickups-static	side-entrance	8	True	166	pickup_problem	nil	sidecar	agree
+B031	pickups-static	side-entrance	12	False	172	pickup_target	169	game	agree
+B031	pickups-static	side-entrance	12	False	172	underground_pair	170	game	agree
+B031	pickups-static	side-entrance	12	False	172	line_length_1	0.5	game	agree
+B031	pickups-static	side-entrance	12	False	172	line_length_2	0.5	game	agree
+B031	pickups-static	side-entrance	12	False	172	line_length_3	3	game	no reference
+B031	pickups-static	side-entrance	12	False	172	line_length_4	3	game	no reference
+B031	pickups-static	side-entrance	12	False	172	near_lane	2	sidecar	agree
+B031	pickups-static	side-entrance	12	False	172	pickup_length	0.5	sidecar	agree
+B031	pickups-static	side-entrance	12	False	172	pickup_layout	side-entrance	sidecar	agree
+B031	pickups-static	side-entrance	12	False	172	pickup_problem	nil	sidecar	agree
+B032	pickups-static	side-entrance	12	True	178	pickup_target	175	game	agree
+B032	pickups-static	side-entrance	12	True	178	underground_pair	176	game	agree
+B032	pickups-static	side-entrance	12	True	178	line_length_1	0.5	game	agree
+B032	pickups-static	side-entrance	12	True	178	line_length_2	0.5	game	agree
+B032	pickups-static	side-entrance	12	True	178	line_length_3	3	game	no reference
+B032	pickups-static	side-entrance	12	True	178	line_length_4	3	game	no reference
+B032	pickups-static	side-entrance	12	True	178	near_lane	2	sidecar	agree
+B032	pickups-static	side-entrance	12	True	178	pickup_length	0.5	sidecar	agree
+B032	pickups-static	side-entrance	12	True	178	pickup_layout	side-entrance	sidecar	agree
+B032	pickups-static	side-entrance	12	True	178	pickup_problem	nil	sidecar	agree
+B033	pickups-static	side-exit	0	False	184	pickup_target	182	game	agree
+B033	pickups-static	side-exit	0	False	184	underground_pair	181	game	agree
+B033	pickups-static	side-exit	0	False	184	line_length_1	0.5	game	agree
+B033	pickups-static	side-exit	0	False	184	line_length_2	0.5	game	agree
+B033	pickups-static	side-exit	0	False	184	line_length_3	1	game	no reference
+B033	pickups-static	side-exit	0	False	184	line_length_4	1	game	no reference
+B033	pickups-static	side-exit	0	False	184	near_lane	1	sidecar	agree
+B033	pickups-static	side-exit	0	False	184	pickup_length	0.5	sidecar	agree
+B033	pickups-static	side-exit	0	False	184	pickup_layout	side-exit	sidecar	agree
+B033	pickups-static	side-exit	0	False	184	pickup_problem	nil	sidecar	agree
+B034	pickups-static	side-exit	0	True	190	pickup_target	188	game	agree
+B034	pickups-static	side-exit	0	True	190	underground_pair	187	game	agree
+B034	pickups-static	side-exit	0	True	190	line_length_1	0.5	game	agree
+B034	pickups-static	side-exit	0	True	190	line_length_2	0.5	game	agree
+B034	pickups-static	side-exit	0	True	190	line_length_3	1	game	no reference
+B034	pickups-static	side-exit	0	True	190	line_length_4	1	game	no reference
+B034	pickups-static	side-exit	0	True	190	near_lane	1	sidecar	agree
+B034	pickups-static	side-exit	0	True	190	pickup_length	0.5	sidecar	agree
+B034	pickups-static	side-exit	0	True	190	pickup_layout	side-exit	sidecar	agree
+B034	pickups-static	side-exit	0	True	190	pickup_problem	nil	sidecar	agree
+B035	pickups-static	side-exit	4	False	196	pickup_target	194	game	agree
+B035	pickups-static	side-exit	4	False	196	underground_pair	193	game	agree
+B035	pickups-static	side-exit	4	False	196	line_length_1	0.5	game	agree
+B035	pickups-static	side-exit	4	False	196	line_length_2	0.5	game	agree
+B035	pickups-static	side-exit	4	False	196	line_length_3	1	game	no reference
+B035	pickups-static	side-exit	4	False	196	line_length_4	1	game	no reference
+B035	pickups-static	side-exit	4	False	196	near_lane	1	sidecar	agree
+B035	pickups-static	side-exit	4	False	196	pickup_length	0.5	sidecar	agree
+B035	pickups-static	side-exit	4	False	196	pickup_layout	side-exit	sidecar	agree
+B035	pickups-static	side-exit	4	False	196	pickup_problem	nil	sidecar	agree
+B036	pickups-static	side-exit	4	True	202	pickup_target	200	game	agree
+B036	pickups-static	side-exit	4	True	202	underground_pair	199	game	agree
+B036	pickups-static	side-exit	4	True	202	line_length_1	0.5	game	agree
+B036	pickups-static	side-exit	4	True	202	line_length_2	0.5	game	agree
+B036	pickups-static	side-exit	4	True	202	line_length_3	1	game	no reference
+B036	pickups-static	side-exit	4	True	202	line_length_4	1	game	no reference
+B036	pickups-static	side-exit	4	True	202	near_lane	1	sidecar	agree
+B036	pickups-static	side-exit	4	True	202	pickup_length	0.5	sidecar	agree
+B036	pickups-static	side-exit	4	True	202	pickup_layout	side-exit	sidecar	agree
+B036	pickups-static	side-exit	4	True	202	pickup_problem	nil	sidecar	agree
+B037	pickups-static	side-exit	8	False	208	pickup_target	206	game	agree
+B037	pickups-static	side-exit	8	False	208	underground_pair	205	game	agree
+B037	pickups-static	side-exit	8	False	208	line_length_1	0.5	game	agree
+B037	pickups-static	side-exit	8	False	208	line_length_2	0.5	game	agree
+B037	pickups-static	side-exit	8	False	208	line_length_3	1	game	no reference
+B037	pickups-static	side-exit	8	False	208	line_length_4	1	game	no reference
+B037	pickups-static	side-exit	8	False	208	near_lane	1	sidecar	agree
+B037	pickups-static	side-exit	8	False	208	pickup_length	0.5	sidecar	agree
+B037	pickups-static	side-exit	8	False	208	pickup_layout	side-exit	sidecar	agree
+B037	pickups-static	side-exit	8	False	208	pickup_problem	nil	sidecar	agree
+B038	pickups-static	side-exit	8	True	214	pickup_target	212	game	agree
+B038	pickups-static	side-exit	8	True	214	underground_pair	211	game	agree
+B038	pickups-static	side-exit	8	True	214	line_length_1	0.5	game	agree
+B038	pickups-static	side-exit	8	True	214	line_length_2	0.5	game	agree
+B038	pickups-static	side-exit	8	True	214	line_length_3	1	game	no reference
+B038	pickups-static	side-exit	8	True	214	line_length_4	1	game	no reference
+B038	pickups-static	side-exit	8	True	214	near_lane	1	sidecar	agree
+B038	pickups-static	side-exit	8	True	214	pickup_length	0.5	sidecar	agree
+B038	pickups-static	side-exit	8	True	214	pickup_layout	side-exit	sidecar	agree
+B038	pickups-static	side-exit	8	True	214	pickup_problem	nil	sidecar	agree
+B039	pickups-static	side-exit	12	False	220	pickup_target	218	game	agree
+B039	pickups-static	side-exit	12	False	220	underground_pair	217	game	agree
+B039	pickups-static	side-exit	12	False	220	line_length_1	0.5	game	agree
+B039	pickups-static	side-exit	12	False	220	line_length_2	0.5	game	agree
+B039	pickups-static	side-exit	12	False	220	line_length_3	1	game	no reference
+B039	pickups-static	side-exit	12	False	220	line_length_4	1	game	no reference
+B039	pickups-static	side-exit	12	False	220	near_lane	1	sidecar	agree
+B039	pickups-static	side-exit	12	False	220	pickup_length	0.5	sidecar	agree
+B039	pickups-static	side-exit	12	False	220	pickup_layout	side-exit	sidecar	agree
+B039	pickups-static	side-exit	12	False	220	pickup_problem	nil	sidecar	agree
+B040	pickups-static	side-exit	12	True	226	pickup_target	224	game	agree
+B040	pickups-static	side-exit	12	True	226	underground_pair	223	game	agree
+B040	pickups-static	side-exit	12	True	226	line_length_1	0.5	game	agree
+B040	pickups-static	side-exit	12	True	226	line_length_2	0.5	game	agree
+B040	pickups-static	side-exit	12	True	226	line_length_3	1	game	no reference
+B040	pickups-static	side-exit	12	True	226	line_length_4	1	game	no reference
+B040	pickups-static	side-exit	12	True	226	near_lane	1	sidecar	agree
+B040	pickups-static	side-exit	12	True	226	pickup_length	0.5	sidecar	agree
+B040	pickups-static	side-exit	12	True	226	pickup_layout	side-exit	sidecar	agree
+B040	pickups-static	side-exit	12	True	226	pickup_problem	nil	sidecar	agree
+B041	pickups-static	side-exit	0	False	232	pickup_target	230	game	agree
+B041	pickups-static	side-exit	0	False	232	underground_pair	229	game	agree
+B041	pickups-static	side-exit	0	False	232	line_length_1	0.5	game	agree
+B041	pickups-static	side-exit	0	False	232	line_length_2	0.5	game	agree
+B041	pickups-static	side-exit	0	False	232	line_length_3	1	game	no reference
+B041	pickups-static	side-exit	0	False	232	line_length_4	1	game	no reference
+B041	pickups-static	side-exit	0	False	232	near_lane	2	sidecar	agree
+B041	pickups-static	side-exit	0	False	232	pickup_length	0.5	sidecar	agree
+B041	pickups-static	side-exit	0	False	232	pickup_layout	side-exit	sidecar	agree
+B041	pickups-static	side-exit	0	False	232	pickup_problem	nil	sidecar	agree
+B042	pickups-static	side-exit	0	True	238	pickup_target	236	game	agree
+B042	pickups-static	side-exit	0	True	238	underground_pair	235	game	agree
+B042	pickups-static	side-exit	0	True	238	line_length_1	0.5	game	agree
+B042	pickups-static	side-exit	0	True	238	line_length_2	0.5	game	agree
+B042	pickups-static	side-exit	0	True	238	line_length_3	1	game	no reference
+B042	pickups-static	side-exit	0	True	238	line_length_4	1	game	no reference
+B042	pickups-static	side-exit	0	True	238	near_lane	2	sidecar	agree
+B042	pickups-static	side-exit	0	True	238	pickup_length	0.5	sidecar	agree
+B042	pickups-static	side-exit	0	True	238	pickup_layout	side-exit	sidecar	agree
+B042	pickups-static	side-exit	0	True	238	pickup_problem	nil	sidecar	agree
+B043	pickups-static	side-exit	4	False	244	pickup_target	242	game	agree
+B043	pickups-static	side-exit	4	False	244	underground_pair	241	game	agree
+B043	pickups-static	side-exit	4	False	244	line_length_1	0.5	game	agree
+B043	pickups-static	side-exit	4	False	244	line_length_2	0.5	game	agree
+B043	pickups-static	side-exit	4	False	244	line_length_3	1	game	no reference
+B043	pickups-static	side-exit	4	False	244	line_length_4	1	game	no reference
+B043	pickups-static	side-exit	4	False	244	near_lane	2	sidecar	agree
+B043	pickups-static	side-exit	4	False	244	pickup_length	0.5	sidecar	agree
+B043	pickups-static	side-exit	4	False	244	pickup_layout	side-exit	sidecar	agree
+B043	pickups-static	side-exit	4	False	244	pickup_problem	nil	sidecar	agree
+B044	pickups-static	side-exit	4	True	250	pickup_target	248	game	agree
+B044	pickups-static	side-exit	4	True	250	underground_pair	247	game	agree
+B044	pickups-static	side-exit	4	True	250	line_length_1	0.5	game	agree
+B044	pickups-static	side-exit	4	True	250	line_length_2	0.5	game	agree
+B044	pickups-static	side-exit	4	True	250	line_length_3	1	game	no reference
+B044	pickups-static	side-exit	4	True	250	line_length_4	1	game	no reference
+B044	pickups-static	side-exit	4	True	250	near_lane	2	sidecar	agree
+B044	pickups-static	side-exit	4	True	250	pickup_length	0.5	sidecar	agree
+B044	pickups-static	side-exit	4	True	250	pickup_layout	side-exit	sidecar	agree
+B044	pickups-static	side-exit	4	True	250	pickup_problem	nil	sidecar	agree
+B045	pickups-static	side-exit	8	False	256	pickup_target	254	game	agree
+B045	pickups-static	side-exit	8	False	256	underground_pair	253	game	agree
+B045	pickups-static	side-exit	8	False	256	line_length_1	0.5	game	agree
+B045	pickups-static	side-exit	8	False	256	line_length_2	0.5	game	agree
+B045	pickups-static	side-exit	8	False	256	line_length_3	1	game	no reference
+B045	pickups-static	side-exit	8	False	256	line_length_4	1	game	no reference
+B045	pickups-static	side-exit	8	False	256	near_lane	2	sidecar	agree
+B045	pickups-static	side-exit	8	False	256	pickup_length	0.5	sidecar	agree
+B045	pickups-static	side-exit	8	False	256	pickup_layout	side-exit	sidecar	agree
+B045	pickups-static	side-exit	8	False	256	pickup_problem	nil	sidecar	agree
+B046	pickups-static	side-exit	8	True	262	pickup_target	260	game	agree
+B046	pickups-static	side-exit	8	True	262	underground_pair	259	game	agree
+B046	pickups-static	side-exit	8	True	262	line_length_1	0.5	game	agree
+B046	pickups-static	side-exit	8	True	262	line_length_2	0.5	game	agree
+B046	pickups-static	side-exit	8	True	262	line_length_3	1	game	no reference
+B046	pickups-static	side-exit	8	True	262	line_length_4	1	game	no reference
+B046	pickups-static	side-exit	8	True	262	near_lane	2	sidecar	agree
+B046	pickups-static	side-exit	8	True	262	pickup_length	0.5	sidecar	agree
+B046	pickups-static	side-exit	8	True	262	pickup_layout	side-exit	sidecar	agree
+B046	pickups-static	side-exit	8	True	262	pickup_problem	nil	sidecar	agree
+B047	pickups-static	side-exit	12	False	268	pickup_target	266	game	agree
+B047	pickups-static	side-exit	12	False	268	underground_pair	265	game	agree
+B047	pickups-static	side-exit	12	False	268	line_length_1	0.5	game	agree
+B047	pickups-static	side-exit	12	False	268	line_length_2	0.5	game	agree
+B047	pickups-static	side-exit	12	False	268	line_length_3	1	game	no reference
+B047	pickups-static	side-exit	12	False	268	line_length_4	1	game	no reference
+B047	pickups-static	side-exit	12	False	268	near_lane	2	sidecar	agree
+B047	pickups-static	side-exit	12	False	268	pickup_length	0.5	sidecar	agree
+B047	pickups-static	side-exit	12	False	268	pickup_layout	side-exit	sidecar	agree
+B047	pickups-static	side-exit	12	False	268	pickup_problem	nil	sidecar	agree
+B048	pickups-static	side-exit	12	True	274	pickup_target	272	game	agree
+B048	pickups-static	side-exit	12	True	274	underground_pair	271	game	agree
+B048	pickups-static	side-exit	12	True	274	line_length_1	0.5	game	agree
+B048	pickups-static	side-exit	12	True	274	line_length_2	0.5	game	agree
+B048	pickups-static	side-exit	12	True	274	line_length_3	1	game	no reference
+B048	pickups-static	side-exit	12	True	274	line_length_4	1	game	no reference
+B048	pickups-static	side-exit	12	True	274	near_lane	2	sidecar	agree
+B048	pickups-static	side-exit	12	True	274	pickup_length	0.5	sidecar	agree
+B048	pickups-static	side-exit	12	True	274	pickup_layout	side-exit	sidecar	agree
+B048	pickups-static	side-exit	12	True	274	pickup_problem	nil	sidecar	agree
+B049	pickups-static	front-entrance	0	False	280	pickup_target	277	game	agree
+B049	pickups-static	front-entrance	0	False	280	underground_pair	278	game	agree
+B049	pickups-static	front-entrance	0	False	280	line_length_1	0.5	game	agree
+B049	pickups-static	front-entrance	0	False	280	line_length_2	0.5	game	agree
+B049	pickups-static	front-entrance	0	False	280	line_length_3	4	game	no reference
+B049	pickups-static	front-entrance	0	False	280	line_length_4	4	game	no reference
+B049	pickups-static	front-entrance	0	False	280	near_lane	1	sidecar	agree
+B049	pickups-static	front-entrance	0	False	280	pickup_length	0.5	sidecar	agree
+B049	pickups-static	front-entrance	0	False	280	pickup_layout	front-entrance	sidecar	agree
+B049	pickups-static	front-entrance	0	False	280	pickup_problem	nil	sidecar	agree
+B050	pickups-static	front-entrance	0	True	286	pickup_target	283	game	agree
+B050	pickups-static	front-entrance	0	True	286	underground_pair	284	game	agree
+B050	pickups-static	front-entrance	0	True	286	line_length_1	0.5	game	agree
+B050	pickups-static	front-entrance	0	True	286	line_length_2	0.5	game	agree
+B050	pickups-static	front-entrance	0	True	286	line_length_3	4	game	no reference
+B050	pickups-static	front-entrance	0	True	286	line_length_4	4	game	no reference
+B050	pickups-static	front-entrance	0	True	286	near_lane	2	sidecar	agree
+B050	pickups-static	front-entrance	0	True	286	pickup_length	0.5	sidecar	agree
+B050	pickups-static	front-entrance	0	True	286	pickup_layout	front-entrance	sidecar	agree
+B050	pickups-static	front-entrance	0	True	286	pickup_problem	nil	sidecar	agree
+B051	pickups-static	front-entrance	4	False	292	pickup_target	289	game	agree
+B051	pickups-static	front-entrance	4	False	292	underground_pair	290	game	agree
+B051	pickups-static	front-entrance	4	False	292	line_length_1	0.5	game	agree
+B051	pickups-static	front-entrance	4	False	292	line_length_2	0.5	game	agree
+B051	pickups-static	front-entrance	4	False	292	line_length_3	4	game	no reference
+B051	pickups-static	front-entrance	4	False	292	line_length_4	4	game	no reference
+B051	pickups-static	front-entrance	4	False	292	near_lane	1	sidecar	agree
+B051	pickups-static	front-entrance	4	False	292	pickup_length	0.5	sidecar	agree
+B051	pickups-static	front-entrance	4	False	292	pickup_layout	front-entrance	sidecar	agree
+B051	pickups-static	front-entrance	4	False	292	pickup_problem	nil	sidecar	agree
+B052	pickups-static	front-entrance	4	True	298	pickup_target	295	game	agree
+B052	pickups-static	front-entrance	4	True	298	underground_pair	296	game	agree
+B052	pickups-static	front-entrance	4	True	298	line_length_1	0.5	game	agree
+B052	pickups-static	front-entrance	4	True	298	line_length_2	0.5	game	agree
+B052	pickups-static	front-entrance	4	True	298	line_length_3	4	game	no reference
+B052	pickups-static	front-entrance	4	True	298	line_length_4	4	game	no reference
+B052	pickups-static	front-entrance	4	True	298	near_lane	2	sidecar	agree
+B052	pickups-static	front-entrance	4	True	298	pickup_length	0.5	sidecar	agree
+B052	pickups-static	front-entrance	4	True	298	pickup_layout	front-entrance	sidecar	agree
+B052	pickups-static	front-entrance	4	True	298	pickup_problem	nil	sidecar	agree
+B053	pickups-static	front-entrance	8	False	304	pickup_target	301	game	agree
+B053	pickups-static	front-entrance	8	False	304	underground_pair	302	game	agree
+B053	pickups-static	front-entrance	8	False	304	line_length_1	0.5	game	agree
+B053	pickups-static	front-entrance	8	False	304	line_length_2	0.5	game	agree
+B053	pickups-static	front-entrance	8	False	304	line_length_3	4	game	no reference
+B053	pickups-static	front-entrance	8	False	304	line_length_4	4	game	no reference
+B053	pickups-static	front-entrance	8	False	304	near_lane	1	sidecar	agree
+B053	pickups-static	front-entrance	8	False	304	pickup_length	0.5	sidecar	agree
+B053	pickups-static	front-entrance	8	False	304	pickup_layout	front-entrance	sidecar	agree
+B053	pickups-static	front-entrance	8	False	304	pickup_problem	nil	sidecar	agree
+B054	pickups-static	front-entrance	8	True	310	pickup_target	307	game	agree
+B054	pickups-static	front-entrance	8	True	310	underground_pair	308	game	agree
+B054	pickups-static	front-entrance	8	True	310	line_length_1	0.5	game	agree
+B054	pickups-static	front-entrance	8	True	310	line_length_2	0.5	game	agree
+B054	pickups-static	front-entrance	8	True	310	line_length_3	4	game	no reference
+B054	pickups-static	front-entrance	8	True	310	line_length_4	4	game	no reference
+B054	pickups-static	front-entrance	8	True	310	near_lane	2	sidecar	agree
+B054	pickups-static	front-entrance	8	True	310	pickup_length	0.5	sidecar	agree
+B054	pickups-static	front-entrance	8	True	310	pickup_layout	front-entrance	sidecar	agree
+B054	pickups-static	front-entrance	8	True	310	pickup_problem	nil	sidecar	agree
+B055	pickups-static	front-entrance	12	False	316	pickup_target	313	game	agree
+B055	pickups-static	front-entrance	12	False	316	underground_pair	314	game	agree
+B055	pickups-static	front-entrance	12	False	316	line_length_1	0.5	game	agree
+B055	pickups-static	front-entrance	12	False	316	line_length_2	0.5	game	agree
+B055	pickups-static	front-entrance	12	False	316	line_length_3	4	game	no reference
+B055	pickups-static	front-entrance	12	False	316	line_length_4	4	game	no reference
+B055	pickups-static	front-entrance	12	False	316	near_lane	1	sidecar	agree
+B055	pickups-static	front-entrance	12	False	316	pickup_length	0.5	sidecar	agree
+B055	pickups-static	front-entrance	12	False	316	pickup_layout	front-entrance	sidecar	agree
+B055	pickups-static	front-entrance	12	False	316	pickup_problem	nil	sidecar	agree
+B056	pickups-static	front-entrance	12	True	322	pickup_target	319	game	agree
+B056	pickups-static	front-entrance	12	True	322	underground_pair	320	game	agree
+B056	pickups-static	front-entrance	12	True	322	line_length_1	0.5	game	agree
+B056	pickups-static	front-entrance	12	True	322	line_length_2	0.5	game	agree
+B056	pickups-static	front-entrance	12	True	322	line_length_3	4	game	no reference
+B056	pickups-static	front-entrance	12	True	322	line_length_4	4	game	no reference
+B056	pickups-static	front-entrance	12	True	322	near_lane	2	sidecar	agree
+B056	pickups-static	front-entrance	12	True	322	pickup_length	0.5	sidecar	agree
+B056	pickups-static	front-entrance	12	True	322	pickup_layout	front-entrance	sidecar	agree
+B056	pickups-static	front-entrance	12	True	322	pickup_problem	nil	sidecar	agree
+B057	pickups-static	front-exit	0	False	327	pickup_target	326	game	agree
+B057	pickups-static	front-exit	0	False	327	underground_pair	325	game	agree
+B057	pickups-static	front-exit	0	False	327	line_length_1	0.5	game	agree
+B057	pickups-static	front-exit	0	False	327	line_length_2	0.5	game	agree
+B057	pickups-static	front-exit	0	False	327	line_length_3	1	game	no reference
+B057	pickups-static	front-exit	0	False	327	line_length_4	1	game	no reference
+B057	pickups-static	front-exit	0	False	327	near_lane	1	sidecar	agree
+B057	pickups-static	front-exit	0	False	327	pickup_length	0.5	sidecar	agree
+B057	pickups-static	front-exit	0	False	327	pickup_layout	front-exit	sidecar	agree
+B057	pickups-static	front-exit	0	False	327	pickup_problem	nil	sidecar	agree
+B058	pickups-static	front-exit	0	True	332	pickup_target	331	game	agree
+B058	pickups-static	front-exit	0	True	332	underground_pair	330	game	agree
+B058	pickups-static	front-exit	0	True	332	line_length_1	0.5	game	agree
+B058	pickups-static	front-exit	0	True	332	line_length_2	0.5	game	agree
+B058	pickups-static	front-exit	0	True	332	line_length_3	1	game	no reference
+B058	pickups-static	front-exit	0	True	332	line_length_4	1	game	no reference
+B058	pickups-static	front-exit	0	True	332	near_lane	2	sidecar	agree
+B058	pickups-static	front-exit	0	True	332	pickup_length	0.5	sidecar	agree
+B058	pickups-static	front-exit	0	True	332	pickup_layout	front-exit	sidecar	agree
+B058	pickups-static	front-exit	0	True	332	pickup_problem	nil	sidecar	agree
+B059	pickups-static	front-exit	4	False	337	pickup_target	336	game	agree
+B059	pickups-static	front-exit	4	False	337	underground_pair	335	game	agree
+B059	pickups-static	front-exit	4	False	337	line_length_1	0.5	game	agree
+B059	pickups-static	front-exit	4	False	337	line_length_2	0.5	game	agree
+B059	pickups-static	front-exit	4	False	337	line_length_3	1	game	no reference
+B059	pickups-static	front-exit	4	False	337	line_length_4	1	game	no reference
+B059	pickups-static	front-exit	4	False	337	near_lane	1	sidecar	agree
+B059	pickups-static	front-exit	4	False	337	pickup_length	0.5	sidecar	agree
+B059	pickups-static	front-exit	4	False	337	pickup_layout	front-exit	sidecar	agree
+B059	pickups-static	front-exit	4	False	337	pickup_problem	nil	sidecar	agree
+B060	pickups-static	front-exit	4	True	342	pickup_target	341	game	agree
+B060	pickups-static	front-exit	4	True	342	underground_pair	340	game	agree
+B060	pickups-static	front-exit	4	True	342	line_length_1	0.5	game	agree
+B060	pickups-static	front-exit	4	True	342	line_length_2	0.5	game	agree
+B060	pickups-static	front-exit	4	True	342	line_length_3	1	game	no reference
+B060	pickups-static	front-exit	4	True	342	line_length_4	1	game	no reference
+B060	pickups-static	front-exit	4	True	342	near_lane	2	sidecar	agree
+B060	pickups-static	front-exit	4	True	342	pickup_length	0.5	sidecar	agree
+B060	pickups-static	front-exit	4	True	342	pickup_layout	front-exit	sidecar	agree
+B060	pickups-static	front-exit	4	True	342	pickup_problem	nil	sidecar	agree
+B061	pickups-static	front-exit	8	False	347	pickup_target	346	game	agree
+B061	pickups-static	front-exit	8	False	347	underground_pair	345	game	agree
+B061	pickups-static	front-exit	8	False	347	line_length_1	0.5	game	agree
+B061	pickups-static	front-exit	8	False	347	line_length_2	0.5	game	agree
+B061	pickups-static	front-exit	8	False	347	line_length_3	1	game	no reference
+B061	pickups-static	front-exit	8	False	347	line_length_4	1	game	no reference
+B061	pickups-static	front-exit	8	False	347	near_lane	1	sidecar	agree
+B061	pickups-static	front-exit	8	False	347	pickup_length	0.5	sidecar	agree
+B061	pickups-static	front-exit	8	False	347	pickup_layout	front-exit	sidecar	agree
+B061	pickups-static	front-exit	8	False	347	pickup_problem	nil	sidecar	agree
+B062	pickups-static	front-exit	8	True	352	pickup_target	351	game	agree
+B062	pickups-static	front-exit	8	True	352	underground_pair	350	game	agree
+B062	pickups-static	front-exit	8	True	352	line_length_1	0.5	game	agree
+B062	pickups-static	front-exit	8	True	352	line_length_2	0.5	game	agree
+B062	pickups-static	front-exit	8	True	352	line_length_3	1	game	no reference
+B062	pickups-static	front-exit	8	True	352	line_length_4	1	game	no reference
+B062	pickups-static	front-exit	8	True	352	near_lane	2	sidecar	agree
+B062	pickups-static	front-exit	8	True	352	pickup_length	0.5	sidecar	agree
+B062	pickups-static	front-exit	8	True	352	pickup_layout	front-exit	sidecar	agree
+B062	pickups-static	front-exit	8	True	352	pickup_problem	nil	sidecar	agree
+B063	pickups-static	front-exit	12	False	357	pickup_target	356	game	agree
+B063	pickups-static	front-exit	12	False	357	underground_pair	355	game	agree
+B063	pickups-static	front-exit	12	False	357	line_length_1	0.5	game	agree
+B063	pickups-static	front-exit	12	False	357	line_length_2	0.5	game	agree
+B063	pickups-static	front-exit	12	False	357	line_length_3	1	game	no reference
+B063	pickups-static	front-exit	12	False	357	line_length_4	1	game	no reference
+B063	pickups-static	front-exit	12	False	357	near_lane	1	sidecar	agree
+B063	pickups-static	front-exit	12	False	357	pickup_length	0.5	sidecar	agree
+B063	pickups-static	front-exit	12	False	357	pickup_layout	front-exit	sidecar	agree
+B063	pickups-static	front-exit	12	False	357	pickup_problem	nil	sidecar	agree
+B064	pickups-static	front-exit	12	True	362	pickup_target	361	game	agree
+B064	pickups-static	front-exit	12	True	362	underground_pair	360	game	agree
+B064	pickups-static	front-exit	12	True	362	line_length_1	0.5	game	agree
+B064	pickups-static	front-exit	12	True	362	line_length_2	0.5	game	agree
+B064	pickups-static	front-exit	12	True	362	line_length_3	1	game	no reference
+B064	pickups-static	front-exit	12	True	362	line_length_4	1	game	no reference
+B064	pickups-static	front-exit	12	True	362	near_lane	2	sidecar	agree
+B064	pickups-static	front-exit	12	True	362	pickup_length	0.5	sidecar	agree
+B064	pickups-static	front-exit	12	True	362	pickup_layout	front-exit	sidecar	agree
+B064	pickups-static	front-exit	12	True	362	pickup_problem	nil	sidecar	agree
+B065	pickups-static	over-hood-exit	0	False	368	pickup_target	366	game	agree
+B065	pickups-static	over-hood-exit	0	False	368	underground_pair	365	game	agree
+B065	pickups-static	over-hood-exit	0	False	368	line_length_1	0.5	game	agree
+B065	pickups-static	over-hood-exit	0	False	368	line_length_2	0.5	game	agree
+B065	pickups-static	over-hood-exit	0	False	368	line_length_3	1	game	no reference
+B065	pickups-static	over-hood-exit	0	False	368	line_length_4	1	game	no reference
+B065	pickups-static	over-hood-exit	0	False	368	near_lane	1	sidecar	agree
+B065	pickups-static	over-hood-exit	0	False	368	pickup_length	0.5	sidecar	agree
+B065	pickups-static	over-hood-exit	0	False	368	pickup_layout	over-hood-exit	sidecar	agree
+B065	pickups-static	over-hood-exit	0	False	368	pickup_problem	nil	sidecar	agree
+B066	pickups-static	over-hood-exit	0	True	374	pickup_target	372	game	agree
+B066	pickups-static	over-hood-exit	0	True	374	underground_pair	371	game	agree
+B066	pickups-static	over-hood-exit	0	True	374	line_length_1	0.5	game	agree
+B066	pickups-static	over-hood-exit	0	True	374	line_length_2	0.5	game	agree
+B066	pickups-static	over-hood-exit	0	True	374	line_length_3	1	game	no reference
+B066	pickups-static	over-hood-exit	0	True	374	line_length_4	1	game	no reference
+B066	pickups-static	over-hood-exit	0	True	374	near_lane	2	sidecar	agree
+B066	pickups-static	over-hood-exit	0	True	374	pickup_length	0.5	sidecar	agree
+B066	pickups-static	over-hood-exit	0	True	374	pickup_layout	over-hood-exit	sidecar	agree
+B066	pickups-static	over-hood-exit	0	True	374	pickup_problem	nil	sidecar	agree
+B067	pickups-static	over-hood-exit	4	False	380	pickup_target	378	game	agree
+B067	pickups-static	over-hood-exit	4	False	380	underground_pair	377	game	agree
+B067	pickups-static	over-hood-exit	4	False	380	line_length_1	0.5	game	agree
+B067	pickups-static	over-hood-exit	4	False	380	line_length_2	0.5	game	agree
+B067	pickups-static	over-hood-exit	4	False	380	line_length_3	1	game	no reference
+B067	pickups-static	over-hood-exit	4	False	380	line_length_4	1	game	no reference
+B067	pickups-static	over-hood-exit	4	False	380	near_lane	1	sidecar	agree
+B067	pickups-static	over-hood-exit	4	False	380	pickup_length	0.5	sidecar	agree
+B067	pickups-static	over-hood-exit	4	False	380	pickup_layout	over-hood-exit	sidecar	agree
+B067	pickups-static	over-hood-exit	4	False	380	pickup_problem	nil	sidecar	agree
+B068	pickups-static	over-hood-exit	4	True	386	pickup_target	384	game	agree
+B068	pickups-static	over-hood-exit	4	True	386	underground_pair	383	game	agree
+B068	pickups-static	over-hood-exit	4	True	386	line_length_1	0.5	game	agree
+B068	pickups-static	over-hood-exit	4	True	386	line_length_2	0.5	game	agree
+B068	pickups-static	over-hood-exit	4	True	386	line_length_3	1	game	no reference
+B068	pickups-static	over-hood-exit	4	True	386	line_length_4	1	game	no reference
+B068	pickups-static	over-hood-exit	4	True	386	near_lane	2	sidecar	agree
+B068	pickups-static	over-hood-exit	4	True	386	pickup_length	0.5	sidecar	agree
+B068	pickups-static	over-hood-exit	4	True	386	pickup_layout	over-hood-exit	sidecar	agree
+B068	pickups-static	over-hood-exit	4	True	386	pickup_problem	nil	sidecar	agree
+B069	pickups-static	over-hood-exit	8	False	392	pickup_target	390	game	agree
+B069	pickups-static	over-hood-exit	8	False	392	underground_pair	389	game	agree
+B069	pickups-static	over-hood-exit	8	False	392	line_length_1	0.5	game	agree
+B069	pickups-static	over-hood-exit	8	False	392	line_length_2	0.5	game	agree
+B069	pickups-static	over-hood-exit	8	False	392	line_length_3	1	game	no reference
+B069	pickups-static	over-hood-exit	8	False	392	line_length_4	1	game	no reference
+B069	pickups-static	over-hood-exit	8	False	392	near_lane	1	sidecar	agree
+B069	pickups-static	over-hood-exit	8	False	392	pickup_length	0.5	sidecar	agree
+B069	pickups-static	over-hood-exit	8	False	392	pickup_layout	over-hood-exit	sidecar	agree
+B069	pickups-static	over-hood-exit	8	False	392	pickup_problem	nil	sidecar	agree
+B070	pickups-static	over-hood-exit	8	True	398	pickup_target	396	game	agree
+B070	pickups-static	over-hood-exit	8	True	398	underground_pair	395	game	agree
+B070	pickups-static	over-hood-exit	8	True	398	line_length_1	0.5	game	agree
+B070	pickups-static	over-hood-exit	8	True	398	line_length_2	0.5	game	agree
+B070	pickups-static	over-hood-exit	8	True	398	line_length_3	1	game	no reference
+B070	pickups-static	over-hood-exit	8	True	398	line_length_4	1	game	no reference
+B070	pickups-static	over-hood-exit	8	True	398	near_lane	2	sidecar	agree
+B070	pickups-static	over-hood-exit	8	True	398	pickup_length	0.5	sidecar	agree
+B070	pickups-static	over-hood-exit	8	True	398	pickup_layout	over-hood-exit	sidecar	agree
+B070	pickups-static	over-hood-exit	8	True	398	pickup_problem	nil	sidecar	agree
+B071	pickups-static	over-hood-exit	12	False	404	pickup_target	402	game	agree
+B071	pickups-static	over-hood-exit	12	False	404	underground_pair	401	game	agree
+B071	pickups-static	over-hood-exit	12	False	404	line_length_1	0.5	game	agree
+B071	pickups-static	over-hood-exit	12	False	404	line_length_2	0.5	game	agree
+B071	pickups-static	over-hood-exit	12	False	404	line_length_3	1	game	no reference
+B071	pickups-static	over-hood-exit	12	False	404	line_length_4	1	game	no reference
+B071	pickups-static	over-hood-exit	12	False	404	near_lane	1	sidecar	agree
+B071	pickups-static	over-hood-exit	12	False	404	pickup_length	0.5	sidecar	agree
+B071	pickups-static	over-hood-exit	12	False	404	pickup_layout	over-hood-exit	sidecar	agree
+B071	pickups-static	over-hood-exit	12	False	404	pickup_problem	nil	sidecar	agree
+B072	pickups-static	over-hood-exit	12	True	410	pickup_target	408	game	agree
+B072	pickups-static	over-hood-exit	12	True	410	underground_pair	407	game	agree
+B072	pickups-static	over-hood-exit	12	True	410	line_length_1	0.5	game	agree
+B072	pickups-static	over-hood-exit	12	True	410	line_length_2	0.5	game	agree
+B072	pickups-static	over-hood-exit	12	True	410	line_length_3	1	game	no reference
+B072	pickups-static	over-hood-exit	12	True	410	line_length_4	1	game	no reference
+B072	pickups-static	over-hood-exit	12	True	410	near_lane	2	sidecar	agree
+B072	pickups-static	over-hood-exit	12	True	410	pickup_length	0.5	sidecar	agree
+B072	pickups-static	over-hood-exit	12	True	410	pickup_layout	over-hood-exit	sidecar	agree
+B072	pickups-static	over-hood-exit	12	True	410	pickup_problem	nil	sidecar	agree
+B073	pickups-static	inline-upstream-entrance	0	False	414	pickup_target	411	game	agree
+B073	pickups-static	inline-upstream-entrance	0	False	414	underground_pair	412	game	agree
+B073	pickups-static	inline-upstream-entrance	0	False	414	line_length_1	0.5	game	agree
+B073	pickups-static	inline-upstream-entrance	0	False	414	line_length_2	0.5	game	agree
+B073	pickups-static	inline-upstream-entrance	0	False	414	line_length_3	3	game	no reference
+B073	pickups-static	inline-upstream-entrance	0	False	414	line_length_4	3	game	no reference
+B073	pickups-static	inline-upstream-entrance	0	False	414	near_lane	nil	sidecar	agree
+B073	pickups-static	inline-upstream-entrance	0	False	414	pickup_length	nil	sidecar	agree
+B073	pickups-static	inline-upstream-entrance	0	False	414	pickup_layout	nil	sidecar	agree
+B073	pickups-static	inline-upstream-entrance	0	False	414	pickup_problem	inline	sidecar	agree
+B074	pickups-static	inline-upstream-entrance	0	True	418	pickup_target	415	game	agree
+B074	pickups-static	inline-upstream-entrance	0	True	418	underground_pair	416	game	agree
+B074	pickups-static	inline-upstream-entrance	0	True	418	line_length_1	0.5	game	agree
+B074	pickups-static	inline-upstream-entrance	0	True	418	line_length_2	0.5	game	agree
+B074	pickups-static	inline-upstream-entrance	0	True	418	line_length_3	3	game	no reference
+B074	pickups-static	inline-upstream-entrance	0	True	418	line_length_4	3	game	no reference
+B074	pickups-static	inline-upstream-entrance	0	True	418	near_lane	nil	sidecar	agree
+B074	pickups-static	inline-upstream-entrance	0	True	418	pickup_length	nil	sidecar	agree
+B074	pickups-static	inline-upstream-entrance	0	True	418	pickup_layout	nil	sidecar	agree
+B074	pickups-static	inline-upstream-entrance	0	True	418	pickup_problem	inline	sidecar	agree
+B075	pickups-static	inline-upstream-entrance	4	False	422	pickup_target	419	game	agree
+B075	pickups-static	inline-upstream-entrance	4	False	422	underground_pair	420	game	agree
+B075	pickups-static	inline-upstream-entrance	4	False	422	line_length_1	0.5	game	agree
+B075	pickups-static	inline-upstream-entrance	4	False	422	line_length_2	0.5	game	agree
+B075	pickups-static	inline-upstream-entrance	4	False	422	line_length_3	3	game	no reference
+B075	pickups-static	inline-upstream-entrance	4	False	422	line_length_4	3	game	no reference
+B075	pickups-static	inline-upstream-entrance	4	False	422	near_lane	nil	sidecar	agree
+B075	pickups-static	inline-upstream-entrance	4	False	422	pickup_length	nil	sidecar	agree
+B075	pickups-static	inline-upstream-entrance	4	False	422	pickup_layout	nil	sidecar	agree
+B075	pickups-static	inline-upstream-entrance	4	False	422	pickup_problem	inline	sidecar	agree
+B076	pickups-static	inline-upstream-entrance	4	True	426	pickup_target	423	game	agree
+B076	pickups-static	inline-upstream-entrance	4	True	426	underground_pair	424	game	agree
+B076	pickups-static	inline-upstream-entrance	4	True	426	line_length_1	0.5	game	agree
+B076	pickups-static	inline-upstream-entrance	4	True	426	line_length_2	0.5	game	agree
+B076	pickups-static	inline-upstream-entrance	4	True	426	line_length_3	3	game	no reference
+B076	pickups-static	inline-upstream-entrance	4	True	426	line_length_4	3	game	no reference
+B076	pickups-static	inline-upstream-entrance	4	True	426	near_lane	nil	sidecar	agree
+B076	pickups-static	inline-upstream-entrance	4	True	426	pickup_length	nil	sidecar	agree
+B076	pickups-static	inline-upstream-entrance	4	True	426	pickup_layout	nil	sidecar	agree
+B076	pickups-static	inline-upstream-entrance	4	True	426	pickup_problem	inline	sidecar	agree
+B077	pickups-static	inline-upstream-entrance	8	False	430	pickup_target	427	game	agree
+B077	pickups-static	inline-upstream-entrance	8	False	430	underground_pair	428	game	agree
+B077	pickups-static	inline-upstream-entrance	8	False	430	line_length_1	0.5	game	agree
+B077	pickups-static	inline-upstream-entrance	8	False	430	line_length_2	0.5	game	agree
+B077	pickups-static	inline-upstream-entrance	8	False	430	line_length_3	3	game	no reference
+B077	pickups-static	inline-upstream-entrance	8	False	430	line_length_4	3	game	no reference
+B077	pickups-static	inline-upstream-entrance	8	False	430	near_lane	nil	sidecar	agree
+B077	pickups-static	inline-upstream-entrance	8	False	430	pickup_length	nil	sidecar	agree
+B077	pickups-static	inline-upstream-entrance	8	False	430	pickup_layout	nil	sidecar	agree
+B077	pickups-static	inline-upstream-entrance	8	False	430	pickup_problem	inline	sidecar	agree
+B078	pickups-static	inline-upstream-entrance	8	True	434	pickup_target	431	game	agree
+B078	pickups-static	inline-upstream-entrance	8	True	434	underground_pair	432	game	agree
+B078	pickups-static	inline-upstream-entrance	8	True	434	line_length_1	0.5	game	agree
+B078	pickups-static	inline-upstream-entrance	8	True	434	line_length_2	0.5	game	agree
+B078	pickups-static	inline-upstream-entrance	8	True	434	line_length_3	3	game	no reference
+B078	pickups-static	inline-upstream-entrance	8	True	434	line_length_4	3	game	no reference
+B078	pickups-static	inline-upstream-entrance	8	True	434	near_lane	nil	sidecar	agree
+B078	pickups-static	inline-upstream-entrance	8	True	434	pickup_length	nil	sidecar	agree
+B078	pickups-static	inline-upstream-entrance	8	True	434	pickup_layout	nil	sidecar	agree
+B078	pickups-static	inline-upstream-entrance	8	True	434	pickup_problem	inline	sidecar	agree
+B079	pickups-static	inline-upstream-entrance	12	False	438	pickup_target	435	game	agree
+B079	pickups-static	inline-upstream-entrance	12	False	438	underground_pair	436	game	agree
+B079	pickups-static	inline-upstream-entrance	12	False	438	line_length_1	0.5	game	agree
+B079	pickups-static	inline-upstream-entrance	12	False	438	line_length_2	0.5	game	agree
+B079	pickups-static	inline-upstream-entrance	12	False	438	line_length_3	3	game	no reference
+B079	pickups-static	inline-upstream-entrance	12	False	438	line_length_4	3	game	no reference
+B079	pickups-static	inline-upstream-entrance	12	False	438	near_lane	nil	sidecar	agree
+B079	pickups-static	inline-upstream-entrance	12	False	438	pickup_length	nil	sidecar	agree
+B079	pickups-static	inline-upstream-entrance	12	False	438	pickup_layout	nil	sidecar	agree
+B079	pickups-static	inline-upstream-entrance	12	False	438	pickup_problem	inline	sidecar	agree
+B080	pickups-static	inline-upstream-entrance	12	True	442	pickup_target	439	game	agree
+B080	pickups-static	inline-upstream-entrance	12	True	442	underground_pair	440	game	agree
+B080	pickups-static	inline-upstream-entrance	12	True	442	line_length_1	0.5	game	agree
+B080	pickups-static	inline-upstream-entrance	12	True	442	line_length_2	0.5	game	agree
+B080	pickups-static	inline-upstream-entrance	12	True	442	line_length_3	3	game	no reference
+B080	pickups-static	inline-upstream-entrance	12	True	442	line_length_4	3	game	no reference
+B080	pickups-static	inline-upstream-entrance	12	True	442	near_lane	nil	sidecar	agree
+B080	pickups-static	inline-upstream-entrance	12	True	442	pickup_length	nil	sidecar	agree
+B080	pickups-static	inline-upstream-entrance	12	True	442	pickup_layout	nil	sidecar	agree
+B080	pickups-static	inline-upstream-entrance	12	True	442	pickup_problem	inline	sidecar	agree
+B081	pickups-static	inline-straight-end	0	False	446	pickup_target	445	game	agree
+B081	pickups-static	inline-straight-end	0	False	446	piece_shape	straight	game	agree
+B081	pickups-static	inline-straight-end	0	False	446	line_length_1	1	game	agree
+B081	pickups-static	inline-straight-end	0	False	446	line_length_2	1	game	agree
+B081	pickups-static	inline-straight-end	0	False	446	near_lane	nil	sidecar	agree
+B081	pickups-static	inline-straight-end	0	False	446	pickup_length	nil	sidecar	agree
+B081	pickups-static	inline-straight-end	0	False	446	pickup_layout	nil	sidecar	agree
+B081	pickups-static	inline-straight-end	0	False	446	pickup_problem	inline	sidecar	agree
+B082	pickups-static	inline-straight-end	0	True	450	pickup_target	449	game	agree
+B082	pickups-static	inline-straight-end	0	True	450	piece_shape	straight	game	agree
+B082	pickups-static	inline-straight-end	0	True	450	line_length_1	1	game	agree
+B082	pickups-static	inline-straight-end	0	True	450	line_length_2	1	game	agree
+B082	pickups-static	inline-straight-end	0	True	450	near_lane	nil	sidecar	agree
+B082	pickups-static	inline-straight-end	0	True	450	pickup_length	nil	sidecar	agree
+B082	pickups-static	inline-straight-end	0	True	450	pickup_layout	nil	sidecar	agree
+B082	pickups-static	inline-straight-end	0	True	450	pickup_problem	inline	sidecar	agree
+B083	pickups-static	inline-straight-end	4	False	454	pickup_target	453	game	agree
+B083	pickups-static	inline-straight-end	4	False	454	piece_shape	straight	game	agree
+B083	pickups-static	inline-straight-end	4	False	454	line_length_1	1	game	agree
+B083	pickups-static	inline-straight-end	4	False	454	line_length_2	1	game	agree
+B083	pickups-static	inline-straight-end	4	False	454	near_lane	nil	sidecar	agree
+B083	pickups-static	inline-straight-end	4	False	454	pickup_length	nil	sidecar	agree
+B083	pickups-static	inline-straight-end	4	False	454	pickup_layout	nil	sidecar	agree
+B083	pickups-static	inline-straight-end	4	False	454	pickup_problem	inline	sidecar	agree
+B084	pickups-static	inline-straight-end	4	True	458	pickup_target	457	game	agree
+B084	pickups-static	inline-straight-end	4	True	458	piece_shape	straight	game	agree
+B084	pickups-static	inline-straight-end	4	True	458	line_length_1	1	game	agree
+B084	pickups-static	inline-straight-end	4	True	458	line_length_2	1	game	agree
+B084	pickups-static	inline-straight-end	4	True	458	near_lane	nil	sidecar	agree
+B084	pickups-static	inline-straight-end	4	True	458	pickup_length	nil	sidecar	agree
+B084	pickups-static	inline-straight-end	4	True	458	pickup_layout	nil	sidecar	agree
+B084	pickups-static	inline-straight-end	4	True	458	pickup_problem	inline	sidecar	agree
+B085	pickups-static	inline-straight-end	8	False	462	pickup_target	461	game	agree
+B085	pickups-static	inline-straight-end	8	False	462	piece_shape	straight	game	agree
+B085	pickups-static	inline-straight-end	8	False	462	line_length_1	1	game	agree
+B085	pickups-static	inline-straight-end	8	False	462	line_length_2	1	game	agree
+B085	pickups-static	inline-straight-end	8	False	462	near_lane	nil	sidecar	agree
+B085	pickups-static	inline-straight-end	8	False	462	pickup_length	nil	sidecar	agree
+B085	pickups-static	inline-straight-end	8	False	462	pickup_layout	nil	sidecar	agree
+B085	pickups-static	inline-straight-end	8	False	462	pickup_problem	inline	sidecar	agree
+B086	pickups-static	inline-straight-end	8	True	466	pickup_target	465	game	agree
+B086	pickups-static	inline-straight-end	8	True	466	piece_shape	straight	game	agree
+B086	pickups-static	inline-straight-end	8	True	466	line_length_1	1	game	agree
+B086	pickups-static	inline-straight-end	8	True	466	line_length_2	1	game	agree
+B086	pickups-static	inline-straight-end	8	True	466	near_lane	nil	sidecar	agree
+B086	pickups-static	inline-straight-end	8	True	466	pickup_length	nil	sidecar	agree
+B086	pickups-static	inline-straight-end	8	True	466	pickup_layout	nil	sidecar	agree
+B086	pickups-static	inline-straight-end	8	True	466	pickup_problem	inline	sidecar	agree
+B087	pickups-static	inline-straight-end	12	False	470	pickup_target	469	game	agree
+B087	pickups-static	inline-straight-end	12	False	470	piece_shape	straight	game	agree
+B087	pickups-static	inline-straight-end	12	False	470	line_length_1	1	game	agree
+B087	pickups-static	inline-straight-end	12	False	470	line_length_2	1	game	agree
+B087	pickups-static	inline-straight-end	12	False	470	near_lane	nil	sidecar	agree
+B087	pickups-static	inline-straight-end	12	False	470	pickup_length	nil	sidecar	agree
+B087	pickups-static	inline-straight-end	12	False	470	pickup_layout	nil	sidecar	agree
+B087	pickups-static	inline-straight-end	12	False	470	pickup_problem	inline	sidecar	agree
+B088	pickups-static	inline-straight-end	12	True	474	pickup_target	473	game	agree
+B088	pickups-static	inline-straight-end	12	True	474	piece_shape	straight	game	agree
+B088	pickups-static	inline-straight-end	12	True	474	line_length_1	1	game	agree
+B088	pickups-static	inline-straight-end	12	True	474	line_length_2	1	game	agree
+B088	pickups-static	inline-straight-end	12	True	474	near_lane	nil	sidecar	agree
+B088	pickups-static	inline-straight-end	12	True	474	pickup_length	nil	sidecar	agree
+B088	pickups-static	inline-straight-end	12	True	474	pickup_layout	nil	sidecar	agree
+B088	pickups-static	inline-straight-end	12	True	474	pickup_problem	inline	sidecar	agree
+B089	pickups-static	left-bend-behind	0	False	478	pickup_target	477	game	agree
+B089	pickups-static	left-bend-behind	0	False	478	piece_shape	left	game	agree
+B089	pickups-static	left-bend-behind	0	False	478	line_length_1	0.4140625	game	agree
+B089	pickups-static	left-bend-behind	0	False	478	line_length_2	1.15234375	game	agree
+B089	pickups-static	left-bend-behind	0	False	478	near_lane	nil	sidecar	agree
+B089	pickups-static	left-bend-behind	0	False	478	pickup_length	nil	sidecar	agree
+B089	pickups-static	left-bend-behind	0	False	478	pickup_layout	nil	sidecar	agree
+B089	pickups-static	left-bend-behind	0	False	478	pickup_problem	bend	sidecar	agree
+B090	pickups-static	left-bend-behind	0	True	482	pickup_target	481	game	agree
+B090	pickups-static	left-bend-behind	0	True	482	piece_shape	left	game	agree
+B090	pickups-static	left-bend-behind	0	True	482	line_length_1	0.4140625	game	agree
+B090	pickups-static	left-bend-behind	0	True	482	line_length_2	1.15234375	game	agree
+B090	pickups-static	left-bend-behind	0	True	482	near_lane	nil	sidecar	agree
+B090	pickups-static	left-bend-behind	0	True	482	pickup_length	nil	sidecar	agree
+B090	pickups-static	left-bend-behind	0	True	482	pickup_layout	nil	sidecar	agree
+B090	pickups-static	left-bend-behind	0	True	482	pickup_problem	bend	sidecar	agree
+B091	pickups-static	left-bend-behind	4	False	486	pickup_target	485	game	agree
+B091	pickups-static	left-bend-behind	4	False	486	piece_shape	left	game	agree
+B091	pickups-static	left-bend-behind	4	False	486	line_length_1	0.4140625	game	agree
+B091	pickups-static	left-bend-behind	4	False	486	line_length_2	1.15234375	game	agree
+B091	pickups-static	left-bend-behind	4	False	486	near_lane	nil	sidecar	agree
+B091	pickups-static	left-bend-behind	4	False	486	pickup_length	nil	sidecar	agree
+B091	pickups-static	left-bend-behind	4	False	486	pickup_layout	nil	sidecar	agree
+B091	pickups-static	left-bend-behind	4	False	486	pickup_problem	bend	sidecar	agree
+B092	pickups-static	left-bend-behind	4	True	490	pickup_target	489	game	agree
+B092	pickups-static	left-bend-behind	4	True	490	piece_shape	left	game	agree
+B092	pickups-static	left-bend-behind	4	True	490	line_length_1	0.4140625	game	agree
+B092	pickups-static	left-bend-behind	4	True	490	line_length_2	1.15234375	game	agree
+B092	pickups-static	left-bend-behind	4	True	490	near_lane	nil	sidecar	agree
+B092	pickups-static	left-bend-behind	4	True	490	pickup_length	nil	sidecar	agree
+B092	pickups-static	left-bend-behind	4	True	490	pickup_layout	nil	sidecar	agree
+B092	pickups-static	left-bend-behind	4	True	490	pickup_problem	bend	sidecar	agree
+B093	pickups-static	left-bend-behind	8	False	494	pickup_target	493	game	agree
+B093	pickups-static	left-bend-behind	8	False	494	piece_shape	left	game	agree
+B093	pickups-static	left-bend-behind	8	False	494	line_length_1	0.4140625	game	agree
+B093	pickups-static	left-bend-behind	8	False	494	line_length_2	1.15234375	game	agree
+B093	pickups-static	left-bend-behind	8	False	494	near_lane	nil	sidecar	agree
+B093	pickups-static	left-bend-behind	8	False	494	pickup_length	nil	sidecar	agree
+B093	pickups-static	left-bend-behind	8	False	494	pickup_layout	nil	sidecar	agree
+B093	pickups-static	left-bend-behind	8	False	494	pickup_problem	bend	sidecar	agree
+B094	pickups-static	left-bend-behind	8	True	498	pickup_target	497	game	agree
+B094	pickups-static	left-bend-behind	8	True	498	piece_shape	left	game	agree
+B094	pickups-static	left-bend-behind	8	True	498	line_length_1	0.4140625	game	agree
+B094	pickups-static	left-bend-behind	8	True	498	line_length_2	1.15234375	game	agree
+B094	pickups-static	left-bend-behind	8	True	498	near_lane	nil	sidecar	agree
+B094	pickups-static	left-bend-behind	8	True	498	pickup_length	nil	sidecar	agree
+B094	pickups-static	left-bend-behind	8	True	498	pickup_layout	nil	sidecar	agree
+B094	pickups-static	left-bend-behind	8	True	498	pickup_problem	bend	sidecar	agree
+B095	pickups-static	left-bend-behind	12	False	502	pickup_target	501	game	agree
+B095	pickups-static	left-bend-behind	12	False	502	piece_shape	left	game	agree
+B095	pickups-static	left-bend-behind	12	False	502	line_length_1	0.4140625	game	agree
+B095	pickups-static	left-bend-behind	12	False	502	line_length_2	1.15234375	game	agree
+B095	pickups-static	left-bend-behind	12	False	502	near_lane	nil	sidecar	agree
+B095	pickups-static	left-bend-behind	12	False	502	pickup_length	nil	sidecar	agree
+B095	pickups-static	left-bend-behind	12	False	502	pickup_layout	nil	sidecar	agree
+B095	pickups-static	left-bend-behind	12	False	502	pickup_problem	bend	sidecar	agree
+B096	pickups-static	left-bend-behind	12	True	506	pickup_target	505	game	agree
+B096	pickups-static	left-bend-behind	12	True	506	piece_shape	left	game	agree
+B096	pickups-static	left-bend-behind	12	True	506	line_length_1	0.4140625	game	agree
+B096	pickups-static	left-bend-behind	12	True	506	line_length_2	1.15234375	game	agree
+B096	pickups-static	left-bend-behind	12	True	506	near_lane	nil	sidecar	agree
+B096	pickups-static	left-bend-behind	12	True	506	pickup_length	nil	sidecar	agree
+B096	pickups-static	left-bend-behind	12	True	506	pickup_layout	nil	sidecar	agree
+B096	pickups-static	left-bend-behind	12	True	506	pickup_problem	bend	sidecar	agree
+B097	pickups-static	left-bend-away	0	False	510	pickup_target	509	game	agree
+B097	pickups-static	left-bend-away	0	False	510	piece_shape	left	game	agree
+B097	pickups-static	left-bend-away	0	False	510	line_length_1	0.4140625	game	agree
+B097	pickups-static	left-bend-away	0	False	510	line_length_2	1.15234375	game	agree
+B097	pickups-static	left-bend-away	0	False	510	near_lane	nil	sidecar	agree
+B097	pickups-static	left-bend-away	0	False	510	pickup_length	nil	sidecar	agree
+B097	pickups-static	left-bend-away	0	False	510	pickup_layout	nil	sidecar	agree
+B097	pickups-static	left-bend-away	0	False	510	pickup_problem	bend	sidecar	agree
+B098	pickups-static	left-bend-away	0	True	514	pickup_target	513	game	agree
+B098	pickups-static	left-bend-away	0	True	514	piece_shape	left	game	agree
+B098	pickups-static	left-bend-away	0	True	514	line_length_1	0.4140625	game	agree
+B098	pickups-static	left-bend-away	0	True	514	line_length_2	1.15234375	game	agree
+B098	pickups-static	left-bend-away	0	True	514	near_lane	nil	sidecar	agree
+B098	pickups-static	left-bend-away	0	True	514	pickup_length	nil	sidecar	agree
+B098	pickups-static	left-bend-away	0	True	514	pickup_layout	nil	sidecar	agree
+B098	pickups-static	left-bend-away	0	True	514	pickup_problem	bend	sidecar	agree
+B099	pickups-static	left-bend-away	4	False	518	pickup_target	517	game	agree
+B099	pickups-static	left-bend-away	4	False	518	piece_shape	left	game	agree
+B099	pickups-static	left-bend-away	4	False	518	line_length_1	0.4140625	game	agree
+B099	pickups-static	left-bend-away	4	False	518	line_length_2	1.15234375	game	agree
+B099	pickups-static	left-bend-away	4	False	518	near_lane	nil	sidecar	agree
+B099	pickups-static	left-bend-away	4	False	518	pickup_length	nil	sidecar	agree
+B099	pickups-static	left-bend-away	4	False	518	pickup_layout	nil	sidecar	agree
+B099	pickups-static	left-bend-away	4	False	518	pickup_problem	bend	sidecar	agree
+B100	pickups-static	left-bend-away	4	True	522	pickup_target	521	game	agree
+B100	pickups-static	left-bend-away	4	True	522	piece_shape	left	game	agree
+B100	pickups-static	left-bend-away	4	True	522	line_length_1	0.4140625	game	agree
+B100	pickups-static	left-bend-away	4	True	522	line_length_2	1.15234375	game	agree
+B100	pickups-static	left-bend-away	4	True	522	near_lane	nil	sidecar	agree
+B100	pickups-static	left-bend-away	4	True	522	pickup_length	nil	sidecar	agree
+B100	pickups-static	left-bend-away	4	True	522	pickup_layout	nil	sidecar	agree
+B100	pickups-static	left-bend-away	4	True	522	pickup_problem	bend	sidecar	agree
+B101	pickups-static	left-bend-away	8	False	526	pickup_target	525	game	agree
+B101	pickups-static	left-bend-away	8	False	526	piece_shape	left	game	agree
+B101	pickups-static	left-bend-away	8	False	526	line_length_1	0.4140625	game	agree
+B101	pickups-static	left-bend-away	8	False	526	line_length_2	1.15234375	game	agree
+B101	pickups-static	left-bend-away	8	False	526	near_lane	nil	sidecar	agree
+B101	pickups-static	left-bend-away	8	False	526	pickup_length	nil	sidecar	agree
+B101	pickups-static	left-bend-away	8	False	526	pickup_layout	nil	sidecar	agree
+B101	pickups-static	left-bend-away	8	False	526	pickup_problem	bend	sidecar	agree
+B102	pickups-static	left-bend-away	8	True	530	pickup_target	529	game	agree
+B102	pickups-static	left-bend-away	8	True	530	piece_shape	left	game	agree
+B102	pickups-static	left-bend-away	8	True	530	line_length_1	0.4140625	game	agree
+B102	pickups-static	left-bend-away	8	True	530	line_length_2	1.15234375	game	agree
+B102	pickups-static	left-bend-away	8	True	530	near_lane	nil	sidecar	agree
+B102	pickups-static	left-bend-away	8	True	530	pickup_length	nil	sidecar	agree
+B102	pickups-static	left-bend-away	8	True	530	pickup_layout	nil	sidecar	agree
+B102	pickups-static	left-bend-away	8	True	530	pickup_problem	bend	sidecar	agree
+B103	pickups-static	left-bend-away	12	False	534	pickup_target	533	game	agree
+B103	pickups-static	left-bend-away	12	False	534	piece_shape	left	game	agree
+B103	pickups-static	left-bend-away	12	False	534	line_length_1	0.4140625	game	agree
+B103	pickups-static	left-bend-away	12	False	534	line_length_2	1.15234375	game	agree
+B103	pickups-static	left-bend-away	12	False	534	near_lane	nil	sidecar	agree
+B103	pickups-static	left-bend-away	12	False	534	pickup_length	nil	sidecar	agree
+B103	pickups-static	left-bend-away	12	False	534	pickup_layout	nil	sidecar	agree
+B103	pickups-static	left-bend-away	12	False	534	pickup_problem	bend	sidecar	agree
+B104	pickups-static	left-bend-away	12	True	538	pickup_target	537	game	agree
+B104	pickups-static	left-bend-away	12	True	538	piece_shape	left	game	agree
+B104	pickups-static	left-bend-away	12	True	538	line_length_1	0.4140625	game	agree
+B104	pickups-static	left-bend-away	12	True	538	line_length_2	1.15234375	game	agree
+B104	pickups-static	left-bend-away	12	True	538	near_lane	nil	sidecar	agree
+B104	pickups-static	left-bend-away	12	True	538	pickup_length	nil	sidecar	agree
+B104	pickups-static	left-bend-away	12	True	538	pickup_layout	nil	sidecar	agree
+B104	pickups-static	left-bend-away	12	True	538	pickup_problem	bend	sidecar	agree
+B105	pickups-static	left-bend-front	0	False	542	pickup_target	541	game	agree
+B105	pickups-static	left-bend-front	0	False	542	piece_shape	left	game	agree
+B105	pickups-static	left-bend-front	0	False	542	line_length_1	0.4140625	game	agree
+B105	pickups-static	left-bend-front	0	False	542	line_length_2	1.15234375	game	agree
+B105	pickups-static	left-bend-front	0	False	542	near_lane	nil	sidecar	agree
+B105	pickups-static	left-bend-front	0	False	542	pickup_length	nil	sidecar	agree
+B105	pickups-static	left-bend-front	0	False	542	pickup_layout	nil	sidecar	agree
+B105	pickups-static	left-bend-front	0	False	542	pickup_problem	bend	sidecar	agree
+B106	pickups-static	left-bend-front	0	True	546	pickup_target	545	game	agree
+B106	pickups-static	left-bend-front	0	True	546	piece_shape	left	game	agree
+B106	pickups-static	left-bend-front	0	True	546	line_length_1	0.4140625	game	agree
+B106	pickups-static	left-bend-front	0	True	546	line_length_2	1.15234375	game	agree
+B106	pickups-static	left-bend-front	0	True	546	near_lane	nil	sidecar	agree
+B106	pickups-static	left-bend-front	0	True	546	pickup_length	nil	sidecar	agree
+B106	pickups-static	left-bend-front	0	True	546	pickup_layout	nil	sidecar	agree
+B106	pickups-static	left-bend-front	0	True	546	pickup_problem	bend	sidecar	agree
+B107	pickups-static	left-bend-front	4	False	550	pickup_target	549	game	agree
+B107	pickups-static	left-bend-front	4	False	550	piece_shape	left	game	agree
+B107	pickups-static	left-bend-front	4	False	550	line_length_1	0.4140625	game	agree
+B107	pickups-static	left-bend-front	4	False	550	line_length_2	1.15234375	game	agree
+B107	pickups-static	left-bend-front	4	False	550	near_lane	nil	sidecar	agree
+B107	pickups-static	left-bend-front	4	False	550	pickup_length	nil	sidecar	agree
+B107	pickups-static	left-bend-front	4	False	550	pickup_layout	nil	sidecar	agree
+B107	pickups-static	left-bend-front	4	False	550	pickup_problem	bend	sidecar	agree
+B108	pickups-static	left-bend-front	4	True	554	pickup_target	553	game	agree
+B108	pickups-static	left-bend-front	4	True	554	piece_shape	left	game	agree
+B108	pickups-static	left-bend-front	4	True	554	line_length_1	0.4140625	game	agree
+B108	pickups-static	left-bend-front	4	True	554	line_length_2	1.15234375	game	agree
+B108	pickups-static	left-bend-front	4	True	554	near_lane	nil	sidecar	agree
+B108	pickups-static	left-bend-front	4	True	554	pickup_length	nil	sidecar	agree
+B108	pickups-static	left-bend-front	4	True	554	pickup_layout	nil	sidecar	agree
+B108	pickups-static	left-bend-front	4	True	554	pickup_problem	bend	sidecar	agree
+B109	pickups-static	left-bend-front	8	False	558	pickup_target	557	game	agree
+B109	pickups-static	left-bend-front	8	False	558	piece_shape	left	game	agree
+B109	pickups-static	left-bend-front	8	False	558	line_length_1	0.4140625	game	agree
+B109	pickups-static	left-bend-front	8	False	558	line_length_2	1.15234375	game	agree
+B109	pickups-static	left-bend-front	8	False	558	near_lane	nil	sidecar	agree
+B109	pickups-static	left-bend-front	8	False	558	pickup_length	nil	sidecar	agree
+B109	pickups-static	left-bend-front	8	False	558	pickup_layout	nil	sidecar	agree
+B109	pickups-static	left-bend-front	8	False	558	pickup_problem	bend	sidecar	agree
+B110	pickups-static	left-bend-front	8	True	562	pickup_target	561	game	agree
+B110	pickups-static	left-bend-front	8	True	562	piece_shape	left	game	agree
+B110	pickups-static	left-bend-front	8	True	562	line_length_1	0.4140625	game	agree
+B110	pickups-static	left-bend-front	8	True	562	line_length_2	1.15234375	game	agree
+B110	pickups-static	left-bend-front	8	True	562	near_lane	nil	sidecar	agree
+B110	pickups-static	left-bend-front	8	True	562	pickup_length	nil	sidecar	agree
+B110	pickups-static	left-bend-front	8	True	562	pickup_layout	nil	sidecar	agree
+B110	pickups-static	left-bend-front	8	True	562	pickup_problem	bend	sidecar	agree
+B111	pickups-static	left-bend-front	12	False	566	pickup_target	565	game	agree
+B111	pickups-static	left-bend-front	12	False	566	piece_shape	left	game	agree
+B111	pickups-static	left-bend-front	12	False	566	line_length_1	0.4140625	game	agree
+B111	pickups-static	left-bend-front	12	False	566	line_length_2	1.15234375	game	agree
+B111	pickups-static	left-bend-front	12	False	566	near_lane	nil	sidecar	agree
+B111	pickups-static	left-bend-front	12	False	566	pickup_length	nil	sidecar	agree
+B111	pickups-static	left-bend-front	12	False	566	pickup_layout	nil	sidecar	agree
+B111	pickups-static	left-bend-front	12	False	566	pickup_problem	bend	sidecar	agree
+B112	pickups-static	left-bend-front	12	True	570	pickup_target	569	game	agree
+B112	pickups-static	left-bend-front	12	True	570	piece_shape	left	game	agree
+B112	pickups-static	left-bend-front	12	True	570	line_length_1	0.4140625	game	agree
+B112	pickups-static	left-bend-front	12	True	570	line_length_2	1.15234375	game	agree
+B112	pickups-static	left-bend-front	12	True	570	near_lane	nil	sidecar	agree
+B112	pickups-static	left-bend-front	12	True	570	pickup_length	nil	sidecar	agree
+B112	pickups-static	left-bend-front	12	True	570	pickup_layout	nil	sidecar	agree
+B112	pickups-static	left-bend-front	12	True	570	pickup_problem	bend	sidecar	agree
+B113	pickups-static	right-bend-behind	0	False	574	pickup_target	573	game	agree
+B113	pickups-static	right-bend-behind	0	False	574	piece_shape	right	game	agree
+B113	pickups-static	right-bend-behind	0	False	574	line_length_1	1.15234375	game	agree
+B113	pickups-static	right-bend-behind	0	False	574	line_length_2	0.4140625	game	agree
+B113	pickups-static	right-bend-behind	0	False	574	near_lane	1	sidecar	agree
+B113	pickups-static	right-bend-behind	0	False	574	pickup_length	1	sidecar	agree
+B113	pickups-static	right-bend-behind	0	False	574	pickup_layout	bend-right-upstream	sidecar	agree
+B113	pickups-static	right-bend-behind	0	False	574	pickup_problem	nil	sidecar	agree
+B114	pickups-static	right-bend-behind	0	True	578	pickup_target	577	game	agree
+B114	pickups-static	right-bend-behind	0	True	578	piece_shape	right	game	agree
+B114	pickups-static	right-bend-behind	0	True	578	line_length_1	1.15234375	game	agree
+B114	pickups-static	right-bend-behind	0	True	578	line_length_2	0.4140625	game	agree
+B114	pickups-static	right-bend-behind	0	True	578	near_lane	nil	sidecar	agree
+B114	pickups-static	right-bend-behind	0	True	578	pickup_length	nil	sidecar	agree
+B114	pickups-static	right-bend-behind	0	True	578	pickup_layout	nil	sidecar	agree
+B114	pickups-static	right-bend-behind	0	True	578	pickup_problem	bend	sidecar	agree
+B115	pickups-static	right-bend-behind	4	False	582	pickup_target	581	game	agree
+B115	pickups-static	right-bend-behind	4	False	582	piece_shape	right	game	agree
+B115	pickups-static	right-bend-behind	4	False	582	line_length_1	1.15234375	game	agree
+B115	pickups-static	right-bend-behind	4	False	582	line_length_2	0.4140625	game	agree
+B115	pickups-static	right-bend-behind	4	False	582	near_lane	1	sidecar	agree
+B115	pickups-static	right-bend-behind	4	False	582	pickup_length	1	sidecar	agree
+B115	pickups-static	right-bend-behind	4	False	582	pickup_layout	bend-right-upstream	sidecar	agree
+B115	pickups-static	right-bend-behind	4	False	582	pickup_problem	nil	sidecar	agree
+B116	pickups-static	right-bend-behind	4	True	586	pickup_target	585	game	agree
+B116	pickups-static	right-bend-behind	4	True	586	piece_shape	right	game	agree
+B116	pickups-static	right-bend-behind	4	True	586	line_length_1	1.15234375	game	agree
+B116	pickups-static	right-bend-behind	4	True	586	line_length_2	0.4140625	game	agree
+B116	pickups-static	right-bend-behind	4	True	586	near_lane	nil	sidecar	agree
+B116	pickups-static	right-bend-behind	4	True	586	pickup_length	nil	sidecar	agree
+B116	pickups-static	right-bend-behind	4	True	586	pickup_layout	nil	sidecar	agree
+B116	pickups-static	right-bend-behind	4	True	586	pickup_problem	bend	sidecar	agree
+B117	pickups-static	right-bend-behind	8	False	590	pickup_target	589	game	agree
+B117	pickups-static	right-bend-behind	8	False	590	piece_shape	right	game	agree
+B117	pickups-static	right-bend-behind	8	False	590	line_length_1	1.15234375	game	agree
+B117	pickups-static	right-bend-behind	8	False	590	line_length_2	0.4140625	game	agree
+B117	pickups-static	right-bend-behind	8	False	590	near_lane	1	sidecar	agree
+B117	pickups-static	right-bend-behind	8	False	590	pickup_length	1	sidecar	agree
+B117	pickups-static	right-bend-behind	8	False	590	pickup_layout	bend-right-upstream	sidecar	agree
+B117	pickups-static	right-bend-behind	8	False	590	pickup_problem	nil	sidecar	agree
+B118	pickups-static	right-bend-behind	8	True	594	pickup_target	593	game	agree
+B118	pickups-static	right-bend-behind	8	True	594	piece_shape	right	game	agree
+B118	pickups-static	right-bend-behind	8	True	594	line_length_1	1.15234375	game	agree
+B118	pickups-static	right-bend-behind	8	True	594	line_length_2	0.4140625	game	agree
+B118	pickups-static	right-bend-behind	8	True	594	near_lane	nil	sidecar	agree
+B118	pickups-static	right-bend-behind	8	True	594	pickup_length	nil	sidecar	agree
+B118	pickups-static	right-bend-behind	8	True	594	pickup_layout	nil	sidecar	agree
+B118	pickups-static	right-bend-behind	8	True	594	pickup_problem	bend	sidecar	agree
+B119	pickups-static	right-bend-behind	12	False	598	pickup_target	597	game	agree
+B119	pickups-static	right-bend-behind	12	False	598	piece_shape	right	game	agree
+B119	pickups-static	right-bend-behind	12	False	598	line_length_1	1.15234375	game	agree
+B119	pickups-static	right-bend-behind	12	False	598	line_length_2	0.4140625	game	agree
+B119	pickups-static	right-bend-behind	12	False	598	near_lane	1	sidecar	agree
+B119	pickups-static	right-bend-behind	12	False	598	pickup_length	1	sidecar	agree
+B119	pickups-static	right-bend-behind	12	False	598	pickup_layout	bend-right-upstream	sidecar	agree
+B119	pickups-static	right-bend-behind	12	False	598	pickup_problem	nil	sidecar	agree
+B120	pickups-static	right-bend-behind	12	True	602	pickup_target	601	game	agree
+B120	pickups-static	right-bend-behind	12	True	602	piece_shape	right	game	agree
+B120	pickups-static	right-bend-behind	12	True	602	line_length_1	1.15234375	game	agree
+B120	pickups-static	right-bend-behind	12	True	602	line_length_2	0.4140625	game	agree
+B120	pickups-static	right-bend-behind	12	True	602	near_lane	nil	sidecar	agree
+B120	pickups-static	right-bend-behind	12	True	602	pickup_length	nil	sidecar	agree
+B120	pickups-static	right-bend-behind	12	True	602	pickup_layout	nil	sidecar	agree
+B120	pickups-static	right-bend-behind	12	True	602	pickup_problem	bend	sidecar	agree
+B121	pickups-static	right-bend-away	0	False	606	pickup_target	605	game	agree
+B121	pickups-static	right-bend-away	0	False	606	piece_shape	right	game	agree
+B121	pickups-static	right-bend-away	0	False	606	line_length_1	1.15234375	game	agree
+B121	pickups-static	right-bend-away	0	False	606	line_length_2	0.4140625	game	agree
+B121	pickups-static	right-bend-away	0	False	606	near_lane	nil	sidecar	agree
+B121	pickups-static	right-bend-away	0	False	606	pickup_length	nil	sidecar	agree
+B121	pickups-static	right-bend-away	0	False	606	pickup_layout	nil	sidecar	agree
+B121	pickups-static	right-bend-away	0	False	606	pickup_problem	bend	sidecar	agree
+B122	pickups-static	right-bend-away	0	True	610	pickup_target	609	game	agree
+B122	pickups-static	right-bend-away	0	True	610	piece_shape	right	game	agree
+B122	pickups-static	right-bend-away	0	True	610	line_length_1	1.15234375	game	agree
+B122	pickups-static	right-bend-away	0	True	610	line_length_2	0.4140625	game	agree
+B122	pickups-static	right-bend-away	0	True	610	near_lane	nil	sidecar	agree
+B122	pickups-static	right-bend-away	0	True	610	pickup_length	nil	sidecar	agree
+B122	pickups-static	right-bend-away	0	True	610	pickup_layout	nil	sidecar	agree
+B122	pickups-static	right-bend-away	0	True	610	pickup_problem	bend	sidecar	agree
+B123	pickups-static	right-bend-away	4	False	614	pickup_target	613	game	agree
+B123	pickups-static	right-bend-away	4	False	614	piece_shape	right	game	agree
+B123	pickups-static	right-bend-away	4	False	614	line_length_1	1.15234375	game	agree
+B123	pickups-static	right-bend-away	4	False	614	line_length_2	0.4140625	game	agree
+B123	pickups-static	right-bend-away	4	False	614	near_lane	nil	sidecar	agree
+B123	pickups-static	right-bend-away	4	False	614	pickup_length	nil	sidecar	agree
+B123	pickups-static	right-bend-away	4	False	614	pickup_layout	nil	sidecar	agree
+B123	pickups-static	right-bend-away	4	False	614	pickup_problem	bend	sidecar	agree
+B124	pickups-static	right-bend-away	4	True	618	pickup_target	617	game	agree
+B124	pickups-static	right-bend-away	4	True	618	piece_shape	right	game	agree
+B124	pickups-static	right-bend-away	4	True	618	line_length_1	1.15234375	game	agree
+B124	pickups-static	right-bend-away	4	True	618	line_length_2	0.4140625	game	agree
+B124	pickups-static	right-bend-away	4	True	618	near_lane	nil	sidecar	agree
+B124	pickups-static	right-bend-away	4	True	618	pickup_length	nil	sidecar	agree
+B124	pickups-static	right-bend-away	4	True	618	pickup_layout	nil	sidecar	agree
+B124	pickups-static	right-bend-away	4	True	618	pickup_problem	bend	sidecar	agree
+B125	pickups-static	right-bend-away	8	False	622	pickup_target	621	game	agree
+B125	pickups-static	right-bend-away	8	False	622	piece_shape	right	game	agree
+B125	pickups-static	right-bend-away	8	False	622	line_length_1	1.15234375	game	agree
+B125	pickups-static	right-bend-away	8	False	622	line_length_2	0.4140625	game	agree
+B125	pickups-static	right-bend-away	8	False	622	near_lane	nil	sidecar	agree
+B125	pickups-static	right-bend-away	8	False	622	pickup_length	nil	sidecar	agree
+B125	pickups-static	right-bend-away	8	False	622	pickup_layout	nil	sidecar	agree
+B125	pickups-static	right-bend-away	8	False	622	pickup_problem	bend	sidecar	agree
+B126	pickups-static	right-bend-away	8	True	626	pickup_target	625	game	agree
+B126	pickups-static	right-bend-away	8	True	626	piece_shape	right	game	agree
+B126	pickups-static	right-bend-away	8	True	626	line_length_1	1.15234375	game	agree
+B126	pickups-static	right-bend-away	8	True	626	line_length_2	0.4140625	game	agree
+B126	pickups-static	right-bend-away	8	True	626	near_lane	nil	sidecar	agree
+B126	pickups-static	right-bend-away	8	True	626	pickup_length	nil	sidecar	agree
+B126	pickups-static	right-bend-away	8	True	626	pickup_layout	nil	sidecar	agree
+B126	pickups-static	right-bend-away	8	True	626	pickup_problem	bend	sidecar	agree
+B127	pickups-static	right-bend-away	12	False	630	pickup_target	629	game	agree
+B127	pickups-static	right-bend-away	12	False	630	piece_shape	right	game	agree
+B127	pickups-static	right-bend-away	12	False	630	line_length_1	1.15234375	game	agree
+B127	pickups-static	right-bend-away	12	False	630	line_length_2	0.4140625	game	agree
+B127	pickups-static	right-bend-away	12	False	630	near_lane	nil	sidecar	agree
+B127	pickups-static	right-bend-away	12	False	630	pickup_length	nil	sidecar	agree
+B127	pickups-static	right-bend-away	12	False	630	pickup_layout	nil	sidecar	agree
+B127	pickups-static	right-bend-away	12	False	630	pickup_problem	bend	sidecar	agree
+B128	pickups-static	right-bend-away	12	True	634	pickup_target	633	game	agree
+B128	pickups-static	right-bend-away	12	True	634	piece_shape	right	game	agree
+B128	pickups-static	right-bend-away	12	True	634	line_length_1	1.15234375	game	agree
+B128	pickups-static	right-bend-away	12	True	634	line_length_2	0.4140625	game	agree
+B128	pickups-static	right-bend-away	12	True	634	near_lane	nil	sidecar	agree
+B128	pickups-static	right-bend-away	12	True	634	pickup_length	nil	sidecar	agree
+B128	pickups-static	right-bend-away	12	True	634	pickup_layout	nil	sidecar	agree
+B128	pickups-static	right-bend-away	12	True	634	pickup_problem	bend	sidecar	agree
+B129	pickups-static	right-bend-front	0	False	638	pickup_target	637	game	agree
+B129	pickups-static	right-bend-front	0	False	638	piece_shape	right	game	agree
+B129	pickups-static	right-bend-front	0	False	638	line_length_1	1.15234375	game	agree
+B129	pickups-static	right-bend-front	0	False	638	line_length_2	0.4140625	game	agree
+B129	pickups-static	right-bend-front	0	False	638	near_lane	nil	sidecar	agree
+B129	pickups-static	right-bend-front	0	False	638	pickup_length	nil	sidecar	agree
+B129	pickups-static	right-bend-front	0	False	638	pickup_layout	nil	sidecar	agree
+B129	pickups-static	right-bend-front	0	False	638	pickup_problem	bend	sidecar	agree
+B130	pickups-static	right-bend-front	0	True	642	pickup_target	641	game	agree
+B130	pickups-static	right-bend-front	0	True	642	piece_shape	right	game	agree
+B130	pickups-static	right-bend-front	0	True	642	line_length_1	1.15234375	game	agree
+B130	pickups-static	right-bend-front	0	True	642	line_length_2	0.4140625	game	agree
+B130	pickups-static	right-bend-front	0	True	642	near_lane	nil	sidecar	agree
+B130	pickups-static	right-bend-front	0	True	642	pickup_length	nil	sidecar	agree
+B130	pickups-static	right-bend-front	0	True	642	pickup_layout	nil	sidecar	agree
+B130	pickups-static	right-bend-front	0	True	642	pickup_problem	bend	sidecar	agree
+B131	pickups-static	right-bend-front	4	False	646	pickup_target	645	game	agree
+B131	pickups-static	right-bend-front	4	False	646	piece_shape	right	game	agree
+B131	pickups-static	right-bend-front	4	False	646	line_length_1	1.15234375	game	agree
+B131	pickups-static	right-bend-front	4	False	646	line_length_2	0.4140625	game	agree
+B131	pickups-static	right-bend-front	4	False	646	near_lane	nil	sidecar	agree
+B131	pickups-static	right-bend-front	4	False	646	pickup_length	nil	sidecar	agree
+B131	pickups-static	right-bend-front	4	False	646	pickup_layout	nil	sidecar	agree
+B131	pickups-static	right-bend-front	4	False	646	pickup_problem	bend	sidecar	agree
+B132	pickups-static	right-bend-front	4	True	650	pickup_target	649	game	agree
+B132	pickups-static	right-bend-front	4	True	650	piece_shape	right	game	agree
+B132	pickups-static	right-bend-front	4	True	650	line_length_1	1.15234375	game	agree
+B132	pickups-static	right-bend-front	4	True	650	line_length_2	0.4140625	game	agree
+B132	pickups-static	right-bend-front	4	True	650	near_lane	nil	sidecar	agree
+B132	pickups-static	right-bend-front	4	True	650	pickup_length	nil	sidecar	agree
+B132	pickups-static	right-bend-front	4	True	650	pickup_layout	nil	sidecar	agree
+B132	pickups-static	right-bend-front	4	True	650	pickup_problem	bend	sidecar	agree
+B133	pickups-static	right-bend-front	8	False	654	pickup_target	653	game	agree
+B133	pickups-static	right-bend-front	8	False	654	piece_shape	right	game	agree
+B133	pickups-static	right-bend-front	8	False	654	line_length_1	1.15234375	game	agree
+B133	pickups-static	right-bend-front	8	False	654	line_length_2	0.4140625	game	agree
+B133	pickups-static	right-bend-front	8	False	654	near_lane	nil	sidecar	agree
+B133	pickups-static	right-bend-front	8	False	654	pickup_length	nil	sidecar	agree
+B133	pickups-static	right-bend-front	8	False	654	pickup_layout	nil	sidecar	agree
+B133	pickups-static	right-bend-front	8	False	654	pickup_problem	bend	sidecar	agree
+B134	pickups-static	right-bend-front	8	True	658	pickup_target	657	game	agree
+B134	pickups-static	right-bend-front	8	True	658	piece_shape	right	game	agree
+B134	pickups-static	right-bend-front	8	True	658	line_length_1	1.15234375	game	agree
+B134	pickups-static	right-bend-front	8	True	658	line_length_2	0.4140625	game	agree
+B134	pickups-static	right-bend-front	8	True	658	near_lane	nil	sidecar	agree
+B134	pickups-static	right-bend-front	8	True	658	pickup_length	nil	sidecar	agree
+B134	pickups-static	right-bend-front	8	True	658	pickup_layout	nil	sidecar	agree
+B134	pickups-static	right-bend-front	8	True	658	pickup_problem	bend	sidecar	agree
+B135	pickups-static	right-bend-front	12	False	662	pickup_target	661	game	agree
+B135	pickups-static	right-bend-front	12	False	662	piece_shape	right	game	agree
+B135	pickups-static	right-bend-front	12	False	662	line_length_1	1.15234375	game	agree
+B135	pickups-static	right-bend-front	12	False	662	line_length_2	0.4140625	game	agree
+B135	pickups-static	right-bend-front	12	False	662	near_lane	nil	sidecar	agree
+B135	pickups-static	right-bend-front	12	False	662	pickup_length	nil	sidecar	agree
+B135	pickups-static	right-bend-front	12	False	662	pickup_layout	nil	sidecar	agree
+B135	pickups-static	right-bend-front	12	False	662	pickup_problem	bend	sidecar	agree
+B136	pickups-static	right-bend-front	12	True	666	pickup_target	665	game	agree
+B136	pickups-static	right-bend-front	12	True	666	piece_shape	right	game	agree
+B136	pickups-static	right-bend-front	12	True	666	line_length_1	1.15234375	game	agree
+B136	pickups-static	right-bend-front	12	True	666	line_length_2	0.4140625	game	agree
+B136	pickups-static	right-bend-front	12	True	666	near_lane	nil	sidecar	agree
+B136	pickups-static	right-bend-front	12	True	666	pickup_length	nil	sidecar	agree
+B136	pickups-static	right-bend-front	12	True	666	pickup_layout	nil	sidecar	agree
+B136	pickups-static	right-bend-front	12	True	666	pickup_problem	bend	sidecar	agree
+B137	pickups-static	splitter	0	False	672	pickup_target	669	game	agree
+B137	pickups-static	splitter	0	False	672	line_length_1	0.69921875	game	no reference
+B137	pickups-static	splitter	0	False	672	line_length_2	0.69921875	game	no reference
+B137	pickups-static	splitter	0	False	672	line_length_3	0.69921875	game	no reference
+B137	pickups-static	splitter	0	False	672	line_length_4	0.69921875	game	no reference
+B137	pickups-static	splitter	0	False	672	line_length_5	0.5	game	no reference
+B137	pickups-static	splitter	0	False	672	line_length_6	0.5	game	no reference
+B137	pickups-static	splitter	0	False	672	line_length_7	0.5	game	no reference
+B137	pickups-static	splitter	0	False	672	line_length_8	0.5	game	no reference
+B137	pickups-static	splitter	0	False	672	near_lane	nil	sidecar	agree
+B137	pickups-static	splitter	0	False	672	pickup_length	nil	sidecar	agree
+B137	pickups-static	splitter	0	False	672	pickup_layout	nil	sidecar	agree
+B137	pickups-static	splitter	0	False	672	pickup_problem	splitter	sidecar	agree
+B138	pickups-static	splitter	0	True	678	pickup_target	675	game	agree
+B138	pickups-static	splitter	0	True	678	line_length_1	0.69921875	game	no reference
+B138	pickups-static	splitter	0	True	678	line_length_2	0.69921875	game	no reference
+B138	pickups-static	splitter	0	True	678	line_length_3	0.69921875	game	no reference
+B138	pickups-static	splitter	0	True	678	line_length_4	0.69921875	game	no reference
+B138	pickups-static	splitter	0	True	678	line_length_5	0.5	game	no reference
+B138	pickups-static	splitter	0	True	678	line_length_6	0.5	game	no reference
+B138	pickups-static	splitter	0	True	678	line_length_7	0.5	game	no reference
+B138	pickups-static	splitter	0	True	678	line_length_8	0.5	game	no reference
+B138	pickups-static	splitter	0	True	678	near_lane	nil	sidecar	agree
+B138	pickups-static	splitter	0	True	678	pickup_length	nil	sidecar	agree
+B138	pickups-static	splitter	0	True	678	pickup_layout	nil	sidecar	agree
+B138	pickups-static	splitter	0	True	678	pickup_problem	splitter	sidecar	agree
+B139	pickups-static	splitter	4	False	684	pickup_target	681	game	agree
+B139	pickups-static	splitter	4	False	684	line_length_1	0.69921875	game	no reference
+B139	pickups-static	splitter	4	False	684	line_length_2	0.69921875	game	no reference
+B139	pickups-static	splitter	4	False	684	line_length_3	0.69921875	game	no reference
+B139	pickups-static	splitter	4	False	684	line_length_4	0.69921875	game	no reference
+B139	pickups-static	splitter	4	False	684	line_length_5	0.5	game	no reference
+B139	pickups-static	splitter	4	False	684	line_length_6	0.5	game	no reference
+B139	pickups-static	splitter	4	False	684	line_length_7	0.5	game	no reference
+B139	pickups-static	splitter	4	False	684	line_length_8	0.5	game	no reference
+B139	pickups-static	splitter	4	False	684	near_lane	nil	sidecar	agree
+B139	pickups-static	splitter	4	False	684	pickup_length	nil	sidecar	agree
+B139	pickups-static	splitter	4	False	684	pickup_layout	nil	sidecar	agree
+B139	pickups-static	splitter	4	False	684	pickup_problem	splitter	sidecar	agree
+B140	pickups-static	splitter	4	True	690	pickup_target	687	game	agree
+B140	pickups-static	splitter	4	True	690	line_length_1	0.69921875	game	no reference
+B140	pickups-static	splitter	4	True	690	line_length_2	0.69921875	game	no reference
+B140	pickups-static	splitter	4	True	690	line_length_3	0.69921875	game	no reference
+B140	pickups-static	splitter	4	True	690	line_length_4	0.69921875	game	no reference
+B140	pickups-static	splitter	4	True	690	line_length_5	0.5	game	no reference
+B140	pickups-static	splitter	4	True	690	line_length_6	0.5	game	no reference
+B140	pickups-static	splitter	4	True	690	line_length_7	0.5	game	no reference
+B140	pickups-static	splitter	4	True	690	line_length_8	0.5	game	no reference
+B140	pickups-static	splitter	4	True	690	near_lane	nil	sidecar	agree
+B140	pickups-static	splitter	4	True	690	pickup_length	nil	sidecar	agree
+B140	pickups-static	splitter	4	True	690	pickup_layout	nil	sidecar	agree
+B140	pickups-static	splitter	4	True	690	pickup_problem	splitter	sidecar	agree
+B141	pickups-static	splitter	8	False	696	pickup_target	693	game	agree
+B141	pickups-static	splitter	8	False	696	line_length_1	0.69921875	game	no reference
+B141	pickups-static	splitter	8	False	696	line_length_2	0.69921875	game	no reference
+B141	pickups-static	splitter	8	False	696	line_length_3	0.69921875	game	no reference
+B141	pickups-static	splitter	8	False	696	line_length_4	0.69921875	game	no reference
+B141	pickups-static	splitter	8	False	696	line_length_5	0.5	game	no reference
+B141	pickups-static	splitter	8	False	696	line_length_6	0.5	game	no reference
+B141	pickups-static	splitter	8	False	696	line_length_7	0.5	game	no reference
+B141	pickups-static	splitter	8	False	696	line_length_8	0.5	game	no reference
+B141	pickups-static	splitter	8	False	696	near_lane	nil	sidecar	agree
+B141	pickups-static	splitter	8	False	696	pickup_length	nil	sidecar	agree
+B141	pickups-static	splitter	8	False	696	pickup_layout	nil	sidecar	agree
+B141	pickups-static	splitter	8	False	696	pickup_problem	splitter	sidecar	agree
+B142	pickups-static	splitter	8	True	702	pickup_target	699	game	agree
+B142	pickups-static	splitter	8	True	702	line_length_1	0.69921875	game	no reference
+B142	pickups-static	splitter	8	True	702	line_length_2	0.69921875	game	no reference
+B142	pickups-static	splitter	8	True	702	line_length_3	0.69921875	game	no reference
+B142	pickups-static	splitter	8	True	702	line_length_4	0.69921875	game	no reference
+B142	pickups-static	splitter	8	True	702	line_length_5	0.5	game	no reference
+B142	pickups-static	splitter	8	True	702	line_length_6	0.5	game	no reference
+B142	pickups-static	splitter	8	True	702	line_length_7	0.5	game	no reference
+B142	pickups-static	splitter	8	True	702	line_length_8	0.5	game	no reference
+B142	pickups-static	splitter	8	True	702	near_lane	nil	sidecar	agree
+B142	pickups-static	splitter	8	True	702	pickup_length	nil	sidecar	agree
+B142	pickups-static	splitter	8	True	702	pickup_layout	nil	sidecar	agree
+B142	pickups-static	splitter	8	True	702	pickup_problem	splitter	sidecar	agree
+B143	pickups-static	splitter	12	False	708	pickup_target	705	game	agree
+B143	pickups-static	splitter	12	False	708	line_length_1	0.69921875	game	no reference
+B143	pickups-static	splitter	12	False	708	line_length_2	0.69921875	game	no reference
+B143	pickups-static	splitter	12	False	708	line_length_3	0.69921875	game	no reference
+B143	pickups-static	splitter	12	False	708	line_length_4	0.69921875	game	no reference
+B143	pickups-static	splitter	12	False	708	line_length_5	0.5	game	no reference
+B143	pickups-static	splitter	12	False	708	line_length_6	0.5	game	no reference
+B143	pickups-static	splitter	12	False	708	line_length_7	0.5	game	no reference
+B143	pickups-static	splitter	12	False	708	line_length_8	0.5	game	no reference
+B143	pickups-static	splitter	12	False	708	near_lane	nil	sidecar	agree
+B143	pickups-static	splitter	12	False	708	pickup_length	nil	sidecar	agree
+B143	pickups-static	splitter	12	False	708	pickup_layout	nil	sidecar	agree
+B143	pickups-static	splitter	12	False	708	pickup_problem	splitter	sidecar	agree
+B144	pickups-static	splitter	12	True	714	pickup_target	711	game	agree
+B144	pickups-static	splitter	12	True	714	line_length_1	0.69921875	game	no reference
+B144	pickups-static	splitter	12	True	714	line_length_2	0.69921875	game	no reference
+B144	pickups-static	splitter	12	True	714	line_length_3	0.69921875	game	no reference
+B144	pickups-static	splitter	12	True	714	line_length_4	0.69921875	game	no reference
+B144	pickups-static	splitter	12	True	714	line_length_5	0.5	game	no reference
+B144	pickups-static	splitter	12	True	714	line_length_6	0.5	game	no reference
+B144	pickups-static	splitter	12	True	714	line_length_7	0.5	game	no reference
+B144	pickups-static	splitter	12	True	714	line_length_8	0.5	game	no reference
+B144	pickups-static	splitter	12	True	714	near_lane	nil	sidecar	agree
+B144	pickups-static	splitter	12	True	714	pickup_length	nil	sidecar	agree
+B144	pickups-static	splitter	12	True	714	pickup_layout	nil	sidecar	agree
+B144	pickups-static	splitter	12	True	714	pickup_problem	splitter	sidecar	agree
+B145	pickups-behaviour	side-entrance	4	False	720	pickup_target	717	game	agree
+B145	pickups-behaviour	side-entrance	4	False	720	underground_pair	718	game	agree
+B145	pickups-behaviour	side-entrance	4	False	720	line_length_1	0.5	game	agree
+B145	pickups-behaviour	side-entrance	4	False	720	line_length_2	0.5	game	agree
+B145	pickups-behaviour	side-entrance	4	False	720	line_length_3	3	game	no reference
+B145	pickups-behaviour	side-entrance	4	False	720	line_length_4	3	game	no reference
+B145	pickups-behaviour	side-entrance	4	False	720	near_lane	1	game	agree
+B145	pickups-behaviour	side-entrance	4	False	720	pickup_length	0.5	sidecar	agree
+B145	pickups-behaviour	side-entrance	4	False	720	pickup_layout	side-entrance	sidecar	agree
+B145	pickups-behaviour	side-entrance	4	False	720	pickup_problem	nil	sidecar	agree
+B146	pickups-behaviour	side-entrance	4	True	727	pickup_target	724	game	agree
+B146	pickups-behaviour	side-entrance	4	True	727	underground_pair	725	game	agree
+B146	pickups-behaviour	side-entrance	4	True	727	line_length_1	0.5	game	agree
+B146	pickups-behaviour	side-entrance	4	True	727	line_length_2	0.5	game	agree
+B146	pickups-behaviour	side-entrance	4	True	727	line_length_3	3	game	no reference
+B146	pickups-behaviour	side-entrance	4	True	727	line_length_4	3	game	no reference
+B146	pickups-behaviour	side-entrance	4	True	727	near_lane	1	game	agree
+B146	pickups-behaviour	side-entrance	4	True	727	pickup_length	0.5	sidecar	agree
+B146	pickups-behaviour	side-entrance	4	True	727	pickup_layout	side-entrance	sidecar	agree
+B146	pickups-behaviour	side-entrance	4	True	727	pickup_problem	nil	sidecar	agree
+B147	pickups-behaviour	side-entrance	4	False	734	pickup_target	731	game	agree
+B147	pickups-behaviour	side-entrance	4	False	734	underground_pair	732	game	agree
+B147	pickups-behaviour	side-entrance	4	False	734	line_length_1	0.5	game	agree
+B147	pickups-behaviour	side-entrance	4	False	734	line_length_2	0.5	game	agree
+B147	pickups-behaviour	side-entrance	4	False	734	line_length_3	3	game	no reference
+B147	pickups-behaviour	side-entrance	4	False	734	line_length_4	3	game	no reference
+B147	pickups-behaviour	side-entrance	4	False	734	near_lane	2	game	agree
+B147	pickups-behaviour	side-entrance	4	False	734	pickup_length	0.5	sidecar	agree
+B147	pickups-behaviour	side-entrance	4	False	734	pickup_layout	side-entrance	sidecar	agree
+B147	pickups-behaviour	side-entrance	4	False	734	pickup_problem	nil	sidecar	agree
+B148	pickups-behaviour	side-entrance	4	True	741	pickup_target	738	game	agree
+B148	pickups-behaviour	side-entrance	4	True	741	underground_pair	739	game	agree
+B148	pickups-behaviour	side-entrance	4	True	741	line_length_1	0.5	game	agree
+B148	pickups-behaviour	side-entrance	4	True	741	line_length_2	0.5	game	agree
+B148	pickups-behaviour	side-entrance	4	True	741	line_length_3	3	game	no reference
+B148	pickups-behaviour	side-entrance	4	True	741	line_length_4	3	game	no reference
+B148	pickups-behaviour	side-entrance	4	True	741	near_lane	2	game	agree
+B148	pickups-behaviour	side-entrance	4	True	741	pickup_length	0.5	sidecar	agree
+B148	pickups-behaviour	side-entrance	4	True	741	pickup_layout	side-entrance	sidecar	agree
+B148	pickups-behaviour	side-entrance	4	True	741	pickup_problem	nil	sidecar	agree
+B149	pickups-behaviour	side-exit	4	False	748	pickup_target	746	game	agree
+B149	pickups-behaviour	side-exit	4	False	748	underground_pair	745	game	agree
+B149	pickups-behaviour	side-exit	4	False	748	line_length_1	0.5	game	agree
+B149	pickups-behaviour	side-exit	4	False	748	line_length_2	0.5	game	agree
+B149	pickups-behaviour	side-exit	4	False	748	line_length_3	1	game	no reference
+B149	pickups-behaviour	side-exit	4	False	748	line_length_4	1	game	no reference
+B149	pickups-behaviour	side-exit	4	False	748	near_lane	1	game	agree
+B149	pickups-behaviour	side-exit	4	False	748	pickup_length	0.5	sidecar	agree
+B149	pickups-behaviour	side-exit	4	False	748	pickup_layout	side-exit	sidecar	agree
+B149	pickups-behaviour	side-exit	4	False	748	pickup_problem	nil	sidecar	agree
+B150	pickups-behaviour	side-exit	4	True	755	pickup_target	753	game	agree
+B150	pickups-behaviour	side-exit	4	True	755	underground_pair	752	game	agree
+B150	pickups-behaviour	side-exit	4	True	755	line_length_1	0.5	game	agree
+B150	pickups-behaviour	side-exit	4	True	755	line_length_2	0.5	game	agree
+B150	pickups-behaviour	side-exit	4	True	755	line_length_3	1	game	no reference
+B150	pickups-behaviour	side-exit	4	True	755	line_length_4	1	game	no reference
+B150	pickups-behaviour	side-exit	4	True	755	near_lane	1	game	agree
+B150	pickups-behaviour	side-exit	4	True	755	pickup_length	0.5	sidecar	agree
+B150	pickups-behaviour	side-exit	4	True	755	pickup_layout	side-exit	sidecar	agree
+B150	pickups-behaviour	side-exit	4	True	755	pickup_problem	nil	sidecar	agree
+B151	pickups-behaviour	side-exit	4	False	762	pickup_target	760	game	agree
+B151	pickups-behaviour	side-exit	4	False	762	underground_pair	759	game	agree
+B151	pickups-behaviour	side-exit	4	False	762	line_length_1	0.5	game	agree
+B151	pickups-behaviour	side-exit	4	False	762	line_length_2	0.5	game	agree
+B151	pickups-behaviour	side-exit	4	False	762	line_length_3	1	game	no reference
+B151	pickups-behaviour	side-exit	4	False	762	line_length_4	1	game	no reference
+B151	pickups-behaviour	side-exit	4	False	762	near_lane	2	game	agree
+B151	pickups-behaviour	side-exit	4	False	762	pickup_length	0.5	sidecar	agree
+B151	pickups-behaviour	side-exit	4	False	762	pickup_layout	side-exit	sidecar	agree
+B151	pickups-behaviour	side-exit	4	False	762	pickup_problem	nil	sidecar	agree
+B152	pickups-behaviour	side-exit	4	True	769	pickup_target	767	game	agree
+B152	pickups-behaviour	side-exit	4	True	769	underground_pair	766	game	agree
+B152	pickups-behaviour	side-exit	4	True	769	line_length_1	0.5	game	agree
+B152	pickups-behaviour	side-exit	4	True	769	line_length_2	0.5	game	agree
+B152	pickups-behaviour	side-exit	4	True	769	line_length_3	1	game	no reference
+B152	pickups-behaviour	side-exit	4	True	769	line_length_4	1	game	no reference
+B152	pickups-behaviour	side-exit	4	True	769	near_lane	2	game	agree
+B152	pickups-behaviour	side-exit	4	True	769	pickup_length	0.5	sidecar	agree
+B152	pickups-behaviour	side-exit	4	True	769	pickup_layout	side-exit	sidecar	agree
+B152	pickups-behaviour	side-exit	4	True	769	pickup_problem	nil	sidecar	agree
+B153	pickups-behaviour	front-entrance	4	False	776	pickup_target	773	game	agree
+B153	pickups-behaviour	front-entrance	4	False	776	underground_pair	774	game	agree
+B153	pickups-behaviour	front-entrance	4	False	776	line_length_1	0.5	game	agree
+B153	pickups-behaviour	front-entrance	4	False	776	line_length_2	0.5	game	agree
+B153	pickups-behaviour	front-entrance	4	False	776	line_length_3	4	game	no reference
+B153	pickups-behaviour	front-entrance	4	False	776	line_length_4	4	game	no reference
+B153	pickups-behaviour	front-entrance	4	False	776	near_lane	1	game	agree
+B153	pickups-behaviour	front-entrance	4	False	776	pickup_length	0.5	sidecar	agree
+B153	pickups-behaviour	front-entrance	4	False	776	pickup_layout	front-entrance	sidecar	agree
+B153	pickups-behaviour	front-entrance	4	False	776	pickup_problem	nil	sidecar	agree
+B154	pickups-behaviour	front-entrance	4	True	783	pickup_target	780	game	agree
+B154	pickups-behaviour	front-entrance	4	True	783	underground_pair	781	game	agree
+B154	pickups-behaviour	front-entrance	4	True	783	line_length_1	0.5	game	agree
+B154	pickups-behaviour	front-entrance	4	True	783	line_length_2	0.5	game	agree
+B154	pickups-behaviour	front-entrance	4	True	783	line_length_3	4	game	no reference
+B154	pickups-behaviour	front-entrance	4	True	783	line_length_4	4	game	no reference
+B154	pickups-behaviour	front-entrance	4	True	783	near_lane	2	game	agree
+B154	pickups-behaviour	front-entrance	4	True	783	pickup_length	0.5	sidecar	agree
+B154	pickups-behaviour	front-entrance	4	True	783	pickup_layout	front-entrance	sidecar	agree
+B154	pickups-behaviour	front-entrance	4	True	783	pickup_problem	nil	sidecar	agree
+B155	pickups-behaviour	front-exit	4	False	789	pickup_target	788	game	agree
+B155	pickups-behaviour	front-exit	4	False	789	underground_pair	787	game	agree
+B155	pickups-behaviour	front-exit	4	False	789	line_length_1	0.5	game	agree
+B155	pickups-behaviour	front-exit	4	False	789	line_length_2	0.5	game	agree
+B155	pickups-behaviour	front-exit	4	False	789	line_length_3	1	game	no reference
+B155	pickups-behaviour	front-exit	4	False	789	line_length_4	1	game	no reference
+B155	pickups-behaviour	front-exit	4	False	789	near_lane	1	game	agree
+B155	pickups-behaviour	front-exit	4	False	789	pickup_length	0.5	sidecar	agree
+B155	pickups-behaviour	front-exit	4	False	789	pickup_layout	front-exit	sidecar	agree
+B155	pickups-behaviour	front-exit	4	False	789	pickup_problem	nil	sidecar	agree
+B156	pickups-behaviour	front-exit	4	True	795	pickup_target	794	game	agree
+B156	pickups-behaviour	front-exit	4	True	795	underground_pair	793	game	agree
+B156	pickups-behaviour	front-exit	4	True	795	line_length_1	0.5	game	agree
+B156	pickups-behaviour	front-exit	4	True	795	line_length_2	0.5	game	agree
+B156	pickups-behaviour	front-exit	4	True	795	line_length_3	1	game	no reference
+B156	pickups-behaviour	front-exit	4	True	795	line_length_4	1	game	no reference
+B156	pickups-behaviour	front-exit	4	True	795	near_lane	2	game	agree
+B156	pickups-behaviour	front-exit	4	True	795	pickup_length	0.5	sidecar	agree
+B156	pickups-behaviour	front-exit	4	True	795	pickup_layout	front-exit	sidecar	agree
+B156	pickups-behaviour	front-exit	4	True	795	pickup_problem	nil	sidecar	agree
+B157	pickups-behaviour	over-hood-exit	4	False	801	pickup_target	800	game	agree
+B157	pickups-behaviour	over-hood-exit	4	False	801	underground_pair	799	game	agree
+B157	pickups-behaviour	over-hood-exit	4	False	801	line_length_1	0.5	game	agree
+B157	pickups-behaviour	over-hood-exit	4	False	801	line_length_2	0.5	game	agree
+B157	pickups-behaviour	over-hood-exit	4	False	801	line_length_3	1	game	no reference
+B157	pickups-behaviour	over-hood-exit	4	False	801	line_length_4	1	game	no reference
+B157	pickups-behaviour	over-hood-exit	4	False	801	near_lane	1	game	agree
+B157	pickups-behaviour	over-hood-exit	4	False	801	pickup_length	0.5	sidecar	agree
+B157	pickups-behaviour	over-hood-exit	4	False	801	pickup_layout	over-hood-exit	sidecar	agree
+B157	pickups-behaviour	over-hood-exit	4	False	801	pickup_problem	nil	sidecar	agree
+B158	pickups-behaviour	over-hood-exit	4	True	807	pickup_target	806	game	agree
+B158	pickups-behaviour	over-hood-exit	4	True	807	underground_pair	805	game	agree
+B158	pickups-behaviour	over-hood-exit	4	True	807	line_length_1	0.5	game	agree
+B158	pickups-behaviour	over-hood-exit	4	True	807	line_length_2	0.5	game	agree
+B158	pickups-behaviour	over-hood-exit	4	True	807	line_length_3	1	game	no reference
+B158	pickups-behaviour	over-hood-exit	4	True	807	line_length_4	1	game	no reference
+B158	pickups-behaviour	over-hood-exit	4	True	807	near_lane	2	game	agree
+B158	pickups-behaviour	over-hood-exit	4	True	807	pickup_length	0.5	sidecar	agree
+B158	pickups-behaviour	over-hood-exit	4	True	807	pickup_layout	over-hood-exit	sidecar	agree
+B158	pickups-behaviour	over-hood-exit	4	True	807	pickup_problem	nil	sidecar	agree
+B159	pickups-behaviour	right-bend-behind	4	False	813	pickup_target	812	game	agree
+B159	pickups-behaviour	right-bend-behind	4	False	813	piece_shape	right	game	agree
+B159	pickups-behaviour	right-bend-behind	4	False	813	line_length_1	1.15234375	game	agree
+B159	pickups-behaviour	right-bend-behind	4	False	813	line_length_2	0.4140625	game	agree
+B159	pickups-behaviour	right-bend-behind	4	False	813	near_lane	1	game	agree
+B159	pickups-behaviour	right-bend-behind	4	False	813	pickup_length	1	sidecar	agree
+B159	pickups-behaviour	right-bend-behind	4	False	813	pickup_layout	bend-right-upstream	sidecar	agree
+B159	pickups-behaviour	right-bend-behind	4	False	813	pickup_problem	nil	sidecar	agree
+B160	pickups-behaviour	side-straight	4	False	819	pickup_target	818	game	agree
+B160	pickups-behaviour	side-straight	4	False	819	piece_shape	straight	game	agree
+B160	pickups-behaviour	side-straight	4	False	819	line_length_1	1	game	agree
+B160	pickups-behaviour	side-straight	4	False	819	line_length_2	1	game	agree
+B160	pickups-behaviour	side-straight	4	False	819	near_lane	1	game	agree
+B160	pickups-behaviour	side-straight	4	False	819	pickup_length	1	sidecar	agree
+B160	pickups-behaviour	side-straight	4	False	819	pickup_layout	side-straight	sidecar	agree
+B160	pickups-behaviour	side-straight	4	False	819	pickup_problem	nil	sidecar	agree
+B161	pickups-behaviour	inline-straight-end	4	False	825	pickup_target	824	game	agree
+B161	pickups-behaviour	inline-straight-end	4	False	825	piece_shape	straight	game	agree
+B161	pickups-behaviour	inline-straight-end	4	False	825	line_length_1	1	game	agree
+B161	pickups-behaviour	inline-straight-end	4	False	825	line_length_2	1	game	agree
+B161	pickups-behaviour	inline-straight-end	4	False	825	near_lane	1	game	no reference
+B161	pickups-behaviour	inline-straight-end	4	False	825	pickup_length	nil	sidecar	agree
+B161	pickups-behaviour	inline-straight-end	4	False	825	pickup_layout	nil	sidecar	agree
+B161	pickups-behaviour	inline-straight-end	4	False	825	pickup_problem	inline	sidecar	agree
+B162	pickups-behaviour	inline-straight-end	4	True	831	pickup_target	830	game	agree
+B162	pickups-behaviour	inline-straight-end	4	True	831	piece_shape	straight	game	agree
+B162	pickups-behaviour	inline-straight-end	4	True	831	line_length_1	1	game	agree
+B162	pickups-behaviour	inline-straight-end	4	True	831	line_length_2	1	game	agree
+B162	pickups-behaviour	inline-straight-end	4	True	831	near_lane	2	game	no reference
+B162	pickups-behaviour	inline-straight-end	4	True	831	pickup_length	nil	sidecar	agree
+B162	pickups-behaviour	inline-straight-end	4	True	831	pickup_layout	nil	sidecar	agree
+B162	pickups-behaviour	inline-straight-end	4	True	831	pickup_problem	inline	sidecar	agree
+B163	side-loaded-tile	side-loaded-left	0	False	838	pickup_target	835	game	agree
+B163	side-loaded-tile	side-loaded-left	0	False	838	piece_shape	straight	game	agree
+B163	side-loaded-tile	side-loaded-left	0	False	838	line_length_1	1	game	agree
+B163	side-loaded-tile	side-loaded-left	0	False	838	line_length_2	1	game	agree
+B163	side-loaded-tile	side-loaded-left	0	False	838	near_lane	2	sidecar	agree
+B163	side-loaded-tile	side-loaded-left	0	False	838	pickup_length	1	sidecar	agree
+B163	side-loaded-tile	side-loaded-left	0	False	838	pickup_layout	side-straight	sidecar	agree
+B163	side-loaded-tile	side-loaded-left	0	False	838	pickup_problem	nil	sidecar	agree
+B163	side-loaded-tile	side-loaded-left	0	False	838	supply_problem	side-loaded	sidecar	no reference
+B164	side-loaded-tile	side-loaded-left	4	False	844	pickup_target	841	game	agree
+B164	side-loaded-tile	side-loaded-left	4	False	844	piece_shape	straight	game	agree
+B164	side-loaded-tile	side-loaded-left	4	False	844	line_length_1	1	game	agree
+B164	side-loaded-tile	side-loaded-left	4	False	844	line_length_2	1	game	agree
+B164	side-loaded-tile	side-loaded-left	4	False	844	near_lane	2	sidecar	agree
+B164	side-loaded-tile	side-loaded-left	4	False	844	pickup_length	1	sidecar	agree
+B164	side-loaded-tile	side-loaded-left	4	False	844	pickup_layout	side-straight	sidecar	agree
+B164	side-loaded-tile	side-loaded-left	4	False	844	pickup_problem	nil	sidecar	agree
+B164	side-loaded-tile	side-loaded-left	4	False	844	supply_problem	side-loaded	sidecar	no reference
+B165	side-loaded-tile	side-loaded-left	8	False	850	pickup_target	847	game	agree
+B165	side-loaded-tile	side-loaded-left	8	False	850	piece_shape	straight	game	agree
+B165	side-loaded-tile	side-loaded-left	8	False	850	line_length_1	1	game	agree
+B165	side-loaded-tile	side-loaded-left	8	False	850	line_length_2	1	game	agree
+B165	side-loaded-tile	side-loaded-left	8	False	850	near_lane	2	sidecar	agree
+B165	side-loaded-tile	side-loaded-left	8	False	850	pickup_length	1	sidecar	agree
+B165	side-loaded-tile	side-loaded-left	8	False	850	pickup_layout	side-straight	sidecar	agree
+B165	side-loaded-tile	side-loaded-left	8	False	850	pickup_problem	nil	sidecar	agree
+B165	side-loaded-tile	side-loaded-left	8	False	850	supply_problem	side-loaded	sidecar	no reference
+B166	side-loaded-tile	side-loaded-left	12	False	856	pickup_target	853	game	agree
+B166	side-loaded-tile	side-loaded-left	12	False	856	piece_shape	straight	game	agree
+B166	side-loaded-tile	side-loaded-left	12	False	856	line_length_1	1	game	agree
+B166	side-loaded-tile	side-loaded-left	12	False	856	line_length_2	1	game	agree
+B166	side-loaded-tile	side-loaded-left	12	False	856	near_lane	2	sidecar	agree
+B166	side-loaded-tile	side-loaded-left	12	False	856	pickup_length	1	sidecar	agree
+B166	side-loaded-tile	side-loaded-left	12	False	856	pickup_layout	side-straight	sidecar	agree
+B166	side-loaded-tile	side-loaded-left	12	False	856	pickup_problem	nil	sidecar	agree
+B166	side-loaded-tile	side-loaded-left	12	False	856	supply_problem	side-loaded	sidecar	no reference
+B167	side-loaded-tile	side-loaded-right	0	False	862	pickup_target	859	game	agree
+B167	side-loaded-tile	side-loaded-right	0	False	862	piece_shape	straight	game	agree
+B167	side-loaded-tile	side-loaded-right	0	False	862	line_length_1	1	game	agree
+B167	side-loaded-tile	side-loaded-right	0	False	862	line_length_2	1	game	agree
+B167	side-loaded-tile	side-loaded-right	0	False	862	near_lane	1	sidecar	agree
+B167	side-loaded-tile	side-loaded-right	0	False	862	pickup_length	1	sidecar	agree
+B167	side-loaded-tile	side-loaded-right	0	False	862	pickup_layout	side-straight	sidecar	agree
+B167	side-loaded-tile	side-loaded-right	0	False	862	pickup_problem	nil	sidecar	agree
+B167	side-loaded-tile	side-loaded-right	0	False	862	supply_problem	side-loaded	sidecar	no reference
+B168	side-loaded-tile	side-loaded-right	4	False	868	pickup_target	865	game	agree
+B168	side-loaded-tile	side-loaded-right	4	False	868	piece_shape	straight	game	agree
+B168	side-loaded-tile	side-loaded-right	4	False	868	line_length_1	1	game	agree
+B168	side-loaded-tile	side-loaded-right	4	False	868	line_length_2	1	game	agree
+B168	side-loaded-tile	side-loaded-right	4	False	868	near_lane	1	sidecar	agree
+B168	side-loaded-tile	side-loaded-right	4	False	868	pickup_length	1	sidecar	agree
+B168	side-loaded-tile	side-loaded-right	4	False	868	pickup_layout	side-straight	sidecar	agree
+B168	side-loaded-tile	side-loaded-right	4	False	868	pickup_problem	nil	sidecar	agree
+B168	side-loaded-tile	side-loaded-right	4	False	868	supply_problem	side-loaded	sidecar	no reference
+B169	side-loaded-tile	side-loaded-right	8	False	874	pickup_target	871	game	agree
+B169	side-loaded-tile	side-loaded-right	8	False	874	piece_shape	straight	game	agree
+B169	side-loaded-tile	side-loaded-right	8	False	874	line_length_1	1	game	agree
+B169	side-loaded-tile	side-loaded-right	8	False	874	line_length_2	1	game	agree
+B169	side-loaded-tile	side-loaded-right	8	False	874	near_lane	1	sidecar	agree
+B169	side-loaded-tile	side-loaded-right	8	False	874	pickup_length	1	sidecar	agree
+B169	side-loaded-tile	side-loaded-right	8	False	874	pickup_layout	side-straight	sidecar	agree
+B169	side-loaded-tile	side-loaded-right	8	False	874	pickup_problem	nil	sidecar	agree
+B169	side-loaded-tile	side-loaded-right	8	False	874	supply_problem	side-loaded	sidecar	no reference
+B170	side-loaded-tile	side-loaded-right	12	False	880	pickup_target	877	game	agree
+B170	side-loaded-tile	side-loaded-right	12	False	880	piece_shape	straight	game	agree
+B170	side-loaded-tile	side-loaded-right	12	False	880	line_length_1	1	game	agree
+B170	side-loaded-tile	side-loaded-right	12	False	880	line_length_2	1	game	agree
+B170	side-loaded-tile	side-loaded-right	12	False	880	near_lane	1	sidecar	agree
+B170	side-loaded-tile	side-loaded-right	12	False	880	pickup_length	1	sidecar	agree
+B170	side-loaded-tile	side-loaded-right	12	False	880	pickup_layout	side-straight	sidecar	agree
+B170	side-loaded-tile	side-loaded-right	12	False	880	pickup_problem	nil	sidecar	agree
+B170	side-loaded-tile	side-loaded-right	12	False	880	supply_problem	side-loaded	sidecar	no reference
+B171	side-loaded-tile	side-loaded-both	0	False	886	pickup_target	883	game	agree
+B171	side-loaded-tile	side-loaded-both	0	False	886	piece_shape	straight	game	agree
+B171	side-loaded-tile	side-loaded-both	0	False	886	line_length_1	1	game	agree
+B171	side-loaded-tile	side-loaded-both	0	False	886	line_length_2	1	game	agree
+B171	side-loaded-tile	side-loaded-both	0	False	886	near_lane	nil	sidecar	agree
+B171	side-loaded-tile	side-loaded-both	0	False	886	pickup_length	nil	sidecar	agree
+B171	side-loaded-tile	side-loaded-both	0	False	886	pickup_layout	nil	sidecar	agree
+B171	side-loaded-tile	side-loaded-both	0	False	886	pickup_problem	inline	sidecar	agree
+B171	side-loaded-tile	side-loaded-both	0	False	886	supply_problem	nil	sidecar	no reference
+B172	side-loaded-tile	side-loaded-both	4	False	892	pickup_target	889	game	agree
+B172	side-loaded-tile	side-loaded-both	4	False	892	piece_shape	straight	game	agree
+B172	side-loaded-tile	side-loaded-both	4	False	892	line_length_1	1	game	agree
+B172	side-loaded-tile	side-loaded-both	4	False	892	line_length_2	1	game	agree
+B172	side-loaded-tile	side-loaded-both	4	False	892	near_lane	nil	sidecar	agree
+B172	side-loaded-tile	side-loaded-both	4	False	892	pickup_length	nil	sidecar	agree
+B172	side-loaded-tile	side-loaded-both	4	False	892	pickup_layout	nil	sidecar	agree
+B172	side-loaded-tile	side-loaded-both	4	False	892	pickup_problem	inline	sidecar	agree
+B172	side-loaded-tile	side-loaded-both	4	False	892	supply_problem	nil	sidecar	no reference
+B173	side-loaded-tile	side-loaded-both	8	False	898	pickup_target	895	game	agree
+B173	side-loaded-tile	side-loaded-both	8	False	898	piece_shape	straight	game	agree
+B173	side-loaded-tile	side-loaded-both	8	False	898	line_length_1	1	game	agree
+B173	side-loaded-tile	side-loaded-both	8	False	898	line_length_2	1	game	agree
+B173	side-loaded-tile	side-loaded-both	8	False	898	near_lane	nil	sidecar	agree
+B173	side-loaded-tile	side-loaded-both	8	False	898	pickup_length	nil	sidecar	agree
+B173	side-loaded-tile	side-loaded-both	8	False	898	pickup_layout	nil	sidecar	agree
+B173	side-loaded-tile	side-loaded-both	8	False	898	pickup_problem	inline	sidecar	agree
+B173	side-loaded-tile	side-loaded-both	8	False	898	supply_problem	nil	sidecar	no reference
+B174	side-loaded-tile	side-loaded-both	12	False	904	pickup_target	901	game	agree
+B174	side-loaded-tile	side-loaded-both	12	False	904	piece_shape	straight	game	agree
+B174	side-loaded-tile	side-loaded-both	12	False	904	line_length_1	1	game	agree
+B174	side-loaded-tile	side-loaded-both	12	False	904	line_length_2	1	game	agree
+B174	side-loaded-tile	side-loaded-both	12	False	904	near_lane	nil	sidecar	agree
+B174	side-loaded-tile	side-loaded-both	12	False	904	pickup_length	nil	sidecar	agree
+B174	side-loaded-tile	side-loaded-both	12	False	904	pickup_layout	nil	sidecar	agree
+B174	side-loaded-tile	side-loaded-both	12	False	904	pickup_problem	inline	sidecar	agree
+B174	side-loaded-tile	side-loaded-both	12	False	904	supply_problem	nil	sidecar	no reference
+B175	side-loaded-tile	side-loaded-entrance	0	False	911	pickup_target	907	game	agree
+B175	side-loaded-tile	side-loaded-entrance	0	False	911	underground_pair	908	game	agree
+B175	side-loaded-tile	side-loaded-entrance	0	False	911	line_length_1	0.5	game	agree
+B175	side-loaded-tile	side-loaded-entrance	0	False	911	line_length_2	0.5	game	agree
+B175	side-loaded-tile	side-loaded-entrance	0	False	911	line_length_3	3	game	no reference
+B175	side-loaded-tile	side-loaded-entrance	0	False	911	line_length_4	3	game	no reference
+B175	side-loaded-tile	side-loaded-entrance	0	False	911	near_lane	2	sidecar	agree
+B175	side-loaded-tile	side-loaded-entrance	0	False	911	pickup_length	0.5	sidecar	agree
+B175	side-loaded-tile	side-loaded-entrance	0	False	911	pickup_layout	side-entrance	sidecar	agree
+B175	side-loaded-tile	side-loaded-entrance	0	False	911	pickup_problem	nil	sidecar	agree
+B175	side-loaded-tile	side-loaded-entrance	0	False	911	supply_problem	side-loaded	sidecar	no reference
+B176	side-loaded-tile	side-loaded-entrance	4	False	918	pickup_target	914	game	agree
+B176	side-loaded-tile	side-loaded-entrance	4	False	918	underground_pair	915	game	agree
+B176	side-loaded-tile	side-loaded-entrance	4	False	918	line_length_1	0.5	game	agree
+B176	side-loaded-tile	side-loaded-entrance	4	False	918	line_length_2	0.5	game	agree
+B176	side-loaded-tile	side-loaded-entrance	4	False	918	line_length_3	3	game	no reference
+B176	side-loaded-tile	side-loaded-entrance	4	False	918	line_length_4	3	game	no reference
+B176	side-loaded-tile	side-loaded-entrance	4	False	918	near_lane	2	sidecar	agree
+B176	side-loaded-tile	side-loaded-entrance	4	False	918	pickup_length	0.5	sidecar	agree
+B176	side-loaded-tile	side-loaded-entrance	4	False	918	pickup_layout	side-entrance	sidecar	agree
+B176	side-loaded-tile	side-loaded-entrance	4	False	918	pickup_problem	nil	sidecar	agree
+B176	side-loaded-tile	side-loaded-entrance	4	False	918	supply_problem	side-loaded	sidecar	no reference
+B177	side-loaded-tile	side-loaded-entrance	8	False	925	pickup_target	921	game	agree
+B177	side-loaded-tile	side-loaded-entrance	8	False	925	underground_pair	922	game	agree
+B177	side-loaded-tile	side-loaded-entrance	8	False	925	line_length_1	0.5	game	agree
+B177	side-loaded-tile	side-loaded-entrance	8	False	925	line_length_2	0.5	game	agree
+B177	side-loaded-tile	side-loaded-entrance	8	False	925	line_length_3	3	game	no reference
+B177	side-loaded-tile	side-loaded-entrance	8	False	925	line_length_4	3	game	no reference
+B177	side-loaded-tile	side-loaded-entrance	8	False	925	near_lane	2	sidecar	agree
+B177	side-loaded-tile	side-loaded-entrance	8	False	925	pickup_length	0.5	sidecar	agree
+B177	side-loaded-tile	side-loaded-entrance	8	False	925	pickup_layout	side-entrance	sidecar	agree
+B177	side-loaded-tile	side-loaded-entrance	8	False	925	pickup_problem	nil	sidecar	agree
+B177	side-loaded-tile	side-loaded-entrance	8	False	925	supply_problem	side-loaded	sidecar	no reference
+B178	side-loaded-tile	side-loaded-entrance	12	False	932	pickup_target	928	game	agree
+B178	side-loaded-tile	side-loaded-entrance	12	False	932	underground_pair	929	game	agree
+B178	side-loaded-tile	side-loaded-entrance	12	False	932	line_length_1	0.5	game	agree
+B178	side-loaded-tile	side-loaded-entrance	12	False	932	line_length_2	0.5	game	agree
+B178	side-loaded-tile	side-loaded-entrance	12	False	932	line_length_3	3	game	no reference
+B178	side-loaded-tile	side-loaded-entrance	12	False	932	line_length_4	3	game	no reference
+B178	side-loaded-tile	side-loaded-entrance	12	False	932	near_lane	2	sidecar	agree
+B178	side-loaded-tile	side-loaded-entrance	12	False	932	pickup_length	0.5	sidecar	agree
+B178	side-loaded-tile	side-loaded-entrance	12	False	932	pickup_layout	side-entrance	sidecar	agree
+B178	side-loaded-tile	side-loaded-entrance	12	False	932	pickup_problem	nil	sidecar	agree
+B178	side-loaded-tile	side-loaded-entrance	12	False	932	supply_problem	side-loaded	sidecar	no reference
+B179	side-loaded-tile	side-loaded-exit	0	False	939	pickup_target	936	game	agree
+B179	side-loaded-tile	side-loaded-exit	0	False	939	underground_pair	935	game	agree
+B179	side-loaded-tile	side-loaded-exit	0	False	939	line_length_1	0.5	game	agree
+B179	side-loaded-tile	side-loaded-exit	0	False	939	line_length_2	0.5	game	agree
+B179	side-loaded-tile	side-loaded-exit	0	False	939	line_length_3	1	game	no reference
+B179	side-loaded-tile	side-loaded-exit	0	False	939	line_length_4	1	game	no reference
+B179	side-loaded-tile	side-loaded-exit	0	False	939	near_lane	2	sidecar	agree
+B179	side-loaded-tile	side-loaded-exit	0	False	939	pickup_length	0.5	sidecar	agree
+B179	side-loaded-tile	side-loaded-exit	0	False	939	pickup_layout	side-exit	sidecar	agree
+B179	side-loaded-tile	side-loaded-exit	0	False	939	pickup_problem	nil	sidecar	agree
+B179	side-loaded-tile	side-loaded-exit	0	False	939	supply_problem	side-loaded	sidecar	no reference
+B180	side-loaded-tile	side-loaded-exit	4	False	946	pickup_target	943	game	agree
+B180	side-loaded-tile	side-loaded-exit	4	False	946	underground_pair	942	game	agree
+B180	side-loaded-tile	side-loaded-exit	4	False	946	line_length_1	0.5	game	agree
+B180	side-loaded-tile	side-loaded-exit	4	False	946	line_length_2	0.5	game	agree
+B180	side-loaded-tile	side-loaded-exit	4	False	946	line_length_3	1	game	no reference
+B180	side-loaded-tile	side-loaded-exit	4	False	946	line_length_4	1	game	no reference
+B180	side-loaded-tile	side-loaded-exit	4	False	946	near_lane	2	sidecar	agree
+B180	side-loaded-tile	side-loaded-exit	4	False	946	pickup_length	0.5	sidecar	agree
+B180	side-loaded-tile	side-loaded-exit	4	False	946	pickup_layout	side-exit	sidecar	agree
+B180	side-loaded-tile	side-loaded-exit	4	False	946	pickup_problem	nil	sidecar	agree
+B180	side-loaded-tile	side-loaded-exit	4	False	946	supply_problem	side-loaded	sidecar	no reference
+B181	side-loaded-tile	side-loaded-exit	8	False	953	pickup_target	950	game	agree
+B181	side-loaded-tile	side-loaded-exit	8	False	953	underground_pair	949	game	agree
+B181	side-loaded-tile	side-loaded-exit	8	False	953	line_length_1	0.5	game	agree
+B181	side-loaded-tile	side-loaded-exit	8	False	953	line_length_2	0.5	game	agree
+B181	side-loaded-tile	side-loaded-exit	8	False	953	line_length_3	1	game	no reference
+B181	side-loaded-tile	side-loaded-exit	8	False	953	line_length_4	1	game	no reference
+B181	side-loaded-tile	side-loaded-exit	8	False	953	near_lane	2	sidecar	agree
+B181	side-loaded-tile	side-loaded-exit	8	False	953	pickup_length	0.5	sidecar	agree
+B181	side-loaded-tile	side-loaded-exit	8	False	953	pickup_layout	side-exit	sidecar	agree
+B181	side-loaded-tile	side-loaded-exit	8	False	953	pickup_problem	nil	sidecar	agree
+B181	side-loaded-tile	side-loaded-exit	8	False	953	supply_problem	side-loaded	sidecar	no reference
+B182	side-loaded-tile	side-loaded-exit	12	False	960	pickup_target	957	game	agree
+B182	side-loaded-tile	side-loaded-exit	12	False	960	underground_pair	956	game	agree
+B182	side-loaded-tile	side-loaded-exit	12	False	960	line_length_1	0.5	game	agree
+B182	side-loaded-tile	side-loaded-exit	12	False	960	line_length_2	0.5	game	agree
+B182	side-loaded-tile	side-loaded-exit	12	False	960	line_length_3	1	game	no reference
+B182	side-loaded-tile	side-loaded-exit	12	False	960	line_length_4	1	game	no reference
+B182	side-loaded-tile	side-loaded-exit	12	False	960	near_lane	2	sidecar	agree
+B182	side-loaded-tile	side-loaded-exit	12	False	960	pickup_length	0.5	sidecar	agree
+B182	side-loaded-tile	side-loaded-exit	12	False	960	pickup_layout	side-exit	sidecar	agree
+B182	side-loaded-tile	side-loaded-exit	12	False	960	pickup_problem	nil	sidecar	agree
+B182	side-loaded-tile	side-loaded-exit	12	False	960	supply_problem	side-loaded	sidecar	no reference
+B183	side-loaded-tile	bend-own-input-only	0	False	964	pickup_target	963	game	agree
+B183	side-loaded-tile	bend-own-input-only	0	False	964	piece_shape	right	game	agree
+B183	side-loaded-tile	bend-own-input-only	0	False	964	line_length_1	1.15234375	game	agree
+B183	side-loaded-tile	bend-own-input-only	0	False	964	line_length_2	0.4140625	game	agree
+B183	side-loaded-tile	bend-own-input-only	0	False	964	near_lane	1	sidecar	agree
+B183	side-loaded-tile	bend-own-input-only	0	False	964	pickup_length	1	sidecar	agree
+B183	side-loaded-tile	bend-own-input-only	0	False	964	pickup_layout	bend-right-upstream	sidecar	agree
+B183	side-loaded-tile	bend-own-input-only	0	False	964	pickup_problem	nil	sidecar	agree
+B183	side-loaded-tile	bend-own-input-only	0	False	964	supply_problem	nil	sidecar	no reference
+B184	side-loaded-tile	bend-own-input-only	4	False	968	pickup_target	967	game	agree
+B184	side-loaded-tile	bend-own-input-only	4	False	968	piece_shape	right	game	agree
+B184	side-loaded-tile	bend-own-input-only	4	False	968	line_length_1	1.15234375	game	agree
+B184	side-loaded-tile	bend-own-input-only	4	False	968	line_length_2	0.4140625	game	agree
+B184	side-loaded-tile	bend-own-input-only	4	False	968	near_lane	1	sidecar	agree
+B184	side-loaded-tile	bend-own-input-only	4	False	968	pickup_length	1	sidecar	agree
+B184	side-loaded-tile	bend-own-input-only	4	False	968	pickup_layout	bend-right-upstream	sidecar	agree
+B184	side-loaded-tile	bend-own-input-only	4	False	968	pickup_problem	nil	sidecar	agree
+B184	side-loaded-tile	bend-own-input-only	4	False	968	supply_problem	nil	sidecar	no reference
+B185	side-loaded-tile	bend-own-input-only	8	False	972	pickup_target	971	game	agree
+B185	side-loaded-tile	bend-own-input-only	8	False	972	piece_shape	right	game	agree
+B185	side-loaded-tile	bend-own-input-only	8	False	972	line_length_1	1.15234375	game	agree
+B185	side-loaded-tile	bend-own-input-only	8	False	972	line_length_2	0.4140625	game	agree
+B185	side-loaded-tile	bend-own-input-only	8	False	972	near_lane	1	sidecar	agree
+B185	side-loaded-tile	bend-own-input-only	8	False	972	pickup_length	1	sidecar	agree
+B185	side-loaded-tile	bend-own-input-only	8	False	972	pickup_layout	bend-right-upstream	sidecar	agree
+B185	side-loaded-tile	bend-own-input-only	8	False	972	pickup_problem	nil	sidecar	agree
+B185	side-loaded-tile	bend-own-input-only	8	False	972	supply_problem	nil	sidecar	no reference
+B186	side-loaded-tile	bend-own-input-only	12	False	976	pickup_target	975	game	agree
+B186	side-loaded-tile	bend-own-input-only	12	False	976	piece_shape	right	game	agree
+B186	side-loaded-tile	bend-own-input-only	12	False	976	line_length_1	1.15234375	game	agree
+B186	side-loaded-tile	bend-own-input-only	12	False	976	line_length_2	0.4140625	game	agree
+B186	side-loaded-tile	bend-own-input-only	12	False	976	near_lane	1	sidecar	agree
+B186	side-loaded-tile	bend-own-input-only	12	False	976	pickup_length	1	sidecar	agree
+B186	side-loaded-tile	bend-own-input-only	12	False	976	pickup_layout	bend-right-upstream	sidecar	agree
+B186	side-loaded-tile	bend-own-input-only	12	False	976	pickup_problem	nil	sidecar	agree
+B186	side-loaded-tile	bend-own-input-only	12	False	976	supply_problem	nil	sidecar	no reference
+B187	side-loaded-tile	fed-from-behind-only	0	False	981	pickup_target	979	game	agree
+B187	side-loaded-tile	fed-from-behind-only	0	False	981	piece_shape	straight	game	agree
+B187	side-loaded-tile	fed-from-behind-only	0	False	981	line_length_1	1	game	agree
+B187	side-loaded-tile	fed-from-behind-only	0	False	981	line_length_2	1	game	agree
+B187	side-loaded-tile	fed-from-behind-only	0	False	981	near_lane	2	sidecar	agree
+B187	side-loaded-tile	fed-from-behind-only	0	False	981	pickup_length	1	sidecar	agree
+B187	side-loaded-tile	fed-from-behind-only	0	False	981	pickup_layout	side-straight	sidecar	agree
+B187	side-loaded-tile	fed-from-behind-only	0	False	981	pickup_problem	nil	sidecar	agree
+B187	side-loaded-tile	fed-from-behind-only	0	False	981	supply_problem	nil	sidecar	no reference
+B188	side-loaded-tile	fed-from-behind-only	4	False	986	pickup_target	984	game	agree
+B188	side-loaded-tile	fed-from-behind-only	4	False	986	piece_shape	straight	game	agree
+B188	side-loaded-tile	fed-from-behind-only	4	False	986	line_length_1	1	game	agree
+B188	side-loaded-tile	fed-from-behind-only	4	False	986	line_length_2	1	game	agree
+B188	side-loaded-tile	fed-from-behind-only	4	False	986	near_lane	2	sidecar	agree
+B188	side-loaded-tile	fed-from-behind-only	4	False	986	pickup_length	1	sidecar	agree
+B188	side-loaded-tile	fed-from-behind-only	4	False	986	pickup_layout	side-straight	sidecar	agree
+B188	side-loaded-tile	fed-from-behind-only	4	False	986	pickup_problem	nil	sidecar	agree
+B188	side-loaded-tile	fed-from-behind-only	4	False	986	supply_problem	nil	sidecar	no reference
+B189	side-loaded-tile	fed-from-behind-only	8	False	991	pickup_target	989	game	agree
+B189	side-loaded-tile	fed-from-behind-only	8	False	991	piece_shape	straight	game	agree
+B189	side-loaded-tile	fed-from-behind-only	8	False	991	line_length_1	1	game	agree
+B189	side-loaded-tile	fed-from-behind-only	8	False	991	line_length_2	1	game	agree
+B189	side-loaded-tile	fed-from-behind-only	8	False	991	near_lane	2	sidecar	agree
+B189	side-loaded-tile	fed-from-behind-only	8	False	991	pickup_length	1	sidecar	agree
+B189	side-loaded-tile	fed-from-behind-only	8	False	991	pickup_layout	side-straight	sidecar	agree
+B189	side-loaded-tile	fed-from-behind-only	8	False	991	pickup_problem	nil	sidecar	agree
+B189	side-loaded-tile	fed-from-behind-only	8	False	991	supply_problem	nil	sidecar	no reference
+B190	side-loaded-tile	fed-from-behind-only	12	False	996	pickup_target	994	game	agree
+B190	side-loaded-tile	fed-from-behind-only	12	False	996	piece_shape	straight	game	agree
+B190	side-loaded-tile	fed-from-behind-only	12	False	996	line_length_1	1	game	agree
+B190	side-loaded-tile	fed-from-behind-only	12	False	996	line_length_2	1	game	agree
+B190	side-loaded-tile	fed-from-behind-only	12	False	996	near_lane	2	sidecar	agree
+B190	side-loaded-tile	fed-from-behind-only	12	False	996	pickup_length	1	sidecar	agree
+B190	side-loaded-tile	fed-from-behind-only	12	False	996	pickup_layout	side-straight	sidecar	agree
+B190	side-loaded-tile	fed-from-behind-only	12	False	996	pickup_problem	nil	sidecar	agree
+B190	side-loaded-tile	fed-from-behind-only	12	False	996	supply_problem	nil	sidecar	no reference
+B191	side-loaded-tile	bend-outer-side-input	0	False	1001	pickup_target	999	game	agree
+B191	side-loaded-tile	bend-outer-side-input	0	False	1001	piece_shape	straight	game	agree
+B191	side-loaded-tile	bend-outer-side-input	0	False	1001	line_length_1	1	game	agree
+B191	side-loaded-tile	bend-outer-side-input	0	False	1001	line_length_2	1	game	agree
+B191	side-loaded-tile	bend-outer-side-input	0	False	1001	near_lane	nil	sidecar	agree
+B191	side-loaded-tile	bend-outer-side-input	0	False	1001	pickup_length	nil	sidecar	agree
+B191	side-loaded-tile	bend-outer-side-input	0	False	1001	pickup_layout	nil	sidecar	agree
+B191	side-loaded-tile	bend-outer-side-input	0	False	1001	pickup_problem	inline	sidecar	agree
+B191	side-loaded-tile	bend-outer-side-input	0	False	1001	supply_problem	nil	sidecar	no reference
+B192	side-loaded-tile	bend-outer-side-input	4	False	1006	pickup_target	1004	game	agree
+B192	side-loaded-tile	bend-outer-side-input	4	False	1006	piece_shape	straight	game	agree
+B192	side-loaded-tile	bend-outer-side-input	4	False	1006	line_length_1	1	game	agree
+B192	side-loaded-tile	bend-outer-side-input	4	False	1006	line_length_2	1	game	agree
+B192	side-loaded-tile	bend-outer-side-input	4	False	1006	near_lane	nil	sidecar	agree
+B192	side-loaded-tile	bend-outer-side-input	4	False	1006	pickup_length	nil	sidecar	agree
+B192	side-loaded-tile	bend-outer-side-input	4	False	1006	pickup_layout	nil	sidecar	agree
+B192	side-loaded-tile	bend-outer-side-input	4	False	1006	pickup_problem	inline	sidecar	agree
+B192	side-loaded-tile	bend-outer-side-input	4	False	1006	supply_problem	nil	sidecar	no reference
+B193	side-loaded-tile	bend-outer-side-input	8	False	1011	pickup_target	1009	game	agree
+B193	side-loaded-tile	bend-outer-side-input	8	False	1011	piece_shape	straight	game	agree
+B193	side-loaded-tile	bend-outer-side-input	8	False	1011	line_length_1	1	game	agree
+B193	side-loaded-tile	bend-outer-side-input	8	False	1011	line_length_2	1	game	agree
+B193	side-loaded-tile	bend-outer-side-input	8	False	1011	near_lane	nil	sidecar	agree
+B193	side-loaded-tile	bend-outer-side-input	8	False	1011	pickup_length	nil	sidecar	agree
+B193	side-loaded-tile	bend-outer-side-input	8	False	1011	pickup_layout	nil	sidecar	agree
+B193	side-loaded-tile	bend-outer-side-input	8	False	1011	pickup_problem	inline	sidecar	agree
+B193	side-loaded-tile	bend-outer-side-input	8	False	1011	supply_problem	nil	sidecar	no reference
+B194	side-loaded-tile	bend-outer-side-input	12	False	1016	pickup_target	1014	game	agree
+B194	side-loaded-tile	bend-outer-side-input	12	False	1016	piece_shape	straight	game	agree
+B194	side-loaded-tile	bend-outer-side-input	12	False	1016	line_length_1	1	game	agree
+B194	side-loaded-tile	bend-outer-side-input	12	False	1016	line_length_2	1	game	agree
+B194	side-loaded-tile	bend-outer-side-input	12	False	1016	near_lane	nil	sidecar	agree
+B194	side-loaded-tile	bend-outer-side-input	12	False	1016	pickup_length	nil	sidecar	agree
+B194	side-loaded-tile	bend-outer-side-input	12	False	1016	pickup_layout	nil	sidecar	agree
+B194	side-loaded-tile	bend-outer-side-input	12	False	1016	pickup_problem	inline	sidecar	agree
+B194	side-loaded-tile	bend-outer-side-input	12	False	1016	supply_problem	nil	sidecar	no reference
+B195	underground-length	pair-gap-0	0	False	1021	pickup_target	1018	game	agree
+B195	underground-length	pair-gap-0	0	False	1021	underground_pair	1019	game	agree
+B195	underground-length	pair-gap-0	0	False	1021	line_length_1	0.5	game	agree
+B195	underground-length	pair-gap-0	0	False	1021	line_length_2	0.5	game	agree
+B195	underground-length	pair-gap-0	0	False	1021	line_length_3	1	game	no reference
+B195	underground-length	pair-gap-0	0	False	1021	line_length_4	1	game	no reference
+B195	underground-length	pair-gap-0	0	False	1021	near_lane	1	sidecar	agree
+B195	underground-length	pair-gap-0	0	False	1021	pickup_length	0.5	sidecar	agree
+B195	underground-length	pair-gap-0	0	False	1021	pickup_layout	side-entrance	sidecar	agree
+B195	underground-length	pair-gap-0	0	False	1021	pickup_problem	nil	sidecar	agree
+B195	underground-length	pair-gap-0	0	False	1022	pickup_target	1019	game	agree
+B195	underground-length	pair-gap-0	0	False	1022	underground_pair	1018	game	agree
+B195	underground-length	pair-gap-0	0	False	1022	line_length_1	0.5	game	agree
+B195	underground-length	pair-gap-0	0	False	1022	line_length_2	0.5	game	agree
+B195	underground-length	pair-gap-0	0	False	1022	line_length_3	1	game	no reference
+B195	underground-length	pair-gap-0	0	False	1022	line_length_4	1	game	no reference
+B195	underground-length	pair-gap-0	0	False	1022	near_lane	1	sidecar	agree
+B195	underground-length	pair-gap-0	0	False	1022	pickup_length	0.5	sidecar	agree
+B195	underground-length	pair-gap-0	0	False	1022	pickup_layout	side-exit	sidecar	agree
+B195	underground-length	pair-gap-0	0	False	1022	pickup_problem	nil	sidecar	agree
+B196	underground-length	pair-gap-0	4	False	1027	pickup_target	1024	game	agree
+B196	underground-length	pair-gap-0	4	False	1027	underground_pair	1025	game	agree
+B196	underground-length	pair-gap-0	4	False	1027	line_length_1	0.5	game	agree
+B196	underground-length	pair-gap-0	4	False	1027	line_length_2	0.5	game	agree
+B196	underground-length	pair-gap-0	4	False	1027	line_length_3	1	game	no reference
+B196	underground-length	pair-gap-0	4	False	1027	line_length_4	1	game	no reference
+B196	underground-length	pair-gap-0	4	False	1027	near_lane	1	sidecar	agree
+B196	underground-length	pair-gap-0	4	False	1027	pickup_length	0.5	sidecar	agree
+B196	underground-length	pair-gap-0	4	False	1027	pickup_layout	side-entrance	sidecar	agree
+B196	underground-length	pair-gap-0	4	False	1027	pickup_problem	nil	sidecar	agree
+B196	underground-length	pair-gap-0	4	False	1028	pickup_target	1025	game	agree
+B196	underground-length	pair-gap-0	4	False	1028	underground_pair	1024	game	agree
+B196	underground-length	pair-gap-0	4	False	1028	line_length_1	0.5	game	agree
+B196	underground-length	pair-gap-0	4	False	1028	line_length_2	0.5	game	agree
+B196	underground-length	pair-gap-0	4	False	1028	line_length_3	1	game	no reference
+B196	underground-length	pair-gap-0	4	False	1028	line_length_4	1	game	no reference
+B196	underground-length	pair-gap-0	4	False	1028	near_lane	1	sidecar	agree
+B196	underground-length	pair-gap-0	4	False	1028	pickup_length	0.5	sidecar	agree
+B196	underground-length	pair-gap-0	4	False	1028	pickup_layout	side-exit	sidecar	agree
+B196	underground-length	pair-gap-0	4	False	1028	pickup_problem	nil	sidecar	agree
+B197	underground-length	pair-gap-0	8	False	1033	pickup_target	1030	game	agree
+B197	underground-length	pair-gap-0	8	False	1033	underground_pair	1031	game	agree
+B197	underground-length	pair-gap-0	8	False	1033	line_length_1	0.5	game	agree
+B197	underground-length	pair-gap-0	8	False	1033	line_length_2	0.5	game	agree
+B197	underground-length	pair-gap-0	8	False	1033	line_length_3	1	game	no reference
+B197	underground-length	pair-gap-0	8	False	1033	line_length_4	1	game	no reference
+B197	underground-length	pair-gap-0	8	False	1033	near_lane	1	sidecar	agree
+B197	underground-length	pair-gap-0	8	False	1033	pickup_length	0.5	sidecar	agree
+B197	underground-length	pair-gap-0	8	False	1033	pickup_layout	side-entrance	sidecar	agree
+B197	underground-length	pair-gap-0	8	False	1033	pickup_problem	nil	sidecar	agree
+B197	underground-length	pair-gap-0	8	False	1034	pickup_target	1031	game	agree
+B197	underground-length	pair-gap-0	8	False	1034	underground_pair	1030	game	agree
+B197	underground-length	pair-gap-0	8	False	1034	line_length_1	0.5	game	agree
+B197	underground-length	pair-gap-0	8	False	1034	line_length_2	0.5	game	agree
+B197	underground-length	pair-gap-0	8	False	1034	line_length_3	1	game	no reference
+B197	underground-length	pair-gap-0	8	False	1034	line_length_4	1	game	no reference
+B197	underground-length	pair-gap-0	8	False	1034	near_lane	1	sidecar	agree
+B197	underground-length	pair-gap-0	8	False	1034	pickup_length	0.5	sidecar	agree
+B197	underground-length	pair-gap-0	8	False	1034	pickup_layout	side-exit	sidecar	agree
+B197	underground-length	pair-gap-0	8	False	1034	pickup_problem	nil	sidecar	agree
+B198	underground-length	pair-gap-0	12	False	1039	pickup_target	1036	game	agree
+B198	underground-length	pair-gap-0	12	False	1039	underground_pair	1037	game	agree
+B198	underground-length	pair-gap-0	12	False	1039	line_length_1	0.5	game	agree
+B198	underground-length	pair-gap-0	12	False	1039	line_length_2	0.5	game	agree
+B198	underground-length	pair-gap-0	12	False	1039	line_length_3	1	game	no reference
+B198	underground-length	pair-gap-0	12	False	1039	line_length_4	1	game	no reference
+B198	underground-length	pair-gap-0	12	False	1039	near_lane	1	sidecar	agree
+B198	underground-length	pair-gap-0	12	False	1039	pickup_length	0.5	sidecar	agree
+B198	underground-length	pair-gap-0	12	False	1039	pickup_layout	side-entrance	sidecar	agree
+B198	underground-length	pair-gap-0	12	False	1039	pickup_problem	nil	sidecar	agree
+B198	underground-length	pair-gap-0	12	False	1040	pickup_target	1037	game	agree
+B198	underground-length	pair-gap-0	12	False	1040	underground_pair	1036	game	agree
+B198	underground-length	pair-gap-0	12	False	1040	line_length_1	0.5	game	agree
+B198	underground-length	pair-gap-0	12	False	1040	line_length_2	0.5	game	agree
+B198	underground-length	pair-gap-0	12	False	1040	line_length_3	1	game	no reference
+B198	underground-length	pair-gap-0	12	False	1040	line_length_4	1	game	no reference
+B198	underground-length	pair-gap-0	12	False	1040	near_lane	1	sidecar	agree
+B198	underground-length	pair-gap-0	12	False	1040	pickup_length	0.5	sidecar	agree
+B198	underground-length	pair-gap-0	12	False	1040	pickup_layout	side-exit	sidecar	agree
+B198	underground-length	pair-gap-0	12	False	1040	pickup_problem	nil	sidecar	agree
+B199	underground-length	pair-gap-1	0	False	1045	pickup_target	1042	game	agree
+B199	underground-length	pair-gap-1	0	False	1045	underground_pair	1043	game	agree
+B199	underground-length	pair-gap-1	0	False	1045	line_length_1	0.5	game	agree
+B199	underground-length	pair-gap-1	0	False	1045	line_length_2	0.5	game	agree
+B199	underground-length	pair-gap-1	0	False	1045	line_length_3	2	game	no reference
+B199	underground-length	pair-gap-1	0	False	1045	line_length_4	2	game	no reference
+B199	underground-length	pair-gap-1	0	False	1045	near_lane	1	sidecar	agree
+B199	underground-length	pair-gap-1	0	False	1045	pickup_length	0.5	sidecar	agree
+B199	underground-length	pair-gap-1	0	False	1045	pickup_layout	side-entrance	sidecar	agree
+B199	underground-length	pair-gap-1	0	False	1045	pickup_problem	nil	sidecar	agree
+B199	underground-length	pair-gap-1	0	False	1046	pickup_target	1043	game	agree
+B199	underground-length	pair-gap-1	0	False	1046	underground_pair	1042	game	agree
+B199	underground-length	pair-gap-1	0	False	1046	line_length_1	0.5	game	agree
+B199	underground-length	pair-gap-1	0	False	1046	line_length_2	0.5	game	agree
+B199	underground-length	pair-gap-1	0	False	1046	line_length_3	1	game	no reference
+B199	underground-length	pair-gap-1	0	False	1046	line_length_4	1	game	no reference
+B199	underground-length	pair-gap-1	0	False	1046	near_lane	1	sidecar	agree
+B199	underground-length	pair-gap-1	0	False	1046	pickup_length	0.5	sidecar	agree
+B199	underground-length	pair-gap-1	0	False	1046	pickup_layout	side-exit	sidecar	agree
+B199	underground-length	pair-gap-1	0	False	1046	pickup_problem	nil	sidecar	agree
+B200	underground-length	pair-gap-1	4	False	1051	pickup_target	1048	game	agree
+B200	underground-length	pair-gap-1	4	False	1051	underground_pair	1049	game	agree
+B200	underground-length	pair-gap-1	4	False	1051	line_length_1	0.5	game	agree
+B200	underground-length	pair-gap-1	4	False	1051	line_length_2	0.5	game	agree
+B200	underground-length	pair-gap-1	4	False	1051	line_length_3	2	game	no reference
+B200	underground-length	pair-gap-1	4	False	1051	line_length_4	2	game	no reference
+B200	underground-length	pair-gap-1	4	False	1051	near_lane	1	sidecar	agree
+B200	underground-length	pair-gap-1	4	False	1051	pickup_length	0.5	sidecar	agree
+B200	underground-length	pair-gap-1	4	False	1051	pickup_layout	side-entrance	sidecar	agree
+B200	underground-length	pair-gap-1	4	False	1051	pickup_problem	nil	sidecar	agree
+B200	underground-length	pair-gap-1	4	False	1052	pickup_target	1049	game	agree
+B200	underground-length	pair-gap-1	4	False	1052	underground_pair	1048	game	agree
+B200	underground-length	pair-gap-1	4	False	1052	line_length_1	0.5	game	agree
+B200	underground-length	pair-gap-1	4	False	1052	line_length_2	0.5	game	agree
+B200	underground-length	pair-gap-1	4	False	1052	line_length_3	1	game	no reference
+B200	underground-length	pair-gap-1	4	False	1052	line_length_4	1	game	no reference
+B200	underground-length	pair-gap-1	4	False	1052	near_lane	1	sidecar	agree
+B200	underground-length	pair-gap-1	4	False	1052	pickup_length	0.5	sidecar	agree
+B200	underground-length	pair-gap-1	4	False	1052	pickup_layout	side-exit	sidecar	agree
+B200	underground-length	pair-gap-1	4	False	1052	pickup_problem	nil	sidecar	agree
+B201	underground-length	pair-gap-1	8	False	1057	pickup_target	1054	game	agree
+B201	underground-length	pair-gap-1	8	False	1057	underground_pair	1055	game	agree
+B201	underground-length	pair-gap-1	8	False	1057	line_length_1	0.5	game	agree
+B201	underground-length	pair-gap-1	8	False	1057	line_length_2	0.5	game	agree
+B201	underground-length	pair-gap-1	8	False	1057	line_length_3	2	game	no reference
+B201	underground-length	pair-gap-1	8	False	1057	line_length_4	2	game	no reference
+B201	underground-length	pair-gap-1	8	False	1057	near_lane	1	sidecar	agree
+B201	underground-length	pair-gap-1	8	False	1057	pickup_length	0.5	sidecar	agree
+B201	underground-length	pair-gap-1	8	False	1057	pickup_layout	side-entrance	sidecar	agree
+B201	underground-length	pair-gap-1	8	False	1057	pickup_problem	nil	sidecar	agree
+B201	underground-length	pair-gap-1	8	False	1058	pickup_target	1055	game	agree
+B201	underground-length	pair-gap-1	8	False	1058	underground_pair	1054	game	agree
+B201	underground-length	pair-gap-1	8	False	1058	line_length_1	0.5	game	agree
+B201	underground-length	pair-gap-1	8	False	1058	line_length_2	0.5	game	agree
+B201	underground-length	pair-gap-1	8	False	1058	line_length_3	1	game	no reference
+B201	underground-length	pair-gap-1	8	False	1058	line_length_4	1	game	no reference
+B201	underground-length	pair-gap-1	8	False	1058	near_lane	1	sidecar	agree
+B201	underground-length	pair-gap-1	8	False	1058	pickup_length	0.5	sidecar	agree
+B201	underground-length	pair-gap-1	8	False	1058	pickup_layout	side-exit	sidecar	agree
+B201	underground-length	pair-gap-1	8	False	1058	pickup_problem	nil	sidecar	agree
+B202	underground-length	pair-gap-1	12	False	1063	pickup_target	1060	game	agree
+B202	underground-length	pair-gap-1	12	False	1063	underground_pair	1061	game	agree
+B202	underground-length	pair-gap-1	12	False	1063	line_length_1	0.5	game	agree
+B202	underground-length	pair-gap-1	12	False	1063	line_length_2	0.5	game	agree
+B202	underground-length	pair-gap-1	12	False	1063	line_length_3	2	game	no reference
+B202	underground-length	pair-gap-1	12	False	1063	line_length_4	2	game	no reference
+B202	underground-length	pair-gap-1	12	False	1063	near_lane	1	sidecar	agree
+B202	underground-length	pair-gap-1	12	False	1063	pickup_length	0.5	sidecar	agree
+B202	underground-length	pair-gap-1	12	False	1063	pickup_layout	side-entrance	sidecar	agree
+B202	underground-length	pair-gap-1	12	False	1063	pickup_problem	nil	sidecar	agree
+B202	underground-length	pair-gap-1	12	False	1064	pickup_target	1061	game	agree
+B202	underground-length	pair-gap-1	12	False	1064	underground_pair	1060	game	agree
+B202	underground-length	pair-gap-1	12	False	1064	line_length_1	0.5	game	agree
+B202	underground-length	pair-gap-1	12	False	1064	line_length_2	0.5	game	agree
+B202	underground-length	pair-gap-1	12	False	1064	line_length_3	1	game	no reference
+B202	underground-length	pair-gap-1	12	False	1064	line_length_4	1	game	no reference
+B202	underground-length	pair-gap-1	12	False	1064	near_lane	1	sidecar	agree
+B202	underground-length	pair-gap-1	12	False	1064	pickup_length	0.5	sidecar	agree
+B202	underground-length	pair-gap-1	12	False	1064	pickup_layout	side-exit	sidecar	agree
+B202	underground-length	pair-gap-1	12	False	1064	pickup_problem	nil	sidecar	agree
+B203	underground-length	pair-gap-4	0	False	1069	pickup_target	1066	game	agree
+B203	underground-length	pair-gap-4	0	False	1069	underground_pair	1067	game	agree
+B203	underground-length	pair-gap-4	0	False	1069	line_length_1	0.5	game	agree
+B203	underground-length	pair-gap-4	0	False	1069	line_length_2	0.5	game	agree
+B203	underground-length	pair-gap-4	0	False	1069	line_length_3	5	game	no reference
+B203	underground-length	pair-gap-4	0	False	1069	line_length_4	5	game	no reference
+B203	underground-length	pair-gap-4	0	False	1069	near_lane	1	sidecar	agree
+B203	underground-length	pair-gap-4	0	False	1069	pickup_length	0.5	sidecar	agree
+B203	underground-length	pair-gap-4	0	False	1069	pickup_layout	side-entrance	sidecar	agree
+B203	underground-length	pair-gap-4	0	False	1069	pickup_problem	nil	sidecar	agree
+B203	underground-length	pair-gap-4	0	False	1070	pickup_target	1067	game	agree
+B203	underground-length	pair-gap-4	0	False	1070	underground_pair	1066	game	agree
+B203	underground-length	pair-gap-4	0	False	1070	line_length_1	0.5	game	agree
+B203	underground-length	pair-gap-4	0	False	1070	line_length_2	0.5	game	agree
+B203	underground-length	pair-gap-4	0	False	1070	line_length_3	1	game	no reference
+B203	underground-length	pair-gap-4	0	False	1070	line_length_4	1	game	no reference
+B203	underground-length	pair-gap-4	0	False	1070	near_lane	1	sidecar	agree
+B203	underground-length	pair-gap-4	0	False	1070	pickup_length	0.5	sidecar	agree
+B203	underground-length	pair-gap-4	0	False	1070	pickup_layout	side-exit	sidecar	agree
+B203	underground-length	pair-gap-4	0	False	1070	pickup_problem	nil	sidecar	agree
+B204	underground-length	pair-gap-4	4	False	1075	pickup_target	1072	game	agree
+B204	underground-length	pair-gap-4	4	False	1075	underground_pair	1073	game	agree
+B204	underground-length	pair-gap-4	4	False	1075	line_length_1	0.5	game	agree
+B204	underground-length	pair-gap-4	4	False	1075	line_length_2	0.5	game	agree
+B204	underground-length	pair-gap-4	4	False	1075	line_length_3	5	game	no reference
+B204	underground-length	pair-gap-4	4	False	1075	line_length_4	5	game	no reference
+B204	underground-length	pair-gap-4	4	False	1075	near_lane	1	sidecar	agree
+B204	underground-length	pair-gap-4	4	False	1075	pickup_length	0.5	sidecar	agree
+B204	underground-length	pair-gap-4	4	False	1075	pickup_layout	side-entrance	sidecar	agree
+B204	underground-length	pair-gap-4	4	False	1075	pickup_problem	nil	sidecar	agree
+B204	underground-length	pair-gap-4	4	False	1076	pickup_target	1073	game	agree
+B204	underground-length	pair-gap-4	4	False	1076	underground_pair	1072	game	agree
+B204	underground-length	pair-gap-4	4	False	1076	line_length_1	0.5	game	agree
+B204	underground-length	pair-gap-4	4	False	1076	line_length_2	0.5	game	agree
+B204	underground-length	pair-gap-4	4	False	1076	line_length_3	1	game	no reference
+B204	underground-length	pair-gap-4	4	False	1076	line_length_4	1	game	no reference
+B204	underground-length	pair-gap-4	4	False	1076	near_lane	1	sidecar	agree
+B204	underground-length	pair-gap-4	4	False	1076	pickup_length	0.5	sidecar	agree
+B204	underground-length	pair-gap-4	4	False	1076	pickup_layout	side-exit	sidecar	agree
+B204	underground-length	pair-gap-4	4	False	1076	pickup_problem	nil	sidecar	agree
+B205	underground-length	pair-gap-4	8	False	1081	pickup_target	1078	game	agree
+B205	underground-length	pair-gap-4	8	False	1081	underground_pair	1079	game	agree
+B205	underground-length	pair-gap-4	8	False	1081	line_length_1	0.5	game	agree
+B205	underground-length	pair-gap-4	8	False	1081	line_length_2	0.5	game	agree
+B205	underground-length	pair-gap-4	8	False	1081	line_length_3	5	game	no reference
+B205	underground-length	pair-gap-4	8	False	1081	line_length_4	5	game	no reference
+B205	underground-length	pair-gap-4	8	False	1081	near_lane	1	sidecar	agree
+B205	underground-length	pair-gap-4	8	False	1081	pickup_length	0.5	sidecar	agree
+B205	underground-length	pair-gap-4	8	False	1081	pickup_layout	side-entrance	sidecar	agree
+B205	underground-length	pair-gap-4	8	False	1081	pickup_problem	nil	sidecar	agree
+B205	underground-length	pair-gap-4	8	False	1082	pickup_target	1079	game	agree
+B205	underground-length	pair-gap-4	8	False	1082	underground_pair	1078	game	agree
+B205	underground-length	pair-gap-4	8	False	1082	line_length_1	0.5	game	agree
+B205	underground-length	pair-gap-4	8	False	1082	line_length_2	0.5	game	agree
+B205	underground-length	pair-gap-4	8	False	1082	line_length_3	1	game	no reference
+B205	underground-length	pair-gap-4	8	False	1082	line_length_4	1	game	no reference
+B205	underground-length	pair-gap-4	8	False	1082	near_lane	1	sidecar	agree
+B205	underground-length	pair-gap-4	8	False	1082	pickup_length	0.5	sidecar	agree
+B205	underground-length	pair-gap-4	8	False	1082	pickup_layout	side-exit	sidecar	agree
+B205	underground-length	pair-gap-4	8	False	1082	pickup_problem	nil	sidecar	agree
+B206	underground-length	pair-gap-4	12	False	1087	pickup_target	1084	game	agree
+B206	underground-length	pair-gap-4	12	False	1087	underground_pair	1085	game	agree
+B206	underground-length	pair-gap-4	12	False	1087	line_length_1	0.5	game	agree
+B206	underground-length	pair-gap-4	12	False	1087	line_length_2	0.5	game	agree
+B206	underground-length	pair-gap-4	12	False	1087	line_length_3	5	game	no reference
+B206	underground-length	pair-gap-4	12	False	1087	line_length_4	5	game	no reference
+B206	underground-length	pair-gap-4	12	False	1087	near_lane	1	sidecar	agree
+B206	underground-length	pair-gap-4	12	False	1087	pickup_length	0.5	sidecar	agree
+B206	underground-length	pair-gap-4	12	False	1087	pickup_layout	side-entrance	sidecar	agree
+B206	underground-length	pair-gap-4	12	False	1087	pickup_problem	nil	sidecar	agree
+B206	underground-length	pair-gap-4	12	False	1088	pickup_target	1085	game	agree
+B206	underground-length	pair-gap-4	12	False	1088	underground_pair	1084	game	agree
+B206	underground-length	pair-gap-4	12	False	1088	line_length_1	0.5	game	agree
+B206	underground-length	pair-gap-4	12	False	1088	line_length_2	0.5	game	agree
+B206	underground-length	pair-gap-4	12	False	1088	line_length_3	1	game	no reference
+B206	underground-length	pair-gap-4	12	False	1088	line_length_4	1	game	no reference
+B206	underground-length	pair-gap-4	12	False	1088	near_lane	1	sidecar	agree
+B206	underground-length	pair-gap-4	12	False	1088	pickup_length	0.5	sidecar	agree
+B206	underground-length	pair-gap-4	12	False	1088	pickup_layout	side-exit	sidecar	agree
+B206	underground-length	pair-gap-4	12	False	1088	pickup_problem	nil	sidecar	agree
+B207	underground-length	pair-gap-10	0	False	1093	pickup_target	1090	game	agree
+B207	underground-length	pair-gap-10	0	False	1093	underground_pair	1091	game	agree
+B207	underground-length	pair-gap-10	0	False	1093	line_length_1	0.5	game	agree
+B207	underground-length	pair-gap-10	0	False	1093	line_length_2	0.5	game	agree
+B207	underground-length	pair-gap-10	0	False	1093	line_length_3	11	game	no reference
+B207	underground-length	pair-gap-10	0	False	1093	line_length_4	11	game	no reference
+B207	underground-length	pair-gap-10	0	False	1093	near_lane	1	sidecar	agree
+B207	underground-length	pair-gap-10	0	False	1093	pickup_length	0.5	sidecar	agree
+B207	underground-length	pair-gap-10	0	False	1093	pickup_layout	side-entrance	sidecar	agree
+B207	underground-length	pair-gap-10	0	False	1093	pickup_problem	nil	sidecar	agree
+B207	underground-length	pair-gap-10	0	False	1094	pickup_target	1091	game	agree
+B207	underground-length	pair-gap-10	0	False	1094	underground_pair	1090	game	agree
+B207	underground-length	pair-gap-10	0	False	1094	line_length_1	0.5	game	agree
+B207	underground-length	pair-gap-10	0	False	1094	line_length_2	0.5	game	agree
+B207	underground-length	pair-gap-10	0	False	1094	line_length_3	1	game	no reference
+B207	underground-length	pair-gap-10	0	False	1094	line_length_4	1	game	no reference
+B207	underground-length	pair-gap-10	0	False	1094	near_lane	1	sidecar	agree
+B207	underground-length	pair-gap-10	0	False	1094	pickup_length	0.5	sidecar	agree
+B207	underground-length	pair-gap-10	0	False	1094	pickup_layout	side-exit	sidecar	agree
+B207	underground-length	pair-gap-10	0	False	1094	pickup_problem	nil	sidecar	agree
+B208	underground-length	pair-gap-10	4	False	1099	pickup_target	1096	game	agree
+B208	underground-length	pair-gap-10	4	False	1099	underground_pair	1097	game	agree
+B208	underground-length	pair-gap-10	4	False	1099	line_length_1	0.5	game	agree
+B208	underground-length	pair-gap-10	4	False	1099	line_length_2	0.5	game	agree
+B208	underground-length	pair-gap-10	4	False	1099	line_length_3	11	game	no reference
+B208	underground-length	pair-gap-10	4	False	1099	line_length_4	11	game	no reference
+B208	underground-length	pair-gap-10	4	False	1099	near_lane	1	sidecar	agree
+B208	underground-length	pair-gap-10	4	False	1099	pickup_length	0.5	sidecar	agree
+B208	underground-length	pair-gap-10	4	False	1099	pickup_layout	side-entrance	sidecar	agree
+B208	underground-length	pair-gap-10	4	False	1099	pickup_problem	nil	sidecar	agree
+B208	underground-length	pair-gap-10	4	False	1100	pickup_target	1097	game	agree
+B208	underground-length	pair-gap-10	4	False	1100	underground_pair	1096	game	agree
+B208	underground-length	pair-gap-10	4	False	1100	line_length_1	0.5	game	agree
+B208	underground-length	pair-gap-10	4	False	1100	line_length_2	0.5	game	agree
+B208	underground-length	pair-gap-10	4	False	1100	line_length_3	1	game	no reference
+B208	underground-length	pair-gap-10	4	False	1100	line_length_4	1	game	no reference
+B208	underground-length	pair-gap-10	4	False	1100	near_lane	1	sidecar	agree
+B208	underground-length	pair-gap-10	4	False	1100	pickup_length	0.5	sidecar	agree
+B208	underground-length	pair-gap-10	4	False	1100	pickup_layout	side-exit	sidecar	agree
+B208	underground-length	pair-gap-10	4	False	1100	pickup_problem	nil	sidecar	agree
+B209	underground-length	pair-gap-10	8	False	1105	pickup_target	1102	game	agree
+B209	underground-length	pair-gap-10	8	False	1105	underground_pair	1103	game	agree
+B209	underground-length	pair-gap-10	8	False	1105	line_length_1	0.5	game	agree
+B209	underground-length	pair-gap-10	8	False	1105	line_length_2	0.5	game	agree
+B209	underground-length	pair-gap-10	8	False	1105	line_length_3	11	game	no reference
+B209	underground-length	pair-gap-10	8	False	1105	line_length_4	11	game	no reference
+B209	underground-length	pair-gap-10	8	False	1105	near_lane	1	sidecar	agree
+B209	underground-length	pair-gap-10	8	False	1105	pickup_length	0.5	sidecar	agree
+B209	underground-length	pair-gap-10	8	False	1105	pickup_layout	side-entrance	sidecar	agree
+B209	underground-length	pair-gap-10	8	False	1105	pickup_problem	nil	sidecar	agree
+B209	underground-length	pair-gap-10	8	False	1106	pickup_target	1103	game	agree
+B209	underground-length	pair-gap-10	8	False	1106	underground_pair	1102	game	agree
+B209	underground-length	pair-gap-10	8	False	1106	line_length_1	0.5	game	agree
+B209	underground-length	pair-gap-10	8	False	1106	line_length_2	0.5	game	agree
+B209	underground-length	pair-gap-10	8	False	1106	line_length_3	1	game	no reference
+B209	underground-length	pair-gap-10	8	False	1106	line_length_4	1	game	no reference
+B209	underground-length	pair-gap-10	8	False	1106	near_lane	1	sidecar	agree
+B209	underground-length	pair-gap-10	8	False	1106	pickup_length	0.5	sidecar	agree
+B209	underground-length	pair-gap-10	8	False	1106	pickup_layout	side-exit	sidecar	agree
+B209	underground-length	pair-gap-10	8	False	1106	pickup_problem	nil	sidecar	agree
+B210	underground-length	pair-gap-10	12	False	1111	pickup_target	1108	game	agree
+B210	underground-length	pair-gap-10	12	False	1111	underground_pair	1109	game	agree
+B210	underground-length	pair-gap-10	12	False	1111	line_length_1	0.5	game	agree
+B210	underground-length	pair-gap-10	12	False	1111	line_length_2	0.5	game	agree
+B210	underground-length	pair-gap-10	12	False	1111	line_length_3	11	game	no reference
+B210	underground-length	pair-gap-10	12	False	1111	line_length_4	11	game	no reference
+B210	underground-length	pair-gap-10	12	False	1111	near_lane	1	sidecar	agree
+B210	underground-length	pair-gap-10	12	False	1111	pickup_length	0.5	sidecar	agree
+B210	underground-length	pair-gap-10	12	False	1111	pickup_layout	side-entrance	sidecar	agree
+B210	underground-length	pair-gap-10	12	False	1111	pickup_problem	nil	sidecar	agree
+B210	underground-length	pair-gap-10	12	False	1112	pickup_target	1109	game	agree
+B210	underground-length	pair-gap-10	12	False	1112	underground_pair	1108	game	agree
+B210	underground-length	pair-gap-10	12	False	1112	line_length_1	0.5	game	agree
+B210	underground-length	pair-gap-10	12	False	1112	line_length_2	0.5	game	agree
+B210	underground-length	pair-gap-10	12	False	1112	line_length_3	1	game	no reference
+B210	underground-length	pair-gap-10	12	False	1112	line_length_4	1	game	no reference
+B210	underground-length	pair-gap-10	12	False	1112	near_lane	1	sidecar	agree
+B210	underground-length	pair-gap-10	12	False	1112	pickup_length	0.5	sidecar	agree
+B210	underground-length	pair-gap-10	12	False	1112	pickup_layout	side-exit	sidecar	agree
+B210	underground-length	pair-gap-10	12	False	1112	pickup_problem	nil	sidecar	agree
+B211	underground-length	unpaired-entrance	0	False	1116	pickup_target	1114	game	agree
+B211	underground-length	unpaired-entrance	0	False	1116	underground_pair	nil	game	agree
+B211	underground-length	unpaired-entrance	0	False	1116	line_length_1	0.5	game	agree
+B211	underground-length	unpaired-entrance	0	False	1116	line_length_2	0.5	game	agree
+B211	underground-length	unpaired-entrance	0	False	1116	line_length_3	1	game	no reference
+B211	underground-length	unpaired-entrance	0	False	1116	line_length_4	1	game	no reference
+B211	underground-length	unpaired-entrance	0	False	1116	near_lane	1	sidecar	agree
+B211	underground-length	unpaired-entrance	0	False	1116	pickup_length	0.5	sidecar	agree
+B211	underground-length	unpaired-entrance	0	False	1116	pickup_layout	side-entrance	sidecar	agree
+B211	underground-length	unpaired-entrance	0	False	1116	pickup_problem	nil	sidecar	agree
+B212	underground-length	unpaired-entrance	4	False	1120	pickup_target	1118	game	agree
+B212	underground-length	unpaired-entrance	4	False	1120	underground_pair	nil	game	agree
+B212	underground-length	unpaired-entrance	4	False	1120	line_length_1	0.5	game	agree
+B212	underground-length	unpaired-entrance	4	False	1120	line_length_2	0.5	game	agree
+B212	underground-length	unpaired-entrance	4	False	1120	line_length_3	1	game	no reference
+B212	underground-length	unpaired-entrance	4	False	1120	line_length_4	1	game	no reference
+B212	underground-length	unpaired-entrance	4	False	1120	near_lane	1	sidecar	agree
+B212	underground-length	unpaired-entrance	4	False	1120	pickup_length	0.5	sidecar	agree
+B212	underground-length	unpaired-entrance	4	False	1120	pickup_layout	side-entrance	sidecar	agree
+B212	underground-length	unpaired-entrance	4	False	1120	pickup_problem	nil	sidecar	agree
+B213	underground-length	unpaired-entrance	8	False	1124	pickup_target	1122	game	agree
+B213	underground-length	unpaired-entrance	8	False	1124	underground_pair	nil	game	agree
+B213	underground-length	unpaired-entrance	8	False	1124	line_length_1	0.5	game	agree
+B213	underground-length	unpaired-entrance	8	False	1124	line_length_2	0.5	game	agree
+B213	underground-length	unpaired-entrance	8	False	1124	line_length_3	1	game	no reference
+B213	underground-length	unpaired-entrance	8	False	1124	line_length_4	1	game	no reference
+B213	underground-length	unpaired-entrance	8	False	1124	near_lane	1	sidecar	agree
+B213	underground-length	unpaired-entrance	8	False	1124	pickup_length	0.5	sidecar	agree
+B213	underground-length	unpaired-entrance	8	False	1124	pickup_layout	side-entrance	sidecar	agree
+B213	underground-length	unpaired-entrance	8	False	1124	pickup_problem	nil	sidecar	agree
+B214	underground-length	unpaired-entrance	12	False	1128	pickup_target	1126	game	agree
+B214	underground-length	unpaired-entrance	12	False	1128	underground_pair	nil	game	agree
+B214	underground-length	unpaired-entrance	12	False	1128	line_length_1	0.5	game	agree
+B214	underground-length	unpaired-entrance	12	False	1128	line_length_2	0.5	game	agree
+B214	underground-length	unpaired-entrance	12	False	1128	line_length_3	1	game	no reference
+B214	underground-length	unpaired-entrance	12	False	1128	line_length_4	1	game	no reference
+B214	underground-length	unpaired-entrance	12	False	1128	near_lane	1	sidecar	agree
+B214	underground-length	unpaired-entrance	12	False	1128	pickup_length	0.5	sidecar	agree
+B214	underground-length	unpaired-entrance	12	False	1128	pickup_layout	side-entrance	sidecar	agree
+B214	underground-length	unpaired-entrance	12	False	1128	pickup_problem	nil	sidecar	agree
+B215	underground-length	unpaired-exit	0	False	1132	pickup_target	1130	game	agree
+B215	underground-length	unpaired-exit	0	False	1132	underground_pair	nil	game	agree
+B215	underground-length	unpaired-exit	0	False	1132	line_length_1	0.5	game	agree
+B215	underground-length	unpaired-exit	0	False	1132	line_length_2	0.5	game	agree
+B215	underground-length	unpaired-exit	0	False	1132	line_length_3	1	game	no reference
+B215	underground-length	unpaired-exit	0	False	1132	line_length_4	1	game	no reference
+B215	underground-length	unpaired-exit	0	False	1132	near_lane	1	sidecar	agree
+B215	underground-length	unpaired-exit	0	False	1132	pickup_length	0.5	sidecar	agree
+B215	underground-length	unpaired-exit	0	False	1132	pickup_layout	side-exit	sidecar	agree
+B215	underground-length	unpaired-exit	0	False	1132	pickup_problem	nil	sidecar	agree
+B216	underground-length	unpaired-exit	4	False	1136	pickup_target	1134	game	agree
+B216	underground-length	unpaired-exit	4	False	1136	underground_pair	nil	game	agree
+B216	underground-length	unpaired-exit	4	False	1136	line_length_1	0.5	game	agree
+B216	underground-length	unpaired-exit	4	False	1136	line_length_2	0.5	game	agree
+B216	underground-length	unpaired-exit	4	False	1136	line_length_3	1	game	no reference
+B216	underground-length	unpaired-exit	4	False	1136	line_length_4	1	game	no reference
+B216	underground-length	unpaired-exit	4	False	1136	near_lane	1	sidecar	agree
+B216	underground-length	unpaired-exit	4	False	1136	pickup_length	0.5	sidecar	agree
+B216	underground-length	unpaired-exit	4	False	1136	pickup_layout	side-exit	sidecar	agree
+B216	underground-length	unpaired-exit	4	False	1136	pickup_problem	nil	sidecar	agree
+B217	underground-length	unpaired-exit	8	False	1140	pickup_target	1138	game	agree
+B217	underground-length	unpaired-exit	8	False	1140	underground_pair	nil	game	agree
+B217	underground-length	unpaired-exit	8	False	1140	line_length_1	0.5	game	agree
+B217	underground-length	unpaired-exit	8	False	1140	line_length_2	0.5	game	agree
+B217	underground-length	unpaired-exit	8	False	1140	line_length_3	1	game	no reference
+B217	underground-length	unpaired-exit	8	False	1140	line_length_4	1	game	no reference
+B217	underground-length	unpaired-exit	8	False	1140	near_lane	1	sidecar	agree
+B217	underground-length	unpaired-exit	8	False	1140	pickup_length	0.5	sidecar	agree
+B217	underground-length	unpaired-exit	8	False	1140	pickup_layout	side-exit	sidecar	agree
+B217	underground-length	unpaired-exit	8	False	1140	pickup_problem	nil	sidecar	agree
+B218	underground-length	unpaired-exit	12	False	1144	pickup_target	1142	game	agree
+B218	underground-length	unpaired-exit	12	False	1144	underground_pair	nil	game	agree
+B218	underground-length	unpaired-exit	12	False	1144	line_length_1	0.5	game	agree
+B218	underground-length	unpaired-exit	12	False	1144	line_length_2	0.5	game	agree
+B218	underground-length	unpaired-exit	12	False	1144	line_length_3	1	game	no reference
+B218	underground-length	unpaired-exit	12	False	1144	line_length_4	1	game	no reference
+B218	underground-length	unpaired-exit	12	False	1144	near_lane	1	sidecar	agree
+B218	underground-length	unpaired-exit	12	False	1144	pickup_length	0.5	sidecar	agree
+B218	underground-length	unpaired-exit	12	False	1144	pickup_layout	side-exit	sidecar	agree
+B218	underground-length	unpaired-exit	12	False	1144	pickup_problem	nil	sidecar	agree
