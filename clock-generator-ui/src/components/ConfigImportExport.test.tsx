@@ -328,6 +328,9 @@ describe('a pasted blueprint', () => {
         const follows = (first: Element, second: Element) => (first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
         const setpoint = within(dialog).getByRole('group', { name: 'Setpoint' });
         expect(follows(within(dialog).getByRole('group', { name: 'Questions' }), setpoint)).toBe(true);
+        // with no item yet, the row writes nothing: its box is off and cannot be ticked
+        const box0 = within(setpoint).getByRole<HTMLInputElement>('checkbox', { name: 'Setpoint' });
+        expect([box0.checked, box0.disabled]).toEqual([false, true]);
         await user.click(within(dialog).getByRole('button', { name: /iron.ore/i }));
         const machines = await screen.findByRole('checkbox', { name: /^Machines \(/ });
         // the setpoint is shown once: its checkbox, item, rate and copies in one row

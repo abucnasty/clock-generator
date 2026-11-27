@@ -75,14 +75,14 @@ interface BlueprintSetpointRowProps {
 /** The one setpoint row of the confirm dialog of a pasted blueprint: its checkbox and the item, rate and copies it would write, which can be typed over */
 export function BlueprintSetpointRow({ setpoint, onSetpointChange, itemNames, checked, onToggle, describedBy }: BlueprintSetpointRowProps) {
     return <Box role="group" aria-label="Setpoint" sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center' }}>
-        <FormControlLabel control={<Checkbox checked={checked} onChange={onToggle} disabled={setpoint.item === ''}
-            slotProps={{ input: { 'aria-describedby': describedBy } }} />} label="Setpoint" sx={{ mr: 1 }} />
-        <ItemSelector label="Setpoint item" value={setpoint.item === '' ? null : setpoint.item} options={[...itemNames]} size="small" minWidth={220}
+        <FormControlLabel control={<Checkbox checked={checked && setpoint.item !== ''} onChange={onToggle} disabled={setpoint.item === ''}
+            slotProps={{ input: { 'aria-describedby': describedBy } }} />} label="Setpoint" sx={{ mr: 0 }} />
+        <ItemSelector label="Setpoint item" value={setpoint.item === '' ? null : setpoint.item} options={[...itemNames]} size="small" minWidth={170}
             onChange={item => onSetpointChange({ ...setpoint, item: item ?? '' })} />
-        <NumberField label="Items per second" size="small" min={0} sx={{ width: 150 }}
+        <NumberField label="Items per second" size="small" min={0} sx={{ width: 130 }}
             value={typeof setpoint.items_per_second === 'number' ? setpoint.items_per_second : setpoint.items_per_second.numerator / setpoint.items_per_second.denominator}
             onValueCommitted={(value: number | null) => { if (value !== null && value > 0) onSetpointChange({ ...setpoint, items_per_second: value }); }} />
-        <NumberField label="Copies" size="small" min={1} step={1} sx={{ width: 110 }} value={setpoint.copies}
+        <NumberField label="Copies" size="small" min={1} step={1} sx={{ width: 100 }} value={setpoint.copies}
             onValueCommitted={(value: number | null) => { if (value !== null && Number.isInteger(value) && value >= 1) onSetpointChange({ ...setpoint, copies: value }); }} />
     </Box>;
 }
