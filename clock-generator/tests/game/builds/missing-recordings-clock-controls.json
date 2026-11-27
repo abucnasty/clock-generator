@@ -847,7 +847,7 @@
   },
   "electric-furnace-20": {
    "recorded": {
-    "pr": 0,
+    "pr": 917,
     "commit": "b27a5340",
     "frozen_head": "b27a5340",
     "note": "recorded again after the backpressure start began to hold the mining drill until the opening, in Factorio 2.1.24; pr is set when the PR is opened",
