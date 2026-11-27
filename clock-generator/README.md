@@ -84,7 +84,7 @@ recycler), the way the harness sets a game up (`src/harness/factorio-harness.ts`
 Factorio 2.1 renamed the ore melting recipes (`iron-ore-melting`, `copper-ore-melting`) and gives a recipe a list of
 crafting categories; the filter writes that list for any version of the dump. After a refresh, check the recipe list of the
 All template in `clock-generator-ui/src/utils/researchProfiles.ts` against the `change-recipe-productivity` effects of the
-dump: no test sees them, because the filtered data holds no research.
+dump, because no test can see them in the filtered data.
 
 ## Usage
 
