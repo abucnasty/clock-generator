@@ -263,8 +263,8 @@ modeled transport geometry. Other inserter prototypes and qualities remain uncal
 
 ### Drops of several copies onto one belt
 
-The simulator drops each output inserter's hand on a belt of its own, so it never sees the hands of other inserters or of the other copies
-on the same stretch of belt. The result says what the lane model above would do with them
+A run of one copy does not see the hands of the other copies on the same stretch of belt, and an output inserter with no drop spot of
+the config drops its hand on a tile of its own. The result says what the lane model above would do with all of them
 (`src/config/drop-spacing.ts`). Output inserters that drop straight onto a belt from the same side, in the same row, are one line; copy `k`
 of the unit stands `k` times `setpoint.copy_offset` from it (copies in rows of their own never meet). Seen from the moving belt a hand
 that starts at tick `t` at place `p` lies at `(p - v t) mod L` with `v` the tiles the belt moves in a tick and `L = v P` the tiles it moves in

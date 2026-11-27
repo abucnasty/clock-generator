@@ -451,7 +451,7 @@ function checkLine(config: Config, line: DropLine, starts: ReadonlyMap<number, r
 }
 
 /**
- * Whether the run counts the waits of a line's hands (run-reading of belt-hand-drop.ts, belt-lane.ts and output-belt-run.ts): a
+ * Whether the run counts the waits of a line's hands (as belt-hand-drop.ts, belt-lane.ts and output-belt-run.ts put them down): a
  * hand with a drop spot of the config shares its lane's traffic with the other such hands of its copy, and every copy has belts of
  * its own; a hand without one has a tile of its own; the run of the copies puts the drops `output_belt` states on the output belt,
  * in place of an own tile only (a hand with a drop spot keeps its copy's lane).
