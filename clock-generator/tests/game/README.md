@@ -153,7 +153,8 @@ at least 120 seconds is a job of its own; shorter cases of one file share a job 
 many probes of a few seconds do not each pay vitest's start-up. Any case may be cut from its neighbours: every case starts its own
 game with `recordInFactorio`, or opens a `CachedHarnessSession` inside the one case that needs it (the staged-start tests), so no
 recording key depends on another case. The runner never watches (`FACTORIO_HARNESS_WATCH` is cleared); watched `scaffold-recordings`
-share one game and are run by hand. The result is one table for the run (`results.tsv`, `results.json`: passed, failed, skipped
+share one game and are run by hand. Each job of `missing-recordings-clock` gets its own capture folder,
+`MISSING_RECORDINGS_CAPTURE_DIR=<out>/capture/<job>`; a value of the caller's never reaches a job. The result is one table for the run (`results.tsv`, `results.json`: passed, failed, skipped
 or no result per case; the exit code is 0 only when every selected case passed), the cache events, `lanes.log` and, in
 `durations.json`, the seconds of this run: copy it over `case-seconds.json` after a cold pass to keep the order current.
 

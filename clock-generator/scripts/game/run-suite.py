@@ -26,6 +26,9 @@ before and while a job runs. The folder comes from --guard-dir or $GUARD_DIR; no
 refuses to start (exit 1). Only --no-guard starts the jobs directly, -j lanes at once (default 2). The
 environment a job needs (FACTORIO_PATH, FACTORIO_HARNESS_SAVE, CLOCK_RECORDING_CACHE_DIR) is passed on the command line,
 because the guard's systemd unit does not inherit yours; the rest comes from clock-generator/.env as for any game test.
+A test that needs a capture folder of its own gets one per job, capture/<job> under the run's folder:
+MISSING_RECORDINGS_CAPTURE_DIR for tests/game/builds/missing-recordings-clock.game.test.ts (JOB_CAPTURE_ENV below). A
+caller's own value of it never reaches a job, with the guard or with --no-guard.
 
   file filter        only cases of the test files whose path contains one of these (e.g. iron-plate-80-car-chest-clock, tests/game/mechanics/drills)
   -o, --out DIR      a new folder for the run (default .scratch/game-suite/<time>): list.json, jobs.tsv, json/ (vitest's
@@ -73,10 +76,13 @@ PASS_ENV = ["FACTORIO_PATH", "FACTORIO_HARNESS_SAVE", "CLOCK_RECORDING_CACHE_DIR
 # environment that would change what a case does or where it writes: cleared for every job
 CLEAR_ENV = ["FACTORIO_HARNESS_WATCH", "CLOCK_PROOF_PHASES", "BELT_CLOCK_GENERATION_DIR", "BELT_CLOCK_GENERATION_ONLY",
              "BELT_CLOCK_REPLAY_DIR", "BELT_CLOCK_EXPECTATIONS", "BELT_CLOCK_TRACE_PICKUPS", "BELT_CLOCK_CALIBRATE",
-             "BELT_SPEED_CAPTURE_DIR", "SCAFFOLD_CAPTURE_DIR"]
+             "BELT_SPEED_CAPTURE_DIR", "SCAFFOLD_CAPTURE_DIR", "MISSING_RECORDINGS_CAPTURE_DIR"]
 
 # the capture folders a calibrating pass sets (--calibrate), one per job
 CAPTURE_ENV = ["BELT_SPEED_CAPTURE_DIR", "ORE_VOIDER_CAPTURE_DIR", "RECYCLER_ORIGINAL_CAPTURE_DIR"]
+# test files that ask for a capture folder on every run (the test fails without it): file -> its variable, set for each job
+# of the file to capture/<job> under the run's folder
+JOB_CAPTURE_ENV = {"tests/game/builds/missing-recordings-clock.game.test.ts": "MISSING_RECORDINGS_CAPTURE_DIR"}
 
 
 def js_escape(text: str) -> str:
@@ -216,9 +222,11 @@ class Runner:
         env += ["NO_COLOR=1", f"CLOCK_RECORDING_CACHE={mode}", f"CLOCK_RECORDING_CACHE_LOG={self.out / 'events' / (job['id'] + '.jsonl')}"]
         vitest = ["npx", "vitest", "run", "--config", "vitest.game.config.ts", job["file"], "-t", job["pattern"],
                   "--reporter=json", f"--outputFile={self.out / 'json' / (job['id'] + '.json')}"]
+        capture = self.out / "capture" / job["id"]
         if self.args.calibrate and not is_mechanics(job["file"]):
-            capture = self.out / "capture" / job["id"]
             env += ["BELT_CLOCK_CALIBRATE=1", "ORE_VOIDER_CALIBRATE=1"] + [f"{k}={capture}" for k in CAPTURE_ENV]
+        if job["file"] in JOB_CAPTURE_ENV:
+            env += [f"{JOB_CAPTURE_ENV[job['file']]}={capture}"]
         inner = ["env"] + [f"-u{k}" for k in CLEAR_ENV] + env + vitest
         if not self.guard:
             return inner
