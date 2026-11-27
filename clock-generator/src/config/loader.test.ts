@@ -52,7 +52,7 @@ describe("parseConfig", () => {
                         "id": 1,
                         "productivity": 0.5,
                         "recipe": "iron-gear-wheel",
-                        "type": "machine"
+                        "prototype": "assembling-machine-3"
                     }
                 ],
                 "setpoint": {
@@ -70,7 +70,6 @@ describe("parseConfig", () => {
                 recipe: "iron-gear-wheel",
                 productivity: 0.5,
                 crafting_speed: 1.25,
-                // the former type, read as a machine of that rule that makes the recipe
                 prototype: "assembling-machine-3"
             });
         });
@@ -343,40 +342,6 @@ describe("parseConfig", () => {
             const config = await parseConfig(json);
 
             expect(config.inserters[0].overrides?.enable_control?.mode).toBe("ALWAYS");
-        });
-
-        it("should load the former NEVER mode of an inserter enable_control override as AUTO", async () => {
-            const json = `{
-                "belts": [],
-                "inserters": [
-                    {
-                        "overrides": {
-                            "enable_control": {
-                                "mode": "NEVER"
-                            }
-                        },
-                        "sink": {
-                            "id": 1,
-                            "type": "machine"
-                        },
-                        "source": {
-                            "id": 1,
-                            "type": "belt"
-                        },
-                        "stack_size": 4
-                    }
-                ],
-                "machines": [],
-                "setpoint": {
-                    "copies": 1,
-                    "items_per_second": 1,
-                    "item": "test"
-                }
-            }`;
-
-            const config = await parseConfig(json);
-
-            expect(config.inserters[0].overrides?.enable_control).toEqual({ mode: "AUTO" });
         });
 
         it("should parse inserter enable_control override with CLOCKED mode", async () => {

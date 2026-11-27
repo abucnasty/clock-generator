@@ -9,7 +9,7 @@ import { missingDataSections, type InternalError } from '../utils/internalError'
  */
 
 import type { z } from 'zod';
-import { renameSetpointRecipeToItem, renameTargetOutputToSetpoint, type LaneRole, type SetpointReason } from 'clock-generator/light';
+import type { LaneRole, SetpointReason } from 'clock-generator/light';
 import type { ClockAlternativeRun, Config, DebugSteps, FactorioData, LogMessage, Logger, MachineToName, NotMadeClock, SearchRangeEdge } from 'clock-generator/browser';
 import { parseFormConfig } from './formConfig';
 import { laneRolesAnswer } from './laneRoles';
@@ -458,48 +458,35 @@ function withoutBeltSetting<C>(config: C): C {
     return (convertBeltSetting(config as never, rolesForConversion(config)) as C | null) ?? config;
 }
 
-const hasPrototype = (machine: unknown): boolean => typeof machine === 'object' && machine !== null && 'prototype' in machine && machine.prototype !== undefined;
-
-/**
- * The saved form state with each machine's former type read as its machine (a row given one so is marked as picked for
- * its recipe), and why it cannot be loaded, or null when it can
- */
+/** The saved form state, and why it cannot be loaded, or null when it can */
 function savedConfig(config: unknown): EngineAnswers['saved-config'] {
     const refused = clockGenerator.configFormatProblem(config);
     if (refused !== null) return { problem: refused === 'old' ? 'made before this format' : 'made by a newer version of the site', form: config, refused };
     // the format is of the saved text; the form state loaded has none
-    const { format: _format, ...unmarked } = config as Record<string, unknown>;
+    const { format: _format, ...form } = config as Record<string, unknown>;
     void _format;
-    config = unmarked;
-    const form = clockGenerator.migrateMachineTypes(renameSetpointRecipeToItem(config));
-    const before = typeof config === 'object' && config !== null && 'machines' in config && Array.isArray(config.machines) ? config.machines : [];
-    const marked = typeof form === 'object' && form !== null && 'machines' in form && Array.isArray(form.machines)
-        ? { ...form, machines: form.machines.map((machine: unknown, index: number) => hasPrototype(machine) && !hasPrototype(before[index])
-            ? { ...(machine as object), _prototype_source: 'recipe' } : machine) }
-        : form;
-    const result = parseFormConfig(clockGenerator.ConfigSchema, marked);
-    return result.success ? { problem: null, form: withoutBeltSetting(canonicalRate(marked)) } : { problem: result.error.message, form: marked };
+    const result = parseFormConfig(clockGenerator.ConfigSchema, form);
+    return result.success ? { problem: null, form: withoutBeltSetting(canonicalRate(form)) } : { problem: result.error.message, form };
 }
 
 /**
- * An imported config file, which can hold what the form exports, e.g. an inserter end left unset; a former type is read as
- * the machine. A file without this format's `format` key, or with a newer one, is refused before any check.
+ * An imported config file, which can hold what the form exports, e.g. an inserter end left unset. A file without this
+ * format's `format` key, or with a newer one, is refused before any check.
  */
 function configFile(config: unknown): EngineAnswers['config-file'] {
     const refused = clockGenerator.configFormatProblem(config);
     if (refused !== null) throw new Error(REFUSED_CONFIG_ERRORS[refused]);
-    const form = clockGenerator.migrateMachineTypes(renameSetpointRecipeToItem(config));
-    const result = parseFormConfig(clockGenerator.ConfigSchema, form);
+    const result = parseFormConfig(clockGenerator.ConfigSchema, config);
     if (!result.success) {
         throw new clockGenerator.ConfigValidationError(result.error);
     }
-    return withoutBeltSetting(withSetpointNameOf(result.data, form));
+    return withoutBeltSetting(withSetpointNameOf(result.data, config));
 }
 
 /** The setpoint of an imported file as the file names it: the schema reads a recipe's name as its item, and the form keeps the name */
 function withSetpointNameOf(read: Config, file: unknown): Config {
     const record = (value: unknown): Record<string, unknown> | undefined => typeof value === 'object' && value !== null ? value as Record<string, unknown> : undefined;
-    const given = record(renameSetpointRecipeToItem(renameTargetOutputToSetpoint(file)));
+    const given = record(file);
     const name = record(given?.setpoint)?.item;
     return typeof name === 'string' ? { ...read, setpoint: { ...read.setpoint, item: name } } : read;
 }

@@ -25,8 +25,6 @@ export interface SharedBuild {
     /** The sender's name for it; null when it is named after its target recipe */
     name: string | null;
     config: Config;
-    /** Which entities held the Never on override, which is removed, and now use Auto; null when none did */
-    never_note: string | null;
 }
 
 type ShareProblem = 'broken' | 'newer-version' | 'too-big' | 'unsupported';
@@ -182,8 +180,8 @@ export function shareInvalidMessage(engineMessage: string): string {
     return `The build in this share link has a problem, so nothing was opened: ${engineMessage}`;
 }
 
-export function sharedOpenedMessage(name: string, note: string | null = null): string {
-    return `Shared build opened: ${name}.${note === null ? '' : ` ${note}`}`;
+export function sharedOpenedMessage(name: string): string {
+    return `Shared build opened: ${name}.`;
 }
 
 /** Where the shared build goes, said in the dialog that asks first */

@@ -1,6 +1,5 @@
 import { ParsedConfig, ConfigSchema } from "./schema";
 import { ConfigValidationError } from "./errors";
-import { migrateChestType } from "./migrate-chest-type";
 import { ConfigFormatError, configFormatProblem } from "./format";
 import { didParseJsonConfiguration } from "./json-configuration";
 import * as fs from "fs";
@@ -36,12 +35,9 @@ export async function parseConfig(jsonString: string): Promise<ParsedConfig> {
     } catch (error) {
         throw new Error(`The configuration is not valid JSON: ${error instanceof Error ? error.message : String(error)}`);
     }
-    // Normalize config for backwards compatibility
-    const normalized = normalizeConfig(parsed);
-
-    const result = ConfigSchema.safeParse(normalized);
+    const result = ConfigSchema.safeParse(parsed);
     if (!result.success) {
-        throw new ConfigValidationError(result.error, normalized);
+        throw new ConfigValidationError(result.error, parsed);
     }
     didParseJsonConfiguration(result.data);
     return result.data;
@@ -111,28 +107,4 @@ export async function loadConfigFromFile(filePath: string): Promise<ParsedConfig
         throw new ConfigFormatError(problem, filePath);
     }
     return parseConfig(content);
-}
-
-// ============================================================================
-// Config Normalization Functions
-// ============================================================================
-
-/**
- * Normalize a raw config object for backwards compatibility: a chest without `type` is a buffer chest
- * (`migrateChestType`). The schema runs the other migrations.
- *
- * @param rawConfig - The raw parsed config object (before Zod validation)
- * @returns The normalized config object
- */
-function normalizeConfig(rawConfig: unknown): unknown {
-    if (typeof rawConfig !== "object" || rawConfig === null) {
-        return rawConfig;
-    }
-
-    const config = rawConfig as Record<string, unknown>;
-    if (Array.isArray(config.chests)) {
-        config.chests = config.chests.map(migrateChestType);
-    }
-
-    return config;
 }

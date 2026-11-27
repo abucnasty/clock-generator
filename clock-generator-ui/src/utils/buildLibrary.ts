@@ -1,4 +1,3 @@
-import { renameSetpointRecipeToItem, renameTargetOutputToSetpoint } from 'clock-generator/light';
 import { exampleTitle } from './exampleBuilds';
 
 /**
@@ -111,8 +110,7 @@ export function readIndex(text: string | null): IndexRead {
 function recipeOfSavedText(text: string | null): string {
     if (text === null) return '';
     try {
-        // a build saved before the setpoint named its item holds `recipe`, one saved before it was named so `target_output`
-        const parsed = renameSetpointRecipeToItem(renameTargetOutputToSetpoint(JSON.parse(text))) as { setpoint?: { item?: unknown } } | null;
+        const parsed = JSON.parse(text) as { setpoint?: { item?: unknown } } | null;
         const item = parsed?.setpoint?.item;
         return typeof item === 'string' ? item : '';
     } catch {
@@ -368,9 +366,9 @@ export const REFUSED_BUILD_REMOVE = 'Remove';
 /** The one notice when the build the page would open first is not read: a new build is open in its place */
 export function refusedStartNotice(problem: keyof typeof REFUSED_BUILD_LABELS): string {
     const why = problem === 'old'
-        ? 'was made by a version of the clock generator before 0.33.0 and is no longer supported'
-        : 'was made by a newer version of the site, so this page cannot open it';
-    return `Your last build ${why}, so a new build is open. It stays in ${BUILDS_HEADING}, where you can download or remove it.`;
+        ? 'was made by a version of the clock generator before 0.33.0 and is no longer supported, so a new build is open'
+        : 'was made by a newer version of the site, so this page cannot open it. A new build is open';
+    return `Your last build ${why}. It stays in ${BUILDS_HEADING}, where you can download or remove it.`;
 }
 
 /** The notice when a listed build that is not read is asked to open */

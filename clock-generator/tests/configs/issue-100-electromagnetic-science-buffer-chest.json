@@ -11,21 +11,21 @@
       "recipe": "electromagnetic-science-pack",
       "productivity": 175,
       "crafting_speed": 89.625,
-      "type": "machine"
+      "prototype": "electromagnetic-plant"
     },
     {
       "id": 2,
       "recipe": "electromagnetic-science-pack",
       "productivity": 175,
       "crafting_speed": 89.625,
-      "type": "machine"
+      "prototype": "electromagnetic-plant"
     },
     {
       "id": 3,
       "recipe": "supercapacitor",
       "productivity": 175,
       "crafting_speed": 63.75,
-      "type": "machine"
+      "prototype": "electromagnetic-plant"
     }
   ],
   "inserters": [

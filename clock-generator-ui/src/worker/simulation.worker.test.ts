@@ -487,19 +487,7 @@ describe('live advice on a gear assembler, which does not block', () => {
     });
 });
 
-it('loads an imported build file that carries the former Fractional swings override, without it', async () => {
-    const config = {
-        setpoint: { item: 'iron-plate', items_per_second: 1, copies: 1 },
-        machines: [{ id: 1, recipe: 'iron-plate', crafting_speed: 2, productivity: 0, prototype: 'electric-furnace' }],
-        inserters: [], belts: [],
-    };
-    const loaded = await ask({ kind: 'config-file', config: { format: 1, ...config, overrides: { use_fractional_swings: true, lcm: 2 } } });
-    expect(loaded.overrides).toEqual({ lcm: 2 });
-    expect(await ask({ kind: 'config-file', config: { format: 1, ...config, overrides: { use_fractional_swings: true } } }))
-        .toEqual(await ask({ kind: 'config-file', config: { format: 1, ...config, overrides: {} } }));
-});
-
-it("gives the crafting machines, fills a prototype's rule on import, and warns live of a machine that cannot make its recipe", async () => {
+it('gives the crafting machines, and warns live of a machine that cannot make its recipe', async () => {
     const lookups = await ask({ kind: 'lookups' });
     expect(lookups.craftingMachines.machines.map(machine => machine.name)).toContain('cryogenic-plant');
     expect(lookups.craftingMachines.recipeCategories['lithium-plate']).toEqual(['smelting']);
@@ -509,13 +497,6 @@ it("gives the crafting machines, fills a prototype's rule on import, and warns l
         setpoint: { item: 'iron-plate', items_per_second: 1, copies: 1 },
         machines: [furnace], inserters: [], belts: [],
     };
-    // a former type is read as the machine, in a build file and a saved build
-    const typed = { id: 1, recipe: 'iron-plate', crafting_speed: 2, productivity: 0, type: 'furnace' };
-    expect((await ask({ kind: 'config-file', config: { format: 1, ...config, machines: [typed] } })).machines[0]).toEqual(furnace);
-    const saved = await ask({ kind: 'saved-config', config: { format: 1, ...config, machines: [{ ...typed, _uuid: 'm' }, { ...furnace, id: 2, type: 'machine' }] } });
-    expect(saved.problem).toBeNull();
-    expect((saved.form as { machines: unknown[] }).machines).toEqual([{ ...furnace, _uuid: 'm', _prototype_source: 'recipe' }, { ...furnace, id: 2 }]);
-
     const live = await coverageOf({ ...config, machines: [{ ...furnace, prototype: 'cryogenic-plant' }] } as Config);
     expect(live.machinePrototypes.map(issue => issue.kind)).toEqual(['recipe-not-made']);
     expect(listed({ ...nothingLive, machinePrototypes: live.machinePrototypes }, [{ id: 1 }])

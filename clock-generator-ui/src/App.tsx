@@ -1126,7 +1126,7 @@ function App() {
             ?? (build.config.setpoint.item === '' ? UNTITLED_BUILD : recipeTitle(build.config.setpoint.item, recipeLabel));
         // the build the link added, which its Undo takes out again (none when it took the empty build's place)
         const added: { id?: string } = {};
-        const complete = offerUndoOfBuild(sharedOpenedMessage(title, build.never_note), {
+        const complete = offerUndoOfBuild(sharedOpenedMessage(title), {
             deferAnnouncement: true,
             revert: (form) => library.restore({ meta: previous, form, removeId: replaceId === undefined ? added.id : undefined }),
         });

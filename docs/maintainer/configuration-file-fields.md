@@ -320,7 +320,6 @@ after the engine reads the file: a field with a default is required, but a confi
 | `overrides.judged_start` | one of `cold`, `backpressure` | no | The start every clock is judged from: the backpressure start (the default: the unclocked part of the build filled until it settles, then the clock), or the cold start. |
 | `overrides.disturbance_trials_on_copies` | boolean | no | Whether the generator makes the disturbance trials again on the copies that share a lane. |
 | `overrides.kick_start_items` | integer ≥ 0 | no | The kick start: the number of its own product that a machine gets before its clock starts, when its recipe uses that product. |
-| `overrides.disable_swing_backoff` | boolean | no | Not used: set terminal_swing_count to give the number of output swings. |
 | `overrides.derive_clock_windows` | boolean | no | Whether the generator finds the enable windows of other inserters from a run in which only the output inserters have a clock. |
 | `overrides.ignored_lcm_ingredients` | array of string | no | The items that do not change the window cycle time; set each inserter that moves only these items to ALWAYS. |
 

@@ -5,7 +5,7 @@ import { refusalOfPickIn } from "./setpoint-refusal";
 import { refusalOfPick } from "./setpoint-check";
 import { setpointOutputOf, type SetpointOutput } from "../data/setpoint-output";
 
-const build = (setpoint: { item?: string; recipe?: string; counts?: string }, ...recipes: string[]) => ({
+const build = (setpoint: { item?: string; counts?: string }, ...recipes: string[]) => ({
     setpoint: { items_per_second: 1, copies: 1, ...setpoint },
     machines: recipes.map((recipe, index) => ({ id: index + 1, recipe, productivity: 0, crafting_speed: 1 })),
     inserters: [],
@@ -103,11 +103,6 @@ describe("a config whose setpoint names an output the engine does not count yet"
         expect(itemOf(build({ item: "jelly" }, "jellynut-processing"))).toBe("jelly");
         expect(itemOf(build({ item: "jellynut-seed" }, "jellynut-processing", "jellynut-seed-recycling"))).toBe("jellynut-seed");
         expect(itemOf(build({ item: "jellynut-seed", counts: "destroyed" }, "jellynut-processing"))).toBe("jellynut-seed");
-    });
-
-    it("is refused for `recipe: jellynut-seed`, an item in the old field, as `item` is", () => {
-        expect(reasonsOf(build({ recipe: "jellynut-seed" }, "jellynut-processing")))
-            .toEqual([{ path: "setpoint.item", reason: { code: "not-counted-yet", item: "jellynut-seed", choice: "jelly" } }]);
     });
 
     it("loads the name of a recipe as the item it counts: the recipe's name is read, not refused", () => {

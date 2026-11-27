@@ -105,10 +105,6 @@ describe('the conversion of the former belt setting', () => {
         expect(lanesOf(backed).map(lane => lane.lane_end?.kind)).toEqual(['dead_end', 'dead_end', undefined]);
         const moving = await ask({ kind: 'config-file', config: withSetting(automation, false) });
         expect(lanesOf(moving).map(lane => lane.lane_end?.kind)).toEqual(['infinite', 'infinite', undefined]);
-        // the former spelling
-        const older = await ask({ kind: 'config-file', config: { ...automation, overrides: { non_moving_belts: true } } });
-        expect(lanesOf(older).map(lane => lane.lane_end?.kind)).toEqual(['dead_end', 'dead_end', undefined]);
-        expect(older.overrides).toBeUndefined();
     });
 
     it('opens a share link and a saved build of the released page converted, and round-trips them with no setting', async () => {

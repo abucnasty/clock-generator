@@ -81,7 +81,7 @@ describe("belt pickups outside 16-item hands on 4-item belt stacks", () => {
     it("include a burner machine's fuel taken off a belt", () => {
         const fuel = ConfigSchema.parse({
             setpoint: { item: "yumako-processing", items_per_second: 1, copies: 1 },
-            machines: [{ id: 1, type: "biochamber", recipe: "yumako-processing", crafting_speed: 1, productivity: 0 }],
+            machines: [{ id: 1, prototype: "biochamber", recipe: "yumako-processing", crafting_speed: 1, productivity: 0 }],
             inserters: [
                 { id: 1, source: { type: "belt", id: 1 }, sink: { type: "machine", id: 1 } },
                 { id: 2, source: { type: "belt", id: 2 }, sink: { type: "machine", id: 1 } },

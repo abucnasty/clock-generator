@@ -41,20 +41,15 @@ const OUT_OF_SCOPE_CAPTURES: Readonly<Record<string, string>> = {
 const object = (value: unknown): value is Record<string, unknown> =>
     typeof value === "object" && value !== null && !Array.isArray(value);
 
-/** Missing approach data cannot be recovered from a half-tile span or an old positive marker. */
+/** A pickup with a layout and no length gets the layout's length; a half-tile span cannot recover its approach. */
 function normalizeSource(source: Record<string, unknown>): Record<string, unknown> {
     const layout = source.pickup_layout;
-    let updated = source;
     if (typeof layout === "string" && BELT_PICKUP_LAYOUTS.includes(layout as BeltPickupLayout)
-        && source.pickup_length === undefined) updated = {...source, pickup_length: pickupLengthForLayout(layout as BeltPickupLayout)};
-    const capture = source.pickup_capture;
-    if (object(capture) && capture.status === "supported" && capture.model_version === 1
-        && capture.entity_type === "underground-belt") updated = {...updated,
-            pickup_capture: {...capture, status: "unclassified", reason: "layout-not-captured"}};
-    return updated;
+        && source.pickup_length === undefined) return {...source, pickup_length: pickupLengthForLayout(layout as BeltPickupLayout)};
+    return source;
 }
 
-/** Derive length only from explicit layouts; normalize recognizable capture provenance before defaults. */
+/** Derive length only from explicit layouts, before defaults. */
 export function normalizePickupCaptureConfig(value: unknown): unknown {
     if (!object(value) || !Array.isArray(value.inserters)) return value;
     // Layout can supply length, but length cannot recover an underground layout.

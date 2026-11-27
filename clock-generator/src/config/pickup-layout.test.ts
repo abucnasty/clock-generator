@@ -36,15 +36,10 @@ test("manual half-tile geometry needs a layout choice, including direct engine i
     expect(ConfigSchema.safeParse(config({pickup_layout: "unknown"})).success).toBe(false);
 });
 
-test("older positive underground captures require recapture and remain unclassified across reloads", () => {
-    let parsed = ConfigSchema.parse(config({pickup_length: 0.5, near_lane: 1, pickup_capture: {
+test("older positive underground captures require recapture", () => {
+    expect(() => ConfigSchema.parse(config({pickup_length: 0.5, near_lane: 1, pickup_capture: {
         status: "supported", model: "belt", model_version: 1, entity_type: "underground-belt", sidecar_version: "0.11.0",
-    }}));
-    for (let reload = 0; reload < 3; reload++) {
-        parsed = ConfigSchema.parse(JSON.parse(JSON.stringify(parsed)));
-        expect(parsed.inserters[0].source).toMatchObject({pickup_capture: {status: "unclassified", reason: "layout-not-captured"}});
-        expect(() => SimulationContext.fromConfig(parsed)).toThrow("Update Sidecar and recapture");
-    }
+    }}))).toThrow("Update Sidecar and recapture");
 });
 
 test("capture model 2 needs explicit layout and consistent geometry", () => {

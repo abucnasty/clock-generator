@@ -1,7 +1,7 @@
 {
   "format": 1,
   "setpoint": {
-    "recipe": "utility-science-pack",
+    "item": "utility-science-pack",
     "items_per_second": 320,
     "copies": 3
   },

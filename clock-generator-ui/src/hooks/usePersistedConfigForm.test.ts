@@ -4,42 +4,19 @@ import { formDataToConfig } from '../utils/configForm/configMapping';
 import * as edits from '../utils/configForm/edits';
 import { createDefaultConfig, type ConfigFormData } from '../utils/configForm/formData';
 import { backupKey } from '../utils/buildLibrary';
-import { backUpSavedConfig, readConfigFile, readSavedConfig, serializeConfig } from './usePersistedConfigForm';
+import { backUpSavedConfig, readSavedConfig, serializeConfig } from './usePersistedConfigForm';
 
 afterEach(() => {
     vi.restoreAllMocks();
 });
 
 describe('readSavedConfig', () => {
-    it.each([false, true])('migrates the former belt setting %s before the form is read or exported', value => {
-        const saved = JSON.stringify({ ...createDefaultConfig(), overrides: { non_moving_belts: value, lcm: 2 } });
-        const form = readSavedConfig(saved)!;
-        expect(form.overrides).toEqual({ backed_up_belts: value, lcm: 2 });
-        expect(formDataToConfig(form).overrides).toEqual(form.overrides);
-        expect(serializeConfig(form)).not.toContain('non_moving_belts');
-    });
-
-    it('drops the Fractional swings override of a build saved when the switch existed, so it is not exported again', () => {
-        const saved = JSON.stringify({ ...createDefaultConfig(), overrides: { use_fractional_swings: true, lcm: 2 } });
-        const form = readSavedConfig(saved)!;
-        expect(form.overrides).toEqual({ lcm: 2 });
-        expect(serializeConfig(form)).not.toContain('use_fractional_swings');
-    });
-
-    it("reads a build saved with one mining productivity level as each drill's productivity", () => {
-        const drill = { id: 1, type: 'electric-mining-drill', mined_item_name: 'iron-ore', speed_bonus: 0, target: { type: 'machine', id: 1 } };
-        const saved = JSON.stringify({ ...createDefaultConfig(), drills: { mining_productivity_level: 12, configs: [drill, { ...drill, id: 2 }] } });
-        const form = readSavedConfig(saved)!;
-        expect(form.drills?.configs.map(row => row.productivity)).toEqual([120, 120]);
-        expect(serializeConfig(form)).not.toContain('mining_productivity_level');
-    });
-
-    it('reads the saved form state with the legacy fields migrated', () => {
+    it('reads the saved form state, each row with its UUID', () => {
         const saved = JSON.stringify({
             setpoint: { item: 'iron-gear-wheel', items_per_second: 1, copies: 1 },
             machines: [{ id: 1, recipe: 'iron-gear-wheel', productivity: 0, crafting_speed: 1 }],
-            inserters: [{ source: { type: 'machine', id: 1 }, sink: { type: 'chest', id: 1 }, stack_size: 16 }],
-            chests: [{ id: 1, storage_size: 2, item_filter: 'iron-gear-wheel' }],
+            inserters: [{ id: 1, source: { type: 'machine', id: 1 }, sink: { type: 'chest', id: 1 }, stack_size: 16 }],
+            chests: [{ type: ChestType.BUFFER_CHEST, id: 1, storage_size: 2, item_filter: 'iron-gear-wheel' }],
         });
         const config = readSavedConfig(saved);
         expect(config?.chests[0]).toMatchObject({ type: ChestType.BUFFER_CHEST, id: 1, storage_size: 2 });
@@ -63,23 +40,6 @@ describe('readSavedConfig', () => {
         expect(edits.addInserter(config).inserters.at(-1)!.id).toBe(5);
         expect('next_ids' in formDataToConfig(config)).toBe(false);
         expect(serializeConfig(config)).not.toContain('next_ids');
-    });
-
-    it('reads the Never on override of an inserter and a drill, which is removed, as Auto', () => {
-        const drill = { id: 1, type: 'electric-mining-drill', mined_item_name: 'iron-ore', speed_bonus: 0, productivity: 0, target: { type: 'machine', id: 1 }, overrides: { enable_control: { mode: 'NEVER' } } };
-        const saved = JSON.stringify({
-            setpoint: { item: 'iron-gear-wheel', items_per_second: 1, copies: 1 },
-            machines: [{ id: 1, recipe: 'iron-gear-wheel', productivity: 0, crafting_speed: 1 }],
-            inserters: [{ id: 3, source: { type: 'machine', id: 1 }, sink: { type: 'chest', id: 1 }, stack_size: 16, overrides: { enable_control: { mode: 'NEVER' } } }],
-            chests: [{ id: 1, storage_size: 2, item_filter: 'iron-gear-wheel' }],
-            drills: { configs: [drill] },
-        });
-        const form = readSavedConfig(saved)!;
-        expect(form.inserters[0].overrides?.enable_control).toEqual({ mode: 'AUTO' });
-        expect(form.drills?.configs[0].overrides?.enable_control).toEqual({ mode: 'AUTO' });
-        expect(serializeConfig(form)).not.toContain('NEVER');
-        const file = readConfigFile(saved) as { inserters: { overrides: { enable_control: unknown } }[] };
-        expect(file.inserters[0].overrides.enable_control).toEqual({ mode: 'AUTO' });
     });
 
     it('gives null for what is not the form state', () => {

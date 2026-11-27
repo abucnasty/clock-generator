@@ -205,6 +205,5 @@ describe('the fields of each type', () => {
         showFields(formChest(drafted.chests![0]));
         expect(screen.getByRole('button', { name: 'Slot 2: Blocked (deconstruction-planner)' })).toBeDefined();
         expect(formDataToConfig(configToFormData(drafted)).chests![0]).toEqual(build(CONTAINERS.blockedCar).chests![0]);
-        expect(ConfigSchema.parse(drafted).chests![0]).toEqual(build(CONTAINERS.blockedCar).chests![0]);
     });
 });

@@ -67,17 +67,10 @@ export { COPIES_DECIMAL_ERROR, isShortDecimalCopies } from "./config/copies-valu
 export { CONFIG_FORMAT, configFormatProblem, withConfigFormat } from "./config/format";
 export type { ConfigFormatProblem } from "./config/format";
 export { fraction } from "./data-types/fraction";
-export { migrateBeltSupplyOverrides } from "./config/migrate-belt-supply";
-export { dropFractionalSwingsOverride } from "./config/migrate-fractional-swings";
-export { renameLoopSeedItemsToKickStart } from "./config/migrate-kick-start";
-export { renameSetpointRecipeToItem, renameTargetOutputToSetpoint } from "./config/migrate-setpoint";
 export { reasonString, refusalOfPickIn } from "./config/setpoint-refusal";
 export type { SetpointReason } from "./config/setpoint-refusal";
 export type { SetpointOutput } from "./data/setpoint-output";
-export { neverOverrideEntitiesOf, readNeverOverridesInConfig, type NeverOverrideEntity } from "./config/migrate-never-override";
-export { renameClockedPeriodInConfig } from "./config/migrate-window-cycle";
-export { BLOCKED_SLOT_MARKERS } from "./config/migrate-blocked-slots";
-export { migrateMiningProductivityLevel, PRODUCTIVITY_PER_MINING_LEVEL } from "./config/migrate-mining-productivity";
+export { BLOCKED_SLOT_MARKERS } from "./config/slot-markers";
 
 export { BELT_PICKUP_LAYOUTS, BELT_PICKUP_LAYOUT_LABELS, pickupLengthForLayout } from "./common/belt-pickup-layout";
 export type { BeltPickupLayout } from "./common/belt-pickup-layout";

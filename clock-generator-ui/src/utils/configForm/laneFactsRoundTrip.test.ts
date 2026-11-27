@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BeltConfigSchema, ConfigSchema, migrateMachineTypes, type Config } from 'clock-generator/browser';
+import { BeltConfigSchema, ConfigSchema, type Config } from 'clock-generator/browser';
 import { Option } from 'clock-generator/light';
 import { ConfigPaths } from '../../../../clock-generator/dist/config/config-paths.js';
 import { readConfigFile, readSavedConfig, serializeConfig } from '../../hooks/usePersistedConfigForm';
@@ -20,9 +20,9 @@ function sampleText(file: string): string {
     return SAMPLE_FILES[key];
 }
 
-/** A configuration file as the page reads it: the former names, then the worker's 'config-file' */
+/** A configuration file as the page reads it, then the worker's 'config-file' */
 function configFile(text: string): Config {
-    const result = parseFormConfig(ConfigSchema, migrateMachineTypes(readConfigFile(text)));
+    const result = parseFormConfig(ConfigSchema, readConfigFile(text));
     if (!result.success) throw new Error(result.error.message);
     return result.data as Config;
 }
@@ -53,7 +53,7 @@ async function throughShareLink(config: Config): Promise<Config> {
     if (decoded.kind !== 'build') throw new Error(decoded.problem);
     return configFile(JSON.stringify(decoded.config));
 }
-const throughSave = (form: ConfigFormData) => formDataToConfig(migrateMachineTypes(readSavedConfig(serializeConfig(form))) as ConfigFormData);
+const throughSave = (form: ConfigFormData) => formDataToConfig(readSavedConfig(serializeConfig(form)) as ConfigFormData);
 
 describe('nothing is written that the user did not state', () => {
     const samples = Object.entries(ConfigPaths) as [string, string][];

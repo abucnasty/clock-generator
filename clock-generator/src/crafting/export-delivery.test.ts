@@ -12,8 +12,8 @@ import { quiet } from "./generate-blueprint-test-helpers";
 const SMALL_BUILD = JSON.stringify({
     setpoint: { item: "iron-gear-wheel", items_per_second: 4, copies: 1 },
     machines: [
-        { id: 1, recipe: "iron-gear-wheel", productivity: 0, crafting_speed: 2, type: "machine" },
-        { id: 2, recipe: "copper-cable", productivity: 0, crafting_speed: 2, type: "machine" },
+        { id: 1, recipe: "iron-gear-wheel", productivity: 0, crafting_speed: 2, prototype: "assembling-machine-3" },
+        { id: 2, recipe: "copper-cable", productivity: 0, crafting_speed: 2, prototype: "electromagnetic-plant" },
     ],
     belts: [
         { id: 1, type: "turbo-transport-belt", lanes: [{ ingredient: "iron-plate", stack_size: 4, lane_end: { kind: "infinite" } }, { ingredient: "copper-plate", stack_size: 4, lane_end: { kind: "infinite" } }] },

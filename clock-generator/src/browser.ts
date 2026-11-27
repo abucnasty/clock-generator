@@ -49,7 +49,7 @@ export {
 export { suggestedTargetOf } from './config/suggested-target';
 export { CONFIG_FORMAT, configFormatProblem, withConfigFormat } from './config/format';
 export type { ConfigFormatProblem } from './config/format';
-export { readRecipeSetpointAsItem } from './config/migrate-recipe-setpoint';
+export { readRecipeSetpointAsItem } from './config/setpoint-item';
 export { refusalOfPick, refusalOfSetpoint } from './config/setpoint-check';
 export { setpointOutputOf } from './data/setpoint-output';
 export type { SuggestedTarget } from './config/suggested-target';
@@ -104,7 +104,6 @@ export { dropRoomNote } from './crafting/drop-room-note';
 export { sideLoadedDrops, sideLoadedDropWarning } from './config/side-loaded-drop';
 export type { UncalibratedBeltPickup } from './config/pickup-calibration';
 export { machinePrototypeIssues, machineRuleOf } from './config/machine-prototype';
-export { migrateMachineTypes } from './config/migrate-machine-type';
 export type { MachinePrototypeIssue } from './config/machine-prototype';
 
 // ============================================================================

@@ -198,61 +198,6 @@ describe('sharedBuildSummary', () => {
     });
 });
 
-describe('share links made before the setpoint and the kick start were named so', () => {
-    /** A link as the site made it before: the build carries `target_output`, and `loop_seed_items` in its overrides */
-    const formerLink = async () => {
-        const { setpoint, ...rest } = smallBuild();
-        const former = { target_output: setpoint, ...rest, overrides: { loop_seed_items: 50 } } as unknown as Config;
-        return linkTo(former, 'An old link');
-    };
-
-    it('still opens: the build loads with its setpoint and its kick start, and nothing is left under the old names', async () => {
-        const decoded = await decodeShareLink(await formerLink());
-        if (decoded.kind !== 'build') throw new Error(`Expected a decoded build, not ${decoded.problem}`);
-        const file = readConfigFile(JSON.stringify(decoded.config)) as { setpoint: unknown; overrides: unknown };
-        expect(file.setpoint).toEqual({ item: 'iron-gear-wheel', items_per_second: 2.5, copies: 1 });
-        expect(file.overrides).toEqual({ kick_start_items: 50 });
-        expect('target_output' in file).toBe(false);
-        const parsed = parseFormConfig(ConfigSchema, file);
-        expect(parsed.success).toBe(true);
-        expect(parsed.data!.setpoint.item).toBe('iron-gear-wheel');
-        expect(parsed.data!.overrides?.kick_start_items).toBe(50);
-    });
-
-    it('loads to the same build as a link made with the new names, and the schema reads the old names without the file reader as well', async () => {
-        const old = await decodeShareLink(await formerLink());
-        if (old.kind !== 'build') throw new Error('Expected a decoded build');
-        const current = { ...smallBuild(), overrides: { kick_start_items: 50 } };
-        expect(ConfigSchema.parse(old.config)).toEqual(ConfigSchema.parse(current));
-    });
-});
-
-describe('share links made before the window cycle time was named so', () => {
-    /** A link as the site made it before: a Clocked override of an inserter carries `period_duration_ticks` */
-    const formerLink = async () => {
-        const build = smallBuild();
-        build.inserters = [{ ...build.inserters[0], overrides: { enable_control: { mode: 'CLOCKED', ranges: [{ start: 0, end: 10 }], period_duration_ticks: 120 } } }] as unknown as Config['inserters'];
-        return linkTo(build, 'An old link');
-    };
-
-    it('still opens: the build loads with its window cycle time, and nothing is left under the old name', async () => {
-        const decoded = await decodeShareLink(await formerLink());
-        if (decoded.kind !== 'build') throw new Error(`Expected a decoded build, not ${decoded.problem}`);
-        const file = readConfigFile(JSON.stringify(decoded.config));
-        const parsed = parseFormConfig(ConfigSchema, file);
-        expect(parsed.success).toBe(true);
-        const control = parsed.data!.inserters[0].overrides?.enable_control;
-        expect(control).toEqual({ mode: 'CLOCKED', ranges: [{ start: 0, end: 10 }], window_cycle_ticks: 120 });
-        expect(JSON.stringify(file)).not.toContain('period_duration_ticks');
-    });
-
-    it('is read by the schema without the file reader as well', async () => {
-        const decoded = await decodeShareLink(await formerLink());
-        if (decoded.kind !== 'build') throw new Error('Expected a decoded build');
-        expect(ConfigSchema.parse(decoded.config).inserters[0].overrides?.enable_control).toMatchObject({ window_cycle_ticks: 120 });
-    });
-});
-
 describe('shared builds through the real file and worker boundary', () => {
     it.each([0.0625, 0.0001, 1 / 3])('preserves Copies %s and inserter metadata', async copies => {
         const config = smallBuild();

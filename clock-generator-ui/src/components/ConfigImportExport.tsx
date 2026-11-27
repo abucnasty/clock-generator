@@ -9,7 +9,6 @@ import { useDismissMessage, useNotify } from '../hooks/useMessages';
 import { useGameNames } from '../hooks/useGameNames';
 import { useDisplayPreferences } from '../hooks/useDisplayPreferences';
 import type { DisplayScheme } from '../utils/displayPreferences';
-import { neverOverrideNoteOfText, withNeverOverrideNote } from '../utils/neverOverrideNote';
 import { countOf, describePaste, exampleUndoMessage, UNDO_IMPORT_MESSAGE, UNDO_RESET_MESSAGE } from '../utils/undoSnapshot';
 import { BUTTON_NAMES } from '../utils/a11yLabels';
 import { isBuildFile } from '../utils/sidecarExport';
@@ -363,8 +362,8 @@ export function ConfigImportExport({
             setRefused(refusal);
             return;
         }
-        // its Undo message says what replaced the build, and which entities its Never on override (removed) now leaves on Auto
-        onUndoable(withNeverOverrideNote(undoMessage, neverOverrideNoteOfText(text)));
+        // its Undo message says what replaced the build
+        onUndoable(undoMessage);
         onImport(parsedConfig, prototypeSource);
         onBuildReplaced();
     }, [onImport, onBuildReplaced, onUndoable]);

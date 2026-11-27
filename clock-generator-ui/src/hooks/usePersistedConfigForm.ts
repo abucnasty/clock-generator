@@ -1,6 +1,6 @@
 import { canonicalRate, configFormatProblem, isRatePair, withConfigFormat, type ConfigFormatProblem } from 'clock-generator/light';
 import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react';
-import { ChestType, dropFractionalSwingsOverride, migrateBeltSupplyOverrides, migrateMiningProductivityLevel, readNeverOverridesInConfig, renameClockedPeriodInConfig, renameLoopSeedItemsToKickStart, renameSetpointRecipeToItem, renameTargetOutputToSetpoint } from 'clock-generator/light';
+import { ChestType } from 'clock-generator/light';
 import { askEngine } from '../worker/engineClient';
 import {
     backupKey,
@@ -44,19 +44,17 @@ import {
     type MachineFormData,
 } from '../utils/configForm/formData';
 import { formSlotFilters } from '../utils/containerSlotFilters';
-import { neverOverrideNoteOfText } from '../utils/neverOverrideNote';
 
-/** Migrate legacy inserter data to include id field */
-function migrateInserters(inserters: unknown[]): InserterFormData[] {
-    return inserters.map((ins: unknown, index: number) => {
-        const i = ins as InserterFormData & { id?: number; _uuid?: string };
-        const withId = typeof i.id === 'number' ? i : { ...i, id: index + 1 };
-        return withId._uuid ? withId as InserterFormData : { ...withId, _uuid: crypto.randomUUID() } as InserterFormData;
+/** Each inserter row with its `_uuid` */
+function inserterRows(inserters: unknown[]): InserterFormData[] {
+    return inserters.map((ins: unknown) => {
+        const i = ins as InserterFormData & { _uuid?: string };
+        return i._uuid ? i : { ...i, _uuid: crypto.randomUUID() } as InserterFormData;
     });
 }
 
-/** Migrate legacy chest data to include type field */
-function migrateChests(chests: unknown[]): ChestFormData[] {
+/** Each chest row with its `_uuid`, a buffer chest with its settings */
+function chestRows(chests: unknown[]): ChestFormData[] {
     return chests.map((chest: unknown) => {
         const c = chest as { type?: string; id: number; _uuid?: string; storage_size?: number; item_filter?: string | InfinityFilterFormData[];
             prototype?: string; position?: { x: number; y: number } };
@@ -71,7 +69,9 @@ function migrateChests(chests: unknown[]): ChestFormData[] {
             return { ...container, ...('slot_filters' in container && Array.isArray(container.slot_filters)
                 && { slot_filters: formSlotFilters(container.slot_filters) }), _uuid: uuid } as ContainerChestFormData;
         }
-        // Default to buffer chest (handles legacy data without type)
+        if (c.type !== ChestType.BUFFER_CHEST) {
+            return { ...(c as ChestFormData), _uuid: uuid };
+        }
         return {
             type: ChestType.BUFFER_CHEST,
             id: c.id,
@@ -84,25 +84,13 @@ function migrateChests(chests: unknown[]): ChestFormData[] {
     });
 }
 
-/**
- * A config with the names it had before: the setpoint was `target_output`, the kick start `loop_seed_items` of the overrides, and the
- * window cycle time of a Clocked override `period_duration_ticks`; and without the Never on override, which is read as Auto (the
- * schema reads them too)
- */
-// a file or saved form is read by the shape it has, before any check: no type holds all the shapes it had
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function readFormerNames(parsed: unknown): any {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const config = readNeverOverridesInConfig(renameClockedPeriodInConfig(renameSetpointRecipeToItem(renameTargetOutputToSetpoint(parsed)))) as any;
-    return typeof config?.overrides === 'object' && config.overrides !== null
-        ? { ...config, overrides: renameLoopSeedItemsToKickStart(config.overrides) } : config;
-}
-
-/** The config in an imported file, not yet checked against the config schema; files from before chest types have chests without a type */
+/** The config in an imported file, not yet checked against the config schema */
 export function readConfigFile(content: string): unknown {
-    const parsed = readFormerNames(JSON.parse(content));
+    // a file is read by the shape it has, before any check
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const parsed = JSON.parse(content) as any;
     if (Array.isArray(parsed?.chests)) {
-        parsed.chests = migrateChests(parsed.chests);
+        parsed.chests = chestRows(parsed.chests);
     }
     return parsed;
 }
@@ -121,21 +109,19 @@ export function savedFormatProblem(stored: string): ConfigFormatProblem | null {
     return typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed) ? configFormatProblem(parsed) : null;
 }
 
-/** The saved form state with the legacy fields migrated; null if it is not JSON or lacks the required fields */
+/** The saved form state, each row with its `_uuid`; null if it is not JSON or lacks the required fields */
 export function readSavedConfig(stored: string): ConfigFormData | null {
     try {
-        const parsed = readFormerNames(JSON.parse(stored));
+        // a saved form is read by the shape it has, before any check
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const parsed = JSON.parse(stored) as any;
         // Basic validation - check if it has the required fields
         if (parsed && parsed.setpoint && parsed.machines && parsed.chests) {
-            // builds saved when the Fractional swings switch existed carry its field: it is dropped, as the engine does
-            if (parsed.overrides !== undefined) parsed.overrides = dropFractionalSwingsOverride(migrateBeltSupplyOverrides(parsed.overrides));
-            // Migrate legacy chests
-            parsed.chests = migrateChests(parsed.chests);
-            // Migrate legacy inserters (assign id / _uuid if missing)
+            parsed.chests = chestRows(parsed.chests);
             if (Array.isArray(parsed.inserters)) {
-                parsed.inserters = migrateInserters(parsed.inserters);
+                parsed.inserters = inserterRows(parsed.inserters);
             }
-            // Migrate machines, belts, drills: add _uuid if missing
+            // machines, belts, drills: add _uuid if missing
             if (Array.isArray(parsed.machines)) {
                 parsed.machines = parsed.machines.map((m: MachineFormData & { _uuid?: string }) =>
                     m._uuid ? m : { ...m, _uuid: crypto.randomUUID() });
@@ -144,8 +130,6 @@ export function readSavedConfig(stored: string): ConfigFormData | null {
                 parsed.belts = parsed.belts.map((b: BeltFormData & { _uuid?: string }) =>
                     b._uuid ? b : { ...b, _uuid: crypto.randomUUID() });
             }
-            // drills saved with one mining productivity level get it as each drill's productivity
-            if (parsed.drills !== undefined) parsed.drills = migrateMiningProductivityLevel(parsed.drills);
             if (parsed.drills && Array.isArray(parsed.drills.configs)) {
                 parsed.drills.configs = parsed.drills.configs.map((d: DrillFormData & { _uuid?: string }) =>
                     d._uuid ? d : { ...d, _uuid: crypto.randomUUID() });
@@ -364,14 +348,6 @@ export function usePersistedConfigForm() {
         return backUpSavedConfig(pageLocal, stored.text, backupKey(opened.activeId));
     });
     const [conflict, setConflictState] = useState<ConflictState>(NO_CONFLICT);
-    // a saved build that held the Never on override, which is removed: its entities load with Auto, and the user is told once
-    const [neverNote] = useState(() => (stored && stored.refused === null ? neverOverrideNoteOfText(stored.text) : null));
-    const neverNoteShownRef = useRef(false);
-    useEffect(() => {
-        if (neverNote === null || neverNoteShownRef.current) return;
-        neverNoteShownRef.current = true;
-        notify({ severity: 'info', text: neverNote, durationMs: null });
-    }, [neverNote, notify]);
 
     // read by the handlers and the storage listener, which may run after an await; the id is set with the state
     const idRef = useRef(startMeta?.id ?? opened.activeId);
@@ -494,7 +470,7 @@ export function usePersistedConfigForm() {
         askEngine({ kind: 'saved-config', config: withSavedFormat(stored.text, savedConfig) }).then(
             ({ problem, form }) => complete(() => {
                 if (problem === null) {
-                    // unless the config was replaced (imported or reset) in the meantime; with its machines' former types read
+                    // unless the config was replaced (imported or reset) in the meantime
                     if (load.owner.form === defaultConfig) commitBuildReplacement(load.owner, form as ConfigFormData, () => {});
                 } else {
                     console.warn('Saved config in localStorage is invalid, using defaults:', problem);
@@ -647,11 +623,8 @@ export function usePersistedConfigForm() {
             setLoadNotice(backUpSavedConfig(pageLocal, text, backupKey(id)));
             return null;
         }
-        // the build is saved with Auto from its next save on, so the note shows once
-        const neverNote = neverOverrideNoteOfText(text);
-        if (neverNote !== null) notify({ severity: 'info', text: neverNote, durationMs: null });
         return { form, text };
-    }, [notify]);
+    }, []);
 
     const ownMeta = useCallback((): BuildMeta => {
         const id = idRef.current;

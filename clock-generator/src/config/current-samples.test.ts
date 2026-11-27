@@ -2,54 +2,28 @@ import fs from "fs";
 import path from "path";
 import { describe, expect, it } from "vitest";
 import { ConfigPaths } from "./config-paths";
-import { parseConfig } from "./loader";
-import { migrateBeltSupplyOverrides } from "./migrate-belt-supply";
-import { migrateBlockedSlotFilter } from "./migrate-blocked-slots";
-import { dropFractionalSwingsOverride } from "./migrate-fractional-swings";
-import { renameLoopSeedItemsToKickStart } from "./migrate-kick-start";
-import { renameTargetOutputToSetpoint } from "./migrate-setpoint";
-import { readRecipeSetpointAsItem } from "./migrate-recipe-setpoint";
-import { renameClockedPeriodInConfig } from "./migrate-window-cycle";
-import { migrateChestType } from "./migrate-chest-type";
-import { migrateMachineType } from "./migrate-machine-type";
-import { migrateMiningProductivityLevel } from "./migrate-mining-productivity";
-import { readNeverOverridesInConfig } from "./migrate-never-override";
+import { readRecipeSetpointAsItem } from "./setpoint-item";
 import { normalizePickupCaptureConfig } from "./pickup-capture";
 
 type Raw = Record<string, unknown>;
 
 const ENGINE = path.resolve(__dirname, "../..");
-const LEGACY = path.join(__dirname, "fixtures", "legacy");
 const object = (value: unknown): value is Raw => typeof value === "object" && value !== null && !Array.isArray(value);
-const each = (list: unknown, step: (value: unknown) => unknown) => Array.isArray(list) ? list.map(step) : list;
-const at = (config: Raw, key: string, step: (value: unknown) => unknown): Raw => key in config ? { ...config, [key]: step(config[key]) } : config;
 
 /**
- * Every load-time migration of a config, applied where the loader and the schema apply it, without the schema's checks
- * or defaults; by the name of its legacy fixture in fixtures/legacy/. A config in the current shape is left as it is.
+ * The readers the schema runs before its checks, without the checks or defaults: each reads a current key (a recipe's
+ * name in `setpoint.item`; a pickup's `pickup_layout` without its `pickup_length`). A config in the current shape that
+ * states each value as the engine reads it is left as it is.
  */
-const MIGRATIONS: Record<string, (config: Raw) => Raw> = {
-    "chest-without-type": config => at(config, "chests", chests => each(chests, migrateChestType)),
-    "pickup-without-capture": config => normalizePickupCaptureConfig(config) as Raw,
-    "machine-type": config => at(config, "machines", machines => each(machines, machine => migrateMachineType(machine))),
-    "mining-productivity-level": config => at(config, "drills", drills => migrateMiningProductivityLevel(drills)),
-    "blocked-slot-item": config => at(config, "chests", chests => each(chests, chest =>
-        object(chest) ? at(chest, "slot_filters", filters => each(filters, migrateBlockedSlotFilter)) : chest)),
-    "non-moving-belts": config => at(config, "overrides", migrateBeltSupplyOverrides),
-    "fractional-swings": config => at(config, "overrides", dropFractionalSwingsOverride),
-    "target-output": config => renameTargetOutputToSetpoint(config) as Raw,
-    "loop-seed-items": config => at(config, "overrides", renameLoopSeedItemsToKickStart),
-    "period-duration-ticks": config => renameClockedPeriodInConfig(config) as Raw,
-    "never-override": config => readNeverOverridesInConfig(config) as Raw,
-    "recipe-setpoint": config => readRecipeSetpointAsItem(config) as Raw,
+const READERS: Record<string, (config: Raw) => Raw> = {
+    "pickup-length": config => normalizePickupCaptureConfig(config) as Raw,
+    "setpoint-item": config => readRecipeSetpointAsItem(config) as Raw,
 };
 
-/** The schema's preprocess steps that MIGRATIONS holds (`z.preprocess(<step>, ...)` in schema.ts) */
-const SCHEMA_STEPS = ["normalizePickupCaptureConfig", "migrateMachineTypeStep", "migrateMiningProductivityLevelStep",
-    "migrateBlockedSlotFilter", "migrateBeltSupplyOverrides", "dropFractionalSwingsOverride", "renameLoopSeedItemsToKickStart", "renameTargetOutputToSetpoint",
-    "renameClockedPeriodToWindowCycle", "readNeverOverrideAsAuto", "readRecipeSetpointAsItem"];
+/** The schema's preprocess steps that READERS holds (`z.preprocess(<step>, ...)` in schema.ts) */
+const SCHEMA_STEPS = ["normalizePickupCaptureConfig", "readRecipeSetpointAsItem"];
 
-const migrated = (config: Raw) => Object.values(MIGRATIONS).reduce((value, step) => step(value), config);
+const readBy = (config: Raw) => Object.values(READERS).reduce((value, step) => step(value), config);
 const read = (file: string) => JSON.parse(fs.readFileSync(file, "utf8")) as Raw;
 
 /** Every config the repository keeps as a sample: the config samples and the game tests' fixture configs */
@@ -66,30 +40,11 @@ function sampleConfigs(dir: string): string[] {
 
 const SAMPLES = [...sampleConfigs(path.join(ENGINE, "resources", "config-samples")), ...sampleConfigs(path.join(ENGINE, "tests", "game"))];
 
-describe("the load-time migrations", () => {
+describe("the readers before the schema", () => {
     it("are every preprocess step of the schema", () => {
         const schema = fs.readFileSync(path.join(__dirname, "schema.ts"), "utf8");
         const steps = Array.from(schema.matchAll(/z\.preprocess\((\w+)/g), match => match[1]);
-        // a new step belongs in MIGRATIONS, with a legacy fixture, so that the samples are held to it too
         expect(steps.sort()).toEqual([...SCHEMA_STEPS].sort());
-    });
-
-    it("each have one legacy fixture, which only that migration changes", () => {
-        expect(fs.readdirSync(LEGACY).sort()).toEqual(Object.keys(MIGRATIONS).map(name => `${name}.json`).sort());
-        for (const [name, step] of Object.entries(MIGRATIONS)) {
-            const fixture = read(path.join(LEGACY, `${name}.json`));
-            expect(step(fixture), name).not.toEqual(fixture);
-            for (const [other, otherStep] of Object.entries(MIGRATIONS)) {
-                if (other !== name) expect(otherStep(fixture), `${other} on ${name}`).toEqual(fixture);
-            }
-        }
-    });
-
-    it.each(Object.keys(MIGRATIONS))("read %s as the loader does: the migrated fixture loads to the same config", async name => {
-        const text = fs.readFileSync(path.join(LEGACY, `${name}.json`), "utf8");
-        const current = migrated(JSON.parse(text));
-        expect(migrated(current)).toEqual(current);
-        expect(await parseConfig(JSON.stringify(current))).toEqual(await parseConfig(text));
     });
 });
 
@@ -99,8 +54,8 @@ describe("the samples", () => {
         expect(SAMPLES.length).toBeGreaterThan(Object.values(ConfigPaths).length);
     });
 
-    it.each(SAMPLES.map(file => path.relative(ENGINE, file)))("%s is in the current shape: no migration changes it", file => {
+    it.each(SAMPLES.map(file => path.relative(ENGINE, file)))("%s states each value as the engine reads it: no reader changes it", file => {
         const config = read(path.join(ENGINE, file));
-        expect(migrated(config)).toEqual(config);
+        expect(readBy(config)).toEqual(config);
     });
 });

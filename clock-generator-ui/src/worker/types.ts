@@ -587,8 +587,8 @@ export interface EngineAnswers {
     'lane-roles': LaneRoleOfLane[];
     /** Why the saved config cannot be used; null when it can */
     /**
-     * The saved form state with each machine's former type read as its machine, to load in its place, and why it cannot
-     * be loaded, or null when it can; `refused` when its format is not read, and then nothing else is checked
+     * The saved form state, to load in its place, and why it cannot be loaded, or null when it can; `refused` when its
+     * format is not read, and then nothing else is checked
      */
     'saved-config': { problem: string | null; form: unknown; refused?: ConfigFormatProblem };
     /** The checked build of a file or share link; one whose format is not read fails with `REFUSED_CONFIG_ERRORS`' message */
