@@ -44,6 +44,7 @@ import { ChestsForm } from './components/ChestsForm';
 import { DrillsForm } from './components/DrillsForm';
 import { OverridesForm } from './components/OverridesForm';
 import { ConfigImportExport, type BuildEntryHandle, type ToolsMenuItem } from './components/ConfigImportExport';
+import { ResearchProfilesDialog } from './components/ResearchProfilesDialog';
 import { TermsPopover } from './components/TermsPopover';
 import { IntroCard } from './components/IntroCard';
 import { BuildSwitcher } from './components/BuildSwitcher';
@@ -118,6 +119,9 @@ import {
     type BuildMeta,
 } from './utils/buildLibrary';
 import { sharedBuildSummary, sharedOpenedMessage, sharedPlaceNote, type SharedBuild } from './utils/shareLink';
+
+/** The research profiles show in the dev server only, until the import that uses them is on the page */
+const SHOW_RESEARCH_PROFILES = import.meta.env.DEV;
 
 /** The page's own items in ⋮ */
 const TOOLS_MENU = {
@@ -349,6 +353,7 @@ function App() {
     const { transfers: outputTransfers, generationIssues: outputGenerationIssues, updating: outputTransfersLoading } = useOutputTransfers(engineConfig, isInitialized);
     // asked only while the Layout view or the install dialog is open: they are the ones that tint the regions
     const [installOpen, setInstallOpen] = useState(false);
+    const [researchProfilesOpen, setResearchProfilesOpen] = useState(false);
     const regionOrbits = useRegionOrbits(engineConfig, isInitialized && (configView === 'layout' || installOpen));
     // the lanes as the engine reads them: each lane's role, and the end of a lane that states none
     const { facts: laneFacts, roles: laneRoles } = useLaneFacts(engineConfig, isInitialized);
@@ -1149,6 +1154,7 @@ function App() {
                             onInstall={blueprintString ? () => setInstallOpen(true) : undefined}
                             onCheckOnly={handleCheckOnly}
                             checkDisabled={busy || invalid_rate}
+                            onOpenResearchProfiles={SHOW_RESEARCH_PROFILES ? () => setResearchProfilesOpen(true) : undefined}
                             renderControls={(paste, menu) => (
                                 <WorkflowBar
                                     entryAction={paste}
@@ -1623,6 +1629,10 @@ function App() {
             )}
 
             {manualCopy && <ManualBlueprintDialog failure={manualCopy} onClose={() => setManualCopy(null)} />}
+
+            {SHOW_RESEARCH_PROFILES && (
+                <ResearchProfilesDialog open={researchProfilesOpen} onClose={() => setResearchProfilesOpen(false)} recipeOptions={recipeNames} />
+            )}
 
             <MessageHost />
         </PageProviders>
