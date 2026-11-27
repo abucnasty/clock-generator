@@ -9,11 +9,10 @@ import { missingDataSections, type InternalError } from '../utils/internalError'
  */
 
 import type { z } from 'zod';
-import type { LaneRole, SetpointReason } from 'clock-generator/light';
+import type { SetpointReason } from 'clock-generator/light';
 import type { ClockAlternativeRun, Config, DebugSteps, FactorioData, LogMessage, Logger, MachineToName, NotMadeClock, SearchRangeEdge } from 'clock-generator/browser';
 import { parseFormConfig } from './formConfig';
 import { laneRolesAnswer } from './laneRoles';
-import { convertBeltSetting } from '../utils/beltSettingConversion';
 import { laneTakersOf } from '../utils/laneTakers';
 import { installFactsOf } from './installFacts';
 import { createReadyGate } from './requestGate';
@@ -193,7 +192,7 @@ function toRunView(run: ClockAlternativeRun | null, config: Config): ClockAltern
         strategy: alternative.strategy,
         swingBackoffReport: result.swing_backoff_report ?? null,
         inserterClocks: result.unplanned_inserter_clocks ?? {},
-        backedUpBelts: alternative.belt?.kind === 'backed_up' || (alternative.belt === null && config.overrides?.backed_up_belts === true),
+        backedUpBelts: alternative.belt?.kind === 'backed_up',
         replayReadsConfig: true,
     }));
     // the same clock made with shared windows, listed after it
@@ -428,36 +427,6 @@ function pastedBlueprint(pasted: Extract<EngineQuery, { kind: 'pasted-blueprint'
     };
 }
 
-/**
- * The roles of the lanes of a build, as the engine's lane facts give them, for the conversion of the former belt setting.
- * A machine with no recipe stops the engine from reading any role; the roles are then read without such machines and the
- * inserters at them, so a lane only those inserters use has no role. A build the engine cannot read at all has none.
- */
-function rolesForConversion(config: unknown): { of: (belt_id: number, lane: 1 | 2) => LaneRole | null } {
-    const read = (it: unknown) => {
-        const facts = clockGenerator.laneFactsOfConfig(it as Config);
-        return { of: (belt_id: number, lane: 1 | 2) => facts.of(belt_id, lane).role };
-    };
-    try {
-        return read(config);
-    } catch {
-        try {
-            const build = config as Config;
-            const kept = build.machines.filter(machine => machine.recipe !== '');
-            const ids = new Set(kept.map(machine => machine.id));
-            const atKept = (end: { type: string; id: number }) => end.type !== 'machine' || ids.has(end.id);
-            return read({ ...build, machines: kept, inserters: build.inserters.filter(inserter => atKept(inserter.source) && atKept(inserter.sink)) });
-        } catch {
-            return { of: () => null };
-        }
-    }
-}
-
-/** `config` with the former belt setting turned into lane ends; as it is where it states none */
-function withoutBeltSetting<C>(config: C): C {
-    return (convertBeltSetting(config as never, rolesForConversion(config)) as C | null) ?? config;
-}
-
 /** The saved form state, and why it cannot be loaded, or null when it can */
 function savedConfig(config: unknown): EngineAnswers['saved-config'] {
     const refused = clockGenerator.configFormatProblem(config);
@@ -466,7 +435,7 @@ function savedConfig(config: unknown): EngineAnswers['saved-config'] {
     const { format: _format, ...form } = config as Record<string, unknown>;
     void _format;
     const result = parseFormConfig(clockGenerator.ConfigSchema, form);
-    return result.success ? { problem: null, form: withoutBeltSetting(canonicalRate(form)) } : { problem: result.error.message, form };
+    return result.success ? { problem: null, form: canonicalRate(form) } : { problem: result.error.message, form };
 }
 
 /**
@@ -480,7 +449,7 @@ function configFile(config: unknown): EngineAnswers['config-file'] {
     if (!result.success) {
         throw new clockGenerator.ConfigValidationError(result.error);
     }
-    return withoutBeltSetting(withSetpointNameOf(result.data, config));
+    return withSetpointNameOf(result.data, config);
 }
 
 /** The setpoint of an imported file as the file names it: the schema reads a recipe's name as its item, and the form keeps the name */

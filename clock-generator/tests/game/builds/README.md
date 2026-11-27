@@ -17,7 +17,7 @@ uses it. Setup, selective execution and artifact retention are in the [game veri
 - `lithium-plate-80-silo-chest-clock.game.test.ts`: the lithium plate build, a rocket silo taken as a chest between two cryogenic plants and six furnaces.
 - `iron-plate-80-car-chest-clock.game.test.ts`: the iron plate build, a car taken as a chest between a big mining drill and two furnaces.
 - `steel-plate-26-wagon-chest-clock.game.test.ts`: the steel build, a cargo wagon taken as a chest that a big mining drill and two furnaces fill and empty, the steel leaving through it.
-- `inserter-crafting-240-shared-signal-clock.game.test.ts`: the inserter build on three copies, once with the hand-made clock and once with the generated clock, and the sample's scaffold of one copy under the generator's Round-Robin Polling clock with 6 output swings for the config with backpressure on its belts (`backed_up_belts`; `round_robin_polling_swings_6`, 72 ticks), with the ore and the circuits cut and the output blocked (#442).
+- `inserter-crafting-240-shared-signal-clock.game.test.ts`: the inserter build on three copies, once with the hand-made clock and once with the generated clock, and the sample's scaffold of one copy under the generator's Round-Robin Polling clock with 6 output swings for the config with backpressure on its belts (a dead end on each lane; `round_robin_polling_swings_6`, 72 ticks), with the ore and the circuits cut and the output blocked (#442).
 - `logistic-science-240-direct-insert-clock.game.test.ts`: the logistic science build with direct insertion, the sample's scaffold of one copy, under the generated clock for the config as it is (fractional swings, 96 ticks), with the inserters cut from the belts and the output blocked (#442). The scaffold's inserter belts end closed, so in the game their lanes have backpressure. The config states those lanes as dead ends, so the clock is made for belts with backpressure.
 - `grenade-clock.game.test.ts`: the grenade build on one copy and on its full build of seven, each with the hand-made clock and with the generated clock.
 - `processing-unit-80-circuit-export-clock.game.test.ts`: the circuit export build (processing units from two circuit machines and two advanced circuit machines, an export belt) on its throttled scaffold with the generated clock, as it is and with the belts backed up.
@@ -475,7 +475,7 @@ BELT_SPEED_CAPTURE_DIR=.scratch/judged-start-9 npm run test:game -- tests/game/b
 - **Front exit, backed up, 8:** the electromagnetic-plant [fixture](../mechanics/belt-pickup/fixtures/front-underground-exit/README.md)
   at four speeds and both mirroring states, with the ordinary electromagnetic targets (30/s turbo to 7.5/s normal)
   and the ordinary disturbances.
-- **Front exit on a moving config, 8:** the same eight builds generated with `backed_up_belts: false`. The input
+- **Front exit on a moving config, 8:** the same eight builds generated with an infinite end on each lane. The input
   stands on the exit's output tile, so the belt is backed up in the game whatever the config says; recovery is
   assessed as for backed-up supply.
 

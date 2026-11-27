@@ -8,7 +8,7 @@ import { clockBeltOf } from "../../crafting/plan/unclocked-run";
 import { createEntityRegistryFromConfig } from "../../crafting/sequence/simulation-context";
 import { takenLanesOf } from "../../crafting/shared-lane-lanes";
 import { laneFactsOfConfig } from "./build-traits";
-import { everyInputLaneIsDeadEnd } from "./lane-ends";
+import { everyInputLaneIsDeadEnd, withUnstatedLaneEnds } from "./lane-ends";
 import { LaneRole } from "./lane-role";
 
 type Parts = Partial<Pick<Config, "machines" | "inserters" | "belts" | "chests" | "overrides">>;
@@ -104,35 +104,25 @@ describe("the end of a lane that states none", () => {
         expect(endsOf(roles())).toEqual(["dead_end", "infinite", "dead_end"]);
     });
 
-    it("is never unknown, and the end a lane states wins over its role and over the switch", () => {
+    it("is never unknown, and the end a lane states wins over its role", () => {
         for (const kind of ["dead_end", "infinite", "unknown"] as const) {
-            for (const overrides of [undefined, { backed_up_belts: true }, { backed_up_belts: false }]) {
-                expect(endsOf(roles(overrides, { lane_end: { kind } }))).toEqual([kind, kind, kind]);
-            }
+            expect(endsOf(roles(undefined, { lane_end: { kind } }))).toEqual([kind, kind, kind]);
         }
-        for (const overrides of [undefined, { backed_up_belts: true }, { backed_up_belts: false }]) {
-            expect(endsOf(roles(overrides))).not.toContain("unknown");
-        }
-    });
-
-    it("is what the switch gives where the config states it: a dead end where it is true, an infinite end where it is false", () => {
-        expect(endsOf(roles({ backed_up_belts: true }))).toEqual(["dead_end", "dead_end", "dead_end"]);
-        expect(endsOf(roles({ backed_up_belts: false }))).toEqual(["infinite", "infinite", "infinite"]);
+        expect(endsOf(roles())).not.toContain("unknown");
         expect(endsOf(roles({}))).toEqual(["dead_end", "infinite", "dead_end"]);
     });
 
-    it("is an infinite end on an export lane, whatever the switch", () => {
-        const exporting = (overrides?: Config["overrides"]) => configOf({
+    it("is an infinite end on an export lane, whatever end the other lanes state", () => {
+        const exporting = configOf({
             machines,
             belts: [belt(1, "iron-plate"),
                 { id: 2, type: "turbo-transport-belt", strategy: "export", lanes: [{ ingredient: "iron-gear-wheel", stack_size: 4, consumption_per_second: 1 }] }] as Config["belts"],
             inserters: [take(1, 1, 1), put(2, 1, 2)],
-            ...(overrides && { overrides }),
         });
-        for (const overrides of [undefined, { backed_up_belts: true }, { backed_up_belts: false }]) {
-            expect(laneFactsOfConfig(exporting(overrides)).of(2, 1).lane_end).toEqual({ kind: "infinite" });
+        for (const config of [exporting, withUnstatedLaneEnds(exporting, "dead_end"), withUnstatedLaneEnds(exporting, "infinite")]) {
+            expect(laneFactsOfConfig(config).of(2, 1).lane_end).toEqual({ kind: "infinite" });
         }
-        expect(endsOf(exporting({ backed_up_belts: true }))).toEqual(["dead_end", "infinite"]);
+        expect(endsOf(withUnstatedLaneEnds(exporting, "dead_end"))).toEqual(["dead_end", "infinite"]);
     });
 
     it("is the end of the other lane of its belt on a lane with no item, and as without a role on a belt with two lanes without one", () => {
@@ -142,10 +132,10 @@ describe("the end of a lane that states none", () => {
         const stated_beside = configOf({ machines, belts: [{ ...belt(1, "iron-plate", ""), lanes: [{ ...lane("iron-plate"), lane_end: { kind: "infinite" } }, lane("")] }] as Config["belts"],
             inserters: [take(1, 1, 1)] });
         expect(endsOf(stated_beside)).toEqual(["infinite", "infinite"]);
-        const both_empty = (overrides?: Config["overrides"]) => configOf({ machines, belts: [belt(1, "iron-plate"), belt(2, "", "")] as Config["belts"],
-            inserters: [take(1, 1, 1)], ...(overrides && { overrides }) });
-        expect(endsOf(both_empty())).toEqual(["dead_end", "infinite", "infinite"]);
-        expect(endsOf(both_empty({ backed_up_belts: true }))).toEqual(["dead_end", "dead_end", "dead_end"]);
+        const both_empty = configOf({ machines, belts: [belt(1, "iron-plate"), belt(2, "", "")] as Config["belts"],
+            inserters: [take(1, 1, 1)] });
+        expect(endsOf(both_empty)).toEqual(["dead_end", "infinite", "infinite"]);
+        expect(endsOf(withUnstatedLaneEnds(both_empty, "dead_end"))).toEqual(["dead_end", "dead_end", "dead_end"]);
     });
 
     it("is a dead end on both lanes where one inserter takes the one item from both", () => {

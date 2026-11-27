@@ -4,7 +4,6 @@ import type { ConfigFormData } from './configForm/formData';
  * How many of Advanced's settings are in use: the LCM override, the forced output swings, the search
  * for fewer wake-ups, the cold start (the backpressure start is the default), and ingredients excluded from the LCM (one, however many). Shown on the closed section ("Advanced ·
  * 2 set"), which folds again after Import, Paste and Reset, so a build that sets any is not taken for one that sets none.
- * The belt question's answer is not counted: it is asked outside Advanced.
  */
 export function advancedSetCount(overrides: ConfigFormData['overrides']): number {
     if (!overrides) {

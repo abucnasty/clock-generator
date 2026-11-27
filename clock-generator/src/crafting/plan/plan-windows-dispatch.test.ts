@@ -44,11 +44,11 @@ const ELECTROMAGNETIC_TURBO_BACKED: Config = {
         { id: 2, source: { type: "belt", id: 2, near_lane: 1, pickup_length: 1, pickup_layout: "side-straight" }, sink: { type: "machine", id: 1 }, stack_size: 16 },
     ],
     belts: [
-        { id: 1, type: "turbo-transport-belt", lanes: [{ ingredient: "electromagnetic-science-pack", stack_size: 4 }, { ingredient: "", stack_size: 4 }] },
-        { id: 2, type: "turbo-transport-belt", lanes: [{ ingredient: "accumulator", stack_size: 4 }, { ingredient: "supercapacitor", stack_size: 4 }] },
+        { id: 1, type: "turbo-transport-belt", lanes: [{ ingredient: "electromagnetic-science-pack", stack_size: 4, lane_end: { kind: "dead_end" } }, { ingredient: "", stack_size: 4, lane_end: { kind: "dead_end" } }] },
+        { id: 2, type: "turbo-transport-belt", lanes: [{ ingredient: "accumulator", stack_size: 4, lane_end: { kind: "dead_end" } }, { ingredient: "supercapacitor", stack_size: 4, lane_end: { kind: "dead_end" } }] },
     ],
     chests: [],
-    overrides: { backed_up_belts: true, terminal_swing_count: 3 },
+    overrides: { terminal_swing_count: 3 },
 } as Config;
 
 /**

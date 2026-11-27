@@ -2,10 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { advancedSetCount } from './advancedSummary';
 
 describe('advancedSetCount', () => {
-    it('is 0 with no overrides, or only the belt question\'s answer', () => {
+    it('is 0 with no overrides', () => {
         expect(advancedSetCount(undefined)).toBe(0);
         expect(advancedSetCount({})).toBe(0);
-        expect(advancedSetCount({ backed_up_belts: true })).toBe(0);
         expect(advancedSetCount({ ignored_lcm_ingredients: [] })).toBe(0);
         // the default start named is no change from the default
         expect(advancedSetCount({ judged_start: 'backpressure' })).toBe(0);

@@ -1,5 +1,6 @@
 import {expect, test} from "vitest";
 import {ConfigSchema} from "./schema";
+import {withEveryLaneEnd} from "../entities/traits/lane-ends";
 import {BELT_PICKUP_LAYOUTS, pickupLengthForLayout} from "../common/belt-pickup-layout";
 import {SimulationContext} from "../crafting/sequence/simulation-context";
 import { isDeadEnd } from "../entities/traits/lane-facts";
@@ -9,19 +10,18 @@ function config(source: object) {
         setpoint: {item: "iron-gear-wheel", items_per_second: 1, copies: 1},
         machines: [{id: 1, recipe: "iron-gear-wheel", crafting_speed: 1, productivity: 0}],
         inserters: [{id: 1, source: {type: "belt", id: 1, ...source}, sink: {type: "machine", id: 1}}],
-        belts: [{id: 1, type: "turbo-transport-belt", lanes: [{ingredient: "iron-plate", stack_size: 4}]}],
-        overrides: {backed_up_belts: false},
+        belts: [{id: 1, type: "turbo-transport-belt", lanes: [{ingredient: "iron-plate", stack_size: 4, lane_end: {kind: "infinite"}}]}],
     };
 }
 
 for (const layout of BELT_PICKUP_LAYOUTS) test(`explicit ${layout} layout supplies reach independently of supply motion`, () => {
-    for (const backed_up_belts of [false, true]) {
-        const parsed = ConfigSchema.parse({...config({pickup_layout: layout, near_lane: 1}), overrides: {backed_up_belts}});
+    for (const backed of [false, true]) {
+        const parsed = withEveryLaneEnd(ConfigSchema.parse(config({pickup_layout: layout, near_lane: 1})), backed ? "dead_end" : "infinite");
         expect(parsed.inserters[0].source).toMatchObject({pickup_layout: layout, pickup_length: pickupLengthForLayout(layout)});
         const input = SimulationContext.fromConfig(parsed).inserters[0].inserter_state.inserter;
         expect(input.pickup_layout).toBe(layout);
         expect(input.pickup_length).toBe(pickupLengthForLayout(layout));
-        expect(input.belt_lane_facts!.every(isDeadEnd)).toBe(backed_up_belts);
+        expect(input.belt_lane_facts!.every(isDeadEnd)).toBe(backed);
     }
 });
 

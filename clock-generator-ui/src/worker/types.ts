@@ -219,7 +219,7 @@ export interface ClockAlternativeView {
     swingBackoffReport: SwingBackoffReport | null;
     /** Exact independent inserter clocks exported with this alternative, including measured fuel clocks. */
     inserterClocks?: RecordTimelineRequest['inserter_clocks'];
-    /** The belt timing actually used by this alternative, including clocks for the other belt setting. */
+    /** Whether this alternative was made for backed-up belts (its belt), not the belts the build states. */
     backedUpBelts?: boolean;
     /**
      * True for a clock of an engine that gives each lane its end from the config alone (a lane that states none, by its

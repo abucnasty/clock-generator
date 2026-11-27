@@ -14,7 +14,7 @@
 //   --windows         hand-made windows, as record-clock.js reads them ({"period": 528, "output_swings": 2, "windows":
 //                     {"inserter:1": [{"start": 1, "end": 6}, ...]}}), written as one arm named --tag (default given-windows)
 //   --scaffold        the scaffold blueprint (default: <config name>.scaffold beside the config); cells.json is made from it
-//   --backed-up-belts generate for backed-up belts (overrides.backed_up_belts), which is what a scaffold has
+//   --backed-up-belts generate for backed-up belts (a dead end on each lane that states no end), which is what a scaffold has
 //   --anchor          x,y of the copy's anchor in the scaffold's coordinates (default 0,0: the save has the scaffold where
 //                     the blueprint says); the offsets of cells.json are from it
 //   --no-cells        do not write cells.json

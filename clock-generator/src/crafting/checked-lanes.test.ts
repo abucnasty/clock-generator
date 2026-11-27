@@ -54,10 +54,6 @@ describe("the lanes of the build", () => {
         // a build of one copy has no row
         expect(checkedLanesOf({ config: one, holds: true, judged: judged([]), window_cycle_ticks: 60, copies_trial: null })).toBeNull();
     });
-
-    it("give the switch as where the end comes from where the config states it", () => {
-        expect(buildLanesOf(gears({ overrides: { backed_up_belts: true } })).map(it => it.end_given_by)).toEqual(["lane", "switch"]);
-    });
 });
 
 describe("the rate all the copies made in their run together", () => {

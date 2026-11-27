@@ -45,7 +45,6 @@ describe('buildChangesOf', () => {
         ['names one edited inserter by its label', (config) => edits.updateInserter(config, 2, { stack_size: 12 }), ['Inserter 3']],
         ['names two edited inserters together',
             (config) => edits.updateInserter(edits.updateInserter(config, 0, { stack_size: 7 }), 2, { stack_size: 12 }), ['Inserters 1, 3']],
-        ['calls the former belt setting an override like any other', (config) => edits.updateOverrides(config, 'backed_up_belts', false), ['Advanced Overrides']],
         ['names the deeper-search switch', (config) => edits.updateOverrides(config, 'search_for_fewer_wake_ups', true), ['Search for fewer wakeups (off → on)']],
         ['calls any other override "Advanced Overrides"', (config) => edits.updateOverrides(config, 'lcm', 120), ['Advanced Overrides']],
         ['names the drill whose productivity changed', (config) => edits.updateDrill(config, 0, { productivity: 30 }), ['Drill 1'], edits.addDrill(form())],

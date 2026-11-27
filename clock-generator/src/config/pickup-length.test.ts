@@ -3,17 +3,13 @@ import { InserterConfigSchema } from "./schema";
 import { parseConfig } from "./loader";
 
 describe("belt pickup geometry defaults", () => {
-    it.each([undefined, 1, 0.5] as const)("normalizes length %s independently of the backed-up setting", async length => {
-        for (const backed_up_belts of [false, true]) {
-            const config = await parseConfig(JSON.stringify({
-                setpoint: { item: "iron-gear-wheel", items_per_second: 1, copies: 1 },
-                machines: [], belts: [],
-                inserters: [{ source: { type: "belt", id: 1, pickup_length: length, ...(length === 0.5 && {pickup_layout: "side-entrance"}) }, sink: { type: "machine", id: 1 } }],
-                overrides: { backed_up_belts },
-            }));
-            expect(config.inserters[0].source).toEqual({ type: "belt", id: 1, pickup_length: length ?? 1, ...(length === 0.5 && {pickup_layout: "side-entrance"}) });
-            expect(config.overrides?.backed_up_belts).toBe(backed_up_belts);
-        }
+    it.each([undefined, 1, 0.5] as const)("normalizes length %s", async length => {
+        const config = await parseConfig(JSON.stringify({
+            setpoint: { item: "iron-gear-wheel", items_per_second: 1, copies: 1 },
+            machines: [], belts: [],
+            inserters: [{ source: { type: "belt", id: 1, pickup_length: length, ...(length === 0.5 && {pickup_layout: "side-entrance"}) }, sink: { type: "machine", id: 1 } }],
+        }));
+        expect(config.inserters[0].source).toEqual({ type: "belt", id: 1, pickup_length: length ?? 1, ...(length === 0.5 && {pickup_layout: "side-entrance"}) });
     });
 
     it("does not attach belt geometry to machine or chest sources", () => {

@@ -5,6 +5,7 @@ import { loadConfigFromFile } from "./config/loader";
 import { Entity, ReadableEntityRegistry } from "./entities";
 import { Lane } from "./entities/belt/belt";
 import { createEntityRegistryFromConfig } from "./crafting/sequence/simulation-context";
+import { withUnstatedLaneEnds } from "./entities/traits/lane-ends";
 import { actsInTheTickTheBlockIsLifted, delayedHandRoomTicks, fuelHandRoomTicks, fuelRoomTicks, laneHandRoomTicks, miningDrillMaxInsertion, nearestLaneFirst } from "./rules-of-the-game";
 import { TestConfigPaths } from "../tests/configs/paths";
 
@@ -100,7 +101,7 @@ describe("the rules of the game", () => {
         type LaneEnd = { kind: "dead_end" } | { kind: "unknown" } | { kind: "infinite" };
         // one inserter of a hand of `hand` that takes iron plates off lane 1 and copper cable off lane 2 of a turbo belt
         const roomOf = (lanes: { iron_stack: number; iron_end?: LaneEnd; cable_stack?: number; cable_end?: LaneEnd },
-            hand = 16, backed_up_belts = false) => laneHandRoomTicks(createEntityRegistryFromConfig(ConfigSchema.parse({
+            hand = 16, backed = false) => laneHandRoomTicks(createEntityRegistryFromConfig(withUnstatedLaneEnds(ConfigSchema.parse({
             setpoint: { item: "electronic-circuit", items_per_second: 1, copies: 1 },
             machines: [{ id: 1, recipe: "electronic-circuit", crafting_speed: 1, productivity: 0 }],
             inserters: [
@@ -112,8 +113,7 @@ describe("the rules of the game", () => {
                 { ingredient: "copper-cable", stack_size: lanes.cable_stack ?? lanes.iron_stack, ...(lanes.cable_end !== undefined && { lane_end: lanes.cable_end }) },
             ] }],
             chests: [{ id: 1, type: "infinity-chest", item_filter: [], remove_unfiltered_items: true }],
-            overrides: { backed_up_belts },
-        }))).get("inserter:1");
+        }), backed ? "dead_end" : "infinite"))).get("inserter:1");
 
         it("is the ticks one more hand takes at one lane stack a tick: 4 for a hand of 16 from stacks of 4", () => {
             expect(roomOf({ iron_stack: 4 })).toBe(4);
@@ -124,7 +124,7 @@ describe("the rules of the game", () => {
             expect(roomOf({ iron_stack: 1 })).toBe(16);
         });
 
-        it("is given on a lane that is a dead end, stated or set by backed_up_belts", () => {
+        it("is given on a lane that is a dead end, stated on the lane or for the whole build", () => {
             expect(roomOf({ iron_stack: 4, iron_end: { kind: "dead_end" }, cable_end: { kind: "dead_end" } })).toBe(4);
             expect(roomOf({ iron_stack: 4 }, 16, true)).toBe(4);
         });

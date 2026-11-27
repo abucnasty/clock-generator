@@ -63,12 +63,10 @@ rejected. Sidecar exports layout with model format 2; older underground captures
 [capture guide](belt-pickup/capture.md#physical-layout).
 
 Supply comes from the lane ends ([Lane ends](belt-pickup/lane-ends.md)). A lane that states no end has the end of its role: an
-input lane is a dead end. The deprecated `overrides.backed_up_belts` gives each lane that states no end an end: `true`
-a dead end, `false` an infinite end. State the `lane_end` of each lane instead.
+input lane is a dead end.
 The simulator retains the pickup length in both cases. Moving supply models reachable stacks, holes and partial
 stacks; ordinary supply with backpressure additionally stops and compresses stacks at its closed endpoint.
-Older `non_moving_belts` config settings migrate to `backed_up_belts` on import. New configs and exports use only
-`backed_up_belts`; if both keys are present, the new key takes precedence. Saved results retain their run's assumptions. Older manual underground configs must choose a layout;
+Saved results retain their run's assumptions. Older manual underground configs must choose a layout;
 physical approach cannot be recovered from half-tile reach alone.
 
 The [lane model](../src/state/belt-pickup-lane.ts) stores only holes and partial stacks in an otherwise evenly spaced

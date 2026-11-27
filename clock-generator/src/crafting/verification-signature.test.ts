@@ -2,6 +2,7 @@ import {afterEach, beforeAll, describe, expect, it, vi} from "vitest";
 import {ConfigPaths} from "../config/config-paths";
 import { TestConfigPaths } from "../../tests/configs/paths";
 import {loadConfigFromFile} from "../config/loader";
+import {withEveryLaneEnd} from "../entities/traits/lane-ends";
 import type {Config} from "../config";
 import {generateClockForConfig} from "./generate-clock";
 import {generateClockAlternatives, planClockAlternatives, runClockAlternativeTask} from "./alternatives";
@@ -28,8 +29,7 @@ describe("candidate verification identity", () => {
     });
 
     it.each(["supply", "speed", "geometry", "seed", "entity order", "start checks"])("keeps %s differences separate", difference => {
-        const changed = structuredClone(config);
-        if (difference === "supply") changed.overrides = {...changed.overrides, backed_up_belts: true};
+        const changed = difference === "supply" ? withEveryLaneEnd(structuredClone(config), "infinite") : structuredClone(config);
         if (difference === "speed") changed.belts[0].type = "express-transport-belt";
         if (difference === "geometry" && changed.inserters[0].source.type === "belt") {
             changed.inserters[0].source.pickup_length = 0.5;
