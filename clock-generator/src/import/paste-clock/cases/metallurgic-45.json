@@ -1,0 +1,640 @@
+{
+ "scaffold": "resources/config-samples/science/metallurgic/metallurgic-45.scaffold",
+ "sample": "resources/config-samples/science/metallurgic/metallurgic-45.json",
+ "record": "config-METALLURGIC_SCIENCE_45",
+ "translation": {
+  "x": 839,
+  "y": -390
+ },
+ "research": {
+  "profile": "save force",
+  "template": null,
+  "bonuses": {
+   "mining_drill_productivity_bonus": 79990.00000001134,
+   "inserter_stack_size_bonus": 3,
+   "bulk_inserter_capacity_bonus": 11,
+   "belt_stack_size_bonus": 3,
+   "recipes": {}
+  }
+ },
+ "id_map": {
+  "machine": {
+   "1": 1,
+   "2": 2,
+   "3": 3,
+   "4": 4
+  },
+  "drill": {},
+  "inserter": {
+   "9": 6,
+   "10": 1,
+   "11": 4,
+   "12": 5,
+   "13": 2,
+   "14": 3,
+   "15": 8,
+   "16": 7
+  },
+  "chest": {
+   "9": 1
+  }
+ },
+ "left_out": {
+  "inserter": [
+   1,
+   2,
+   3,
+   4,
+   5,
+   6,
+   7,
+   8
+  ],
+  "chest": [
+   1,
+   2,
+   3,
+   4,
+   5,
+   6,
+   7,
+   8
+  ]
+ },
+ "read": {
+  "belts": [
+   {
+    "id": 1,
+    "lanes": [
+     {
+      "ingredient": "tungsten-ore",
+      "lane_end": {
+       "kind": "dead_end"
+      },
+      "stack_size": 4
+     },
+     {
+      "ingredient": "tungsten-ore",
+      "lane_end": {
+       "kind": "dead_end"
+      },
+      "stack_size": 4
+     }
+    ],
+    "type": "turbo-transport-belt"
+   },
+   {
+    "flow_direction": 8,
+    "id": 2,
+    "lanes": [
+     {
+      "ingredient": "coal",
+      "lane_end": {
+       "kind": "dead_end"
+      },
+      "stack_size": 4
+     },
+     {
+      "ingredient": "coal",
+      "lane_end": {
+       "kind": "dead_end"
+      },
+      "stack_size": 4
+     }
+    ],
+    "type": "turbo-transport-belt"
+   }
+  ],
+  "chests": [
+   {
+    "id": 1,
+    "item_filter": [
+     {
+      "item_name": "tungsten-ore",
+      "request_count": 100
+     }
+    ],
+    "position": {
+     "x": 387.5,
+     "y": 3.5
+    },
+    "remove_unfiltered_items": true,
+    "type": "infinity-chest"
+   },
+   {
+    "id": 2,
+    "item_filter": [
+     {
+      "item_name": "tungsten-ore",
+      "request_count": 100
+     }
+    ],
+    "position": {
+     "x": 387.5,
+     "y": 7.5
+    },
+    "remove_unfiltered_items": true,
+    "type": "infinity-chest"
+   },
+   {
+    "id": 3,
+    "item_filter": [
+     {
+      "item_name": "tungsten-ore",
+      "request_count": 100
+     }
+    ],
+    "position": {
+     "x": 388.5,
+     "y": 3.5
+    },
+    "remove_unfiltered_items": true,
+    "type": "infinity-chest"
+   },
+   {
+    "id": 4,
+    "item_filter": [
+     {
+      "item_name": "tungsten-ore",
+      "request_count": 100
+     }
+    ],
+    "position": {
+     "x": 388.5,
+     "y": 7.5
+    },
+    "remove_unfiltered_items": true,
+    "type": "infinity-chest"
+   },
+   {
+    "id": 5,
+    "item_filter": [
+     {
+      "item_name": "coal",
+      "request_count": 100
+     }
+    ],
+    "position": {
+     "x": 394.5,
+     "y": -7.5
+    },
+    "remove_unfiltered_items": true,
+    "type": "infinity-chest"
+   },
+   {
+    "id": 6,
+    "item_filter": [
+     {
+      "item_name": "coal",
+      "request_count": 100
+     }
+    ],
+    "position": {
+     "x": 394.5,
+     "y": -6.5
+    },
+    "remove_unfiltered_items": true,
+    "type": "infinity-chest"
+   },
+   {
+    "id": 7,
+    "item_filter": [
+     {
+      "item_name": "coal",
+      "request_count": 100
+     }
+    ],
+    "position": {
+     "x": 398.5,
+     "y": -7.5
+    },
+    "remove_unfiltered_items": true,
+    "type": "infinity-chest"
+   },
+   {
+    "id": 8,
+    "item_filter": [
+     {
+      "item_name": "coal",
+      "request_count": 100
+     }
+    ],
+    "position": {
+     "x": 398.5,
+     "y": -6.5
+    },
+    "remove_unfiltered_items": true,
+    "type": "infinity-chest"
+   },
+   {
+    "id": 9,
+    "position": {
+     "x": 410.5,
+     "y": -2.5
+    },
+    "remove_unfiltered_items": true,
+    "type": "infinity-chest"
+   }
+  ],
+  "drills": {
+   "configs": {}
+  },
+  "inserters": [
+   {
+    "direction": 0,
+    "position": {
+     "x": 387.5,
+     "y": 4.5
+    },
+    "prototype": "stack-inserter",
+    "quality": "legendary",
+    "sink": {
+     "belt_direction": 4,
+     "id": 1,
+     "type": "belt"
+    },
+    "source": {
+     "id": 1,
+     "type": "chest"
+    },
+    "stack_size": 16
+   },
+   {
+    "direction": 8,
+    "position": {
+     "x": 387.5,
+     "y": 6.5
+    },
+    "prototype": "stack-inserter",
+    "quality": "legendary",
+    "sink": {
+     "belt_direction": 4,
+     "id": 1,
+     "type": "belt"
+    },
+    "source": {
+     "id": 2,
+     "type": "chest"
+    },
+    "stack_size": 16
+   },
+   {
+    "direction": 0,
+    "position": {
+     "x": 388.5,
+     "y": 4.5
+    },
+    "prototype": "stack-inserter",
+    "quality": "legendary",
+    "sink": {
+     "belt_direction": 4,
+     "id": 1,
+     "type": "belt"
+    },
+    "source": {
+     "id": 3,
+     "type": "chest"
+    },
+    "stack_size": 16
+   },
+   {
+    "direction": 8,
+    "position": {
+     "x": 388.5,
+     "y": 6.5
+    },
+    "prototype": "stack-inserter",
+    "quality": "legendary",
+    "sink": {
+     "belt_direction": 4,
+     "id": 1,
+     "type": "belt"
+    },
+    "source": {
+     "id": 4,
+     "type": "chest"
+    },
+    "stack_size": 16
+   },
+   {
+    "direction": 12,
+    "position": {
+     "x": 395.5,
+     "y": -7.5
+    },
+    "prototype": "stack-inserter",
+    "quality": "legendary",
+    "sink": {
+     "belt_direction": 8,
+     "id": 2,
+     "type": "belt"
+    },
+    "source": {
+     "id": 5,
+     "type": "chest"
+    },
+    "stack_size": 16
+   },
+   {
+    "direction": 12,
+    "position": {
+     "x": 395.5,
+     "y": -6.5
+    },
+    "prototype": "stack-inserter",
+    "quality": "legendary",
+    "sink": {
+     "belt_direction": 8,
+     "id": 2,
+     "type": "belt"
+    },
+    "source": {
+     "id": 6,
+     "type": "chest"
+    },
+    "stack_size": 16
+   },
+   {
+    "direction": 4,
+    "position": {
+     "x": 397.5,
+     "y": -7.5
+    },
+    "prototype": "stack-inserter",
+    "quality": "legendary",
+    "sink": {
+     "belt_direction": 8,
+     "id": 2,
+     "type": "belt"
+    },
+    "source": {
+     "id": 7,
+     "type": "chest"
+    },
+    "stack_size": 16
+   },
+   {
+    "direction": 4,
+    "position": {
+     "x": 397.5,
+     "y": -6.5
+    },
+    "prototype": "stack-inserter",
+    "quality": "legendary",
+    "sink": {
+     "belt_direction": 8,
+     "id": 2,
+     "type": "belt"
+    },
+    "source": {
+     "id": 8,
+     "type": "chest"
+    },
+    "stack_size": 16
+   },
+   {
+    "direction": 12,
+    "position": {
+     "x": 397.5,
+     "y": 1.5
+    },
+    "prototype": "stack-inserter",
+    "quality": "legendary",
+    "sink": {
+     "id": 1,
+     "type": "machine"
+    },
+    "source": {
+     "id": 2,
+     "near_lane": 1,
+     "pickup_capture": {
+      "entity_name": "turbo-transport-belt",
+      "entity_type": "transport-belt",
+      "model": "belt",
+      "model_version": 2,
+      "status": "supported"
+     },
+     "pickup_layout": "side-straight",
+     "pickup_length": 1,
+     "type": "belt"
+    },
+    "stack_size": 16
+   },
+   {
+    "direction": 12,
+    "position": {
+     "x": 403.5,
+     "y": 2.5
+    },
+    "prototype": "stack-inserter",
+    "quality": "legendary",
+    "sink": {
+     "id": 2,
+     "type": "machine"
+    },
+    "source": {
+     "id": 1,
+     "type": "machine"
+    },
+    "stack_size": 16
+   },
+   {
+    "direction": 8,
+    "position": {
+     "x": 404.5,
+     "y": 4.5
+    },
+    "prototype": "stack-inserter",
+    "quality": "legendary",
+    "sink": {
+     "id": 2,
+     "type": "machine"
+    },
+    "source": {
+     "id": 1,
+     "near_lane": 1,
+     "pickup_capture": {
+      "entity_name": "turbo-transport-belt",
+      "entity_type": "transport-belt",
+      "model": "belt",
+      "model_version": 2,
+      "status": "supported"
+     },
+     "pickup_layout": "side-straight",
+     "pickup_length": 1,
+     "type": "belt"
+    },
+    "stack_size": 16
+   },
+   {
+    "direction": 8,
+    "position": {
+     "x": 406.5,
+     "y": 4.5
+    },
+    "prototype": "stack-inserter",
+    "quality": "legendary",
+    "sink": {
+     "id": 2,
+     "type": "machine"
+    },
+    "source": {
+     "id": 1,
+     "near_lane": 1,
+     "pickup_capture": {
+      "entity_name": "turbo-transport-belt",
+      "entity_type": "transport-belt",
+      "model": "belt",
+      "model_version": 2,
+      "status": "supported"
+     },
+     "pickup_layout": "side-straight",
+     "pickup_length": 1,
+     "type": "belt"
+    },
+    "stack_size": 16
+   },
+   {
+    "direction": 12,
+    "position": {
+     "x": 407.5,
+     "y": 2.5
+    },
+    "prototype": "stack-inserter",
+    "quality": "legendary",
+    "sink": {
+     "id": 3,
+     "type": "machine"
+    },
+    "source": {
+     "id": 2,
+     "type": "machine"
+    },
+    "stack_size": 16
+   },
+   {
+    "direction": 8,
+    "position": {
+     "x": 410.5,
+     "y": -1.5
+    },
+    "prototype": "stack-inserter",
+    "quality": "legendary",
+    "sink": {
+     "id": 9,
+     "type": "chest"
+    },
+    "source": {
+     "id": 3,
+     "type": "machine"
+    },
+    "stack_size": 16
+   },
+   {
+    "direction": 4,
+    "position": {
+     "x": 413.5,
+     "y": 1.5
+    },
+    "prototype": "stack-inserter",
+    "quality": "legendary",
+    "sink": {
+     "id": 3,
+     "type": "machine"
+    },
+    "source": {
+     "id": 4,
+     "type": "machine"
+    },
+    "stack_size": 16
+   },
+   {
+    "direction": 8,
+    "position": {
+     "x": 416.5,
+     "y": 4.5
+    },
+    "prototype": "stack-inserter",
+    "quality": "legendary",
+    "sink": {
+     "id": 4,
+     "type": "machine"
+    },
+    "source": {
+     "id": 1,
+     "near_lane": 2,
+     "pickup_capture": {
+      "entity_name": "turbo-transport-belt",
+      "entity_type": "transport-belt",
+      "model": "belt",
+      "model_version": 2,
+      "status": "supported"
+     },
+     "pickup_layout": "side-straight",
+     "pickup_length": 1,
+     "type": "belt"
+    },
+    "stack_size": 16
+   }
+  ],
+  "machines": [
+   {
+    "crafting_speed": 68.875,
+    "id": 1,
+    "position": {
+     "x": 400.5,
+     "y": 1.5
+    },
+    "productivity": 200,
+    "prototype": "cryogenic-plant",
+    "quality": "legendary",
+    "recipe": "carbon",
+    "recipe_quality": "normal"
+   },
+   {
+    "crafting_speed": 40.3125,
+    "id": 2,
+    "position": {
+     "x": 405.5,
+     "y": 2.5
+    },
+    "productivity": 100,
+    "prototype": "assembling-machine-3",
+    "quality": "legendary",
+    "recipe": "tungsten-carbide",
+    "recipe_quality": "normal"
+   },
+   {
+    "crafting_speed": 180.75,
+    "id": 3,
+    "position": {
+     "x": 410.5,
+     "y": 1.5
+    },
+    "productivity": 150,
+    "prototype": "foundry",
+    "quality": "legendary",
+    "recipe": "metallurgic-science-pack",
+    "recipe_quality": "normal"
+   },
+   {
+    "crafting_speed": 191.481,
+    "id": 4,
+    "position": {
+     "x": 416.5,
+     "y": 1.5
+    },
+    "productivity": 150,
+    "prototype": "foundry",
+    "quality": "legendary",
+    "recipe": "tungsten-plate",
+    "recipe_quality": "normal"
+   }
+  ],
+  "suggested_target": {
+   "copies": 1,
+   "items_per_second": 45.1875,
+   "recipe": "metallurgic-science-pack"
+  }
+ }
+}

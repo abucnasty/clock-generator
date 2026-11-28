@@ -285,6 +285,55 @@ export function pairWithSample(build: ImportBuild, translation: Point, positione
     return { comparable: failures.length === 0, failures, ids, paired, leftOut: outside };
 }
 
+/** From an import id to the sample's id, by kind, as a file states it (JSON keys are text) */
+export type IdMap = Partial<Record<Kind, Record<string, number>>>;
+
+/**
+ * Pairs the import's entities with a sample's by an id map that the caller states, where the sample's ids are not the file's
+ * (a sample whose ids are its author's own order). Every import entity that is not listed in `leftOut` must be in the map, to one
+ * sample entity, one to one; a sample entity of no pair, a listed id the import does not make, and a type that the sample states
+ * and the import does not share, fail. The ends of an inserter are not read: the map is the caller's statement.
+ */
+export function pairByIdMap(build: ImportBuild, sample: ReadFile, idMap: IdMap, leftOut: LeftOut = {}): Pairing {
+    const imported: Record<Kind, Row[]> = {
+        machine: build.machines as unknown as Row[],
+        drill: build.drills as unknown as Row[],
+        inserter: build.inserters as unknown as Row[],
+        chest: build.chests as unknown as Row[],
+    };
+    const mine = rowsOf(sample);
+    const failures: PairFailure[] = [];
+    const ids = { machine: new Map<number, number>(), drill: new Map<number, number>(), inserter: new Map<number, number>(), chest: new Map<number, number>() };
+    const paired = { machine: 0, drill: 0, inserter: 0, chest: 0 };
+    const outside: Record<Kind, number[]> = { machine: [], drill: [], inserter: [], chest: [] };
+    for (const kind of KINDS) {
+        const listed = leftOut[kind] ?? [];
+        const map = idMap[kind] ?? {};
+        for (const id of listed) if (!imported[kind].some((r) => r.id === id)) failures.push({ kind, id, step: 1, reason: "listed as left out, but the import makes no entity of this id" });
+        const used = new Set<Row>();
+        for (const row of imported[kind]) {
+            const id = row.id as number;
+            if (listed.includes(id)) {
+                outside[kind].push(id);
+                continue;
+            }
+            const to = map[String(id)];
+            const other = to === undefined ? undefined : mine[kind].find((r) => r.id === to);
+            if (to === undefined) failures.push({ kind, id, step: 2, reason: "the id map has no sample entity for it" });
+            else if (other === undefined) failures.push({ kind, id, step: 2, reason: `the sample has no entity of id ${to}` });
+            else if (used.has(other)) failures.push({ kind, id, step: 2, reason: `the sample's entity ${to} is paired already` });
+            else if (typeOf(kind, other) !== undefined && typeOf(kind, row) !== typeOf(kind, other)) failures.push({ kind, id, step: 2, reason: `type ${typeOf(kind, row)} against the sample's ${typeOf(kind, other)}` });
+            else {
+                used.add(other);
+                ids[kind].set(id, to as number);
+                paired[kind] += 1;
+            }
+        }
+        for (const s of mine[kind]) if (!used.has(s)) failures.push({ kind, id: (s.id as number | undefined) ?? null, step: 2, reason: "no import entity is paired with it" });
+    }
+    return { comparable: failures.length === 0, failures, ids, paired, leftOut: outside };
+}
+
 // ---------------------------------------------------------------- the clock and the record
 
 /** What a record job file keeps of a clock; the fields of the alternative that the comparison reads */
@@ -391,6 +440,28 @@ export function compareToRecord(summary: ClockSummary, record: RecordedClock, id
     return { state: "moved", differences };
 }
 
+/**
+ * The way a clock differs from the record, in words that a person can read and a test can hold: the selected id, the verdict, the
+ * rate, the window cycle and the wake-ups a minute where they differ, then "windows differ" where the windows, with the ids of
+ * the sample, are not the record's. An empty text means none of them differs.
+ */
+export function directionOf(summary: ClockSummary, record: RecordedClock, ids: Pairing["ids"] | null): string {
+    const recorded = record.alternatives.find((a) => a.id === record.selected);
+    if (recorded === undefined) return `the record has no alternative ${record.selected}`;
+    const parts: string[] = [];
+    if (summary.id !== record.selected) parts.push(`selected ${record.selected} to ${summary.id}`);
+    if (summary.verdict !== recorded.verdict) parts.push(`verdict ${recorded.verdict} to ${summary.verdict}`);
+    if (summary.rate !== recorded.rate) parts.push(`rate ${recorded.rate} to ${summary.rate}`);
+    if (summary.window_cycle_ticks !== recorded.window_cycle_ticks) parts.push(`window cycle ${recorded.window_cycle_ticks} to ${summary.window_cycle_ticks} ticks`);
+    if (summary.wake_ups !== recorded.wake_ups) {
+        const was = recorded.wake_ups;
+        const change = was === null || was === 0 || summary.wake_ups === null ? "" : ` (${summary.wake_ups > was ? "+" : "-"}${Math.abs(((summary.wake_ups - was) / was) * 100).toFixed(1)} %)`;
+        parts.push(`wake-ups a minute ${was} to ${summary.wake_ups}${change}`);
+    }
+    if (ids !== null && sortedEntries(mappedWindows(summary.windows, ids)) !== sortedEntries(record.selected_windows)) parts.push("windows differ");
+    return parts.join("; ");
+}
+
 // ---------------------------------------------------------------- the whole run: paste, configure, generate, compare
 
 /** A sample's configuration: the setpoint and the lists that the pairing reads */
@@ -411,6 +482,8 @@ export type PasteClockInput = {
     /** How many units of the sample the blueprint holds */
     units: number;
     leftOut?: LeftOut;
+    /** Where the sample's ids are not the file's: the id map that pairs the import with the sample, instead of the pairing by position */
+    idMap?: IdMap;
     /** The record job of the sample */
     record: RecordedClock;
 };
@@ -425,6 +498,8 @@ export type PasteClockRun = {
     error: string | null;
     summary: ClockSummary | null;
     comparison: ClockComparison | null;
+    /** How the selected clock differs from the record (`directionOf`); empty where it does not */
+    direction: string | null;
     seconds: number;
 };
 
@@ -441,9 +516,11 @@ export async function pasteClock(input: PasteClockInput): Promise<PasteClockRun>
         name: input.name, text: input.text, data: input.data, source: input.source, translation: input.translation, research: input.research,
         setpoint: { item: sample.setpoint.item, copies: units === 1 ? sample.setpoint.copies : 1 },
     });
-    const pairing = pairWithSample(settled.outcome, input.translation, input.positioned, sample, input.leftOut);
+    const pairing = input.idMap === undefined
+        ? pairWithSample(settled.outcome, input.translation, input.positioned, sample, input.leftOut)
+        : pairByIdMap(settled.outcome, sample, input.idMap, input.leftOut);
     const unitsFound = unitsOf(settled.outcome.machines.length, (sample.machines ?? []).length);
-    const run: PasteClockRun = { settled, unitsFound, setpoint: null, pairing, error: null, summary: null, comparison: null, seconds: 0 };
+    const run: PasteClockRun = { settled, unitsFound, setpoint: null, pairing, error: null, summary: null, comparison: null, direction: null, seconds: 0 };
     if (unitsFound !== units || settled.unanswered.length > 0) return run;
     run.setpoint = pasteSetpointOf(sample.setpoint, units);
     const started = Date.now();
@@ -454,6 +531,9 @@ export async function pasteClock(input: PasteClockInput): Promise<PasteClockRun>
         run.error = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
     }
     run.seconds = (Date.now() - started) / 1000;
-    if (run.summary !== null) run.comparison = compareToRecord(run.summary, input.record, pairing.comparable ? pairing.ids : null);
+    if (run.summary !== null) {
+        run.comparison = compareToRecord(run.summary, input.record, pairing.comparable ? pairing.ids : null);
+        run.direction = directionOf(run.summary, input.record, pairing.comparable ? pairing.ids : null);
+    }
     return run;
 }
