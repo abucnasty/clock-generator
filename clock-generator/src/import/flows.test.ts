@@ -174,12 +174,10 @@ describe("the rows as built, with each build's setpoint item", () => {
         expect(differ).toEqual([]);
     });
 
-    it("asks exactly three questions: the ore of the iron build's drill and the two lanes of logistic 240's belt 2", () => {
+    it("asks exactly one question, the ore of the iron build's drill: each lane of logistic 240's row inputs holds one item past the splitters", () => {
         const asked = BUILD_NAMES.flatMap((build) => flowsOfBuild(build).questions.map((q) => ({ build, key: q.key, candidates: q.candidates })));
         expect(asked).toEqual([
             { build: "iron", key: "drill-ore:1", candidates: ["calcite", "coal", "copper-ore", "iron-ore", "scrap", "stone", "tungsten-ore", "uranium-ore"] },
-            { build: "logistic-240", key: "lane-item:3:1", candidates: ["inserter", "transport-belt"] },
-            { build: "logistic-240", key: "lane-item:3:2", candidates: ["inserter", "transport-belt"] },
         ]);
     });
 
@@ -249,14 +247,20 @@ describe("the rows with the infinity chests giving nothing", () => {
         expect(differ).toEqual([]);
     });
 
-    it("asks the ore of iron's drill, a lane question for each of the 6 rows with more than one candidate, and logistic 240's belt 2 from the takers", () => {
+    it("asks the ore of iron's drill, a lane question for each of the 6 rows with more than one candidate, logistic 240's two row inputs from the takers and its two feed belts with none", () => {
         const asked = BUILD_NAMES.flatMap((build) => flowsOfBuild(build, {}, withoutFeeds(SCAFFOLD_ENTITIES.get(build)!)).questions.map((q) => ({ build, key: q.key, candidates: q.candidates })));
         const more = ["accumulator", "supercapacitor"];
         const four = ["battery", "electronic-circuit", "holmium-plate", "superconductor"];
         expect(asked).toEqual([
             { build: "iron", key: "drill-ore:1", candidates: ["calcite", "coal", "copper-ore", "iron-ore", "scrap", "stone", "tungsten-ore", "uranium-ore"] },
-            { build: "logistic-240", key: "lane-item:3:1", candidates: ["inserter", "transport-belt"] },
-            { build: "logistic-240", key: "lane-item:3:2", candidates: ["inserter", "transport-belt"] },
+            { build: "logistic-240", key: "lane-item:3:1", candidates: [] },
+            { build: "logistic-240", key: "lane-item:3:2", candidates: [] },
+            { build: "logistic-240", key: "lane-item:13:1", candidates: [] },
+            { build: "logistic-240", key: "lane-item:13:2", candidates: [] },
+            { build: "logistic-240", key: "lane-item:25:1", candidates: ["inserter", "transport-belt"] },
+            { build: "logistic-240", key: "lane-item:25:2", candidates: ["inserter", "transport-belt"] },
+            { build: "logistic-240", key: "lane-item:32:1", candidates: ["inserter", "transport-belt"] },
+            { build: "logistic-240", key: "lane-item:32:2", candidates: ["inserter", "transport-belt"] },
             { build: "electromagnetic-240", key: "lane-item:3:1", candidates: more },
             { build: "electromagnetic-240", key: "lane-item:3:2", candidates: more },
             { build: "electromagnetic-240", key: "lane-item:10:1", candidates: four },
@@ -696,11 +700,11 @@ describe("the lanes of the samples that rest on a value with no game read", () =
     const PIN_DROPS: Record<string, [number, number, number[]][]> = {
         iron: [[9, 1, [14]], [9, 2, [17]]],
         lithium: [[15, 1, [20, 37]], [15, 2, [17, 36]]],
-        "logistic-240": [[3, 1, [9, 19]]],
+        "logistic-240": [[3, 1, [9]], [13, 1, [19]]],
     };
     const MARKED: Record<string, [number, number][]> = {
         lithium: [[15, 1], [15, 2]],
-        "logistic-240": [[3, 1], [3, 2]],
+        "logistic-240": [[3, 1], [13, 1], [25, 1], [25, 2], [32, 1], [32, 2]],
     };
 
     it("lists, as built, the pin drops of each build and marks the lanes that rest on them", () => {
@@ -722,14 +726,14 @@ describe("the lanes of the samples that rest on a value with no game read", () =
         if (process.env.FLOWS_WITNESS_DIRECTORY) fs.writeFileSync(path.join(process.env.FLOWS_WITNESS_DIRECTORY, "unread.tsv"), rows.join("\n") + "\n");
     });
 
-    it("carries the mark to logistic 240's lane 2 over a side load: both pin drops land on lane 1", () => {
+    it("carries the mark from logistic 240's two feed belts to both lanes of each row's input over a side load: both pin drops land on lane 1", () => {
         const entities = SCAFFOLD_ENTITIES.get("logistic-240")!;
         const world = worldOf(entities, WORLD_DATA);
         const geometry = geometryOf(world, entities, GEOMETRY_DATA);
-        const line = geometry.lines.find((l) => l.first === 3)!;
-        const crossing = line.pieces.flatMap((n) => world.piece(n)!.side_loads.filter((s) => line.pieces.includes(s.receiver) && s.lane !== s.passing[0]).map((s) => [n, s.receiver, s.lane, s.passing] as const));
+        const rows = geometry.lines.filter((l) => l.first === 25 || l.first === 32).flatMap((l) => l.pieces);
+        const crossing = world.pieces.flatMap((p) => p.side_loads.filter((s) => rows.includes(s.receiver) && s.lane !== s.passing[0]).map((s) => [p.entity_number, s.receiver, s.lane, s.passing] as const));
         expect(crossing.length).toBeGreaterThan(0);
-        expect(flowsOfBuild("logistic-240").unread.map((u) => [u.entity_number, u.lane])).toEqual([[3, 1], [3, 2]]);
+        expect(flowsOfBuild("logistic-240").unread.map((u) => [u.entity_number, u.lane])).toEqual([[3, 1], [13, 1], [25, 1], [25, 2], [32, 1], [32, 2]]);
     });
 
     it("finds no output loader out of an infinity chest with filters on any of the 7 builds, so no lane is marked infinity-loader", () => {
@@ -803,18 +807,16 @@ describe("keys, order and purity", () => {
     });
 
     it("keys the questions by the drill's entity number and by the line's first piece and lane", () => {
-        const flows = flowsOfBuild("logistic-240");
-        expect(flows.questions.map((q) => [q.type, q.key, q.subject])).toEqual([
-            ["lane-item", "lane-item:3:1", { entity_number: 3, lane: 1 }],
-            ["lane-item", "lane-item:3:2", { entity_number: 3, lane: 2 }],
-        ]);
+        const flows = flowsOfBuild("logistic-240", {}, withoutFeeds(SCAFFOLD_ENTITIES.get("logistic-240")!));
+        expect(flows.questions.map((q) => [q.type, q.key, q.subject])).toEqual([3, 13, 25, 32].flatMap((line) => [1, 2].map((lane) => ["lane-item", `lane-item:${line}:${lane}`, { entity_number: line, lane }])));
         expect(flowsOfBuild("iron").questions.map((q) => [q.type, q.key, q.subject])).toEqual([["drill-ore", "drill-ore:1", { entity_number: 1 }]]);
     });
 
-    it("keeps every other key when one answer is given", () => {
-        const all = flowsOfBuild("logistic-240");
-        const one = flowsOfBuild("logistic-240", { "lane-item:3:1": "transport-belt" });
-        expect(questionKeys(all)).toEqual(["lane-item:3:1", "lane-item:3:2"]);
-        expect(questionKeys(one)).toEqual(["lane-item:3:2"]);
+    it("keeps the key of every other line when one answer is given; the line's other lane, fed beside the answered one, asks nothing", () => {
+        const entities = withoutFeeds(SCAFFOLD_ENTITIES.get("logistic-240")!);
+        const all = flowsOfBuild("logistic-240", {}, entities);
+        const one = flowsOfBuild("logistic-240", { "lane-item:25:1": "transport-belt" }, entities);
+        expect(questionKeys(one)).toEqual(questionKeys(all).filter((k) => !k.startsWith("lane-item:25:")));
+        expect(one.lanes.filter((l) => l.line === 25).map((l) => [l.lane, l.items, l.source])).toEqual([[1, ["transport-belt"], "answered"], [2, [], "other-lane"]]);
     });
 });
