@@ -4,6 +4,7 @@ import zlib from "zlib";
 import {expect} from "vitest";
 import {Config, ConfigSchema} from "../../../src/config";
 import {loadConfigFromFile} from "../../../src/config/loader";
+import {withEveryLaneEnd} from "../../../src/entities/traits/lane-ends";
 import {FactorioBlueprintFile} from "../../../src/blueprints/blueprint";
 import {encodeBlueprintFile} from "../../../src/blueprints/serde";
 import {GameFixturePaths} from "../helpers/fixture-paths";
@@ -42,6 +43,8 @@ const COMPACT_CRAFTING_SPEED = 50;
 function frontEntranceClockConfig(variant: FrontClockCase): Config {
     const product = variant.family === "different-items" ? "electronic-circuit" : "iron-gear-wheel";
     const type = `${variant.speed.prefix}transport-belt`;
+    // every lane backed up, or every lane moving
+    const lane_end = {kind: variant.backed ? "dead_end" : "infinite"};
     return ConfigSchema.parse({
         setpoint: {item: product, items_per_second: 6, copies: 1},
         machines: [{id: 1, prototype: product === "iron-gear-wheel" ? "assembling-machine-3" : "electromagnetic-plant", recipe: product, crafting_speed: COMPACT_CRAFTING_SPEED, productivity: 0}],
@@ -51,19 +54,19 @@ function frontEntranceClockConfig(variant: FrontClockCase): Config {
                 pickup_layout: "front-entrance", pickup_length: 0.5}, sink: {type: "machine", id: 1}, stack_size: 16},
         ],
         belts: [
-            {id: 1, type, lanes: [{ingredient: product, stack_size: 4}, {ingredient: "", stack_size: 4}]},
-            {id: 2, type, lanes: [{ingredient: "iron-plate", stack_size: 4},
-                {ingredient: variant.family === "different-items" ? "copper-cable" : "iron-plate", stack_size: 4}]},
+            {id: 1, type, lanes: [{ingredient: product, stack_size: 4, lane_end}, {ingredient: "", stack_size: 4, lane_end}]},
+            {id: 2, type, lanes: [{ingredient: "iron-plate", stack_size: 4, lane_end},
+                {ingredient: variant.family === "different-items" ? "copper-cable" : "iron-plate", stack_size: 4, lane_end}]},
         ],
-        chests: [], overrides: {backed_up_belts: variant.backed},
+        chests: [],
     });
 }
 
 async function frontExitClockConfig(variant: FrontClockCase): Promise<Config> {
-    const config = await loadConfigFromFile(path.join(GameFixturePaths.FRONT_UNDERGROUND_EXIT, "config.json"));
+    const config = withEveryLaneEnd(await loadConfigFromFile(path.join(GameFixturePaths.FRONT_UNDERGROUND_EXIT, "config.json")),
+        variant.backed ? "dead_end" : "infinite");
     configAtSpeed(config, variant.speed);
     config.setpoint.items_per_second = 30 * variant.speed.units / 4;
-    config.overrides = {...config.overrides, backed_up_belts: variant.backed};
     const input = config.inserters.find(inserter => inserter.source.type === "belt")!;
     if (input.source.type !== "belt") throw new Error("Expected the front exit's belt input");
     input.source.near_lane = variant.mirrored ? 2 : 1;

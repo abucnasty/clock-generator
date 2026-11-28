@@ -1,12 +1,13 @@
 // The variants of the blast (`BLAST_GROUPS=variants`, job keys `variants-<name>`; #600): a sample with the options a test or a game
-// recording sets on it, built here in code (the samples carry no overrides, so a build with belts backed up, or with an ingredient
-// left out of the window cycle, is a sample plus the option). Each is one job of the record, so that its result is pinned there and
+// recording sets on it, built here in code (a build with belts backed up is a sample with a dead end stated on each lane that
+// states no end, and a build with an ingredient left out of the window cycle is a sample plus the option). Each is one job of the record, so that its result is pinned there and
 // the property module runs on it; the test or the recording that qualifies it is named beside it. A variant is a job only
 // because a game recording is tied to its clock, a test pins it or a per-job check reads it; the speed-80 agricultural ranking config is a plain test.
 //
 // Loaded by blast.blastrun.ts by path where this file exists (a worktree from before it has no variant jobs).
 import type { Config } from '../../../src/config/schema';
 import { ConfigPaths } from '../../../src/config/config-paths';
+import { withUnstatedLaneEnds } from '../../../src/entities/traits/lane-ends';
 import { loadConfigFromFile } from '../../../src/config/loader';
 import { productionScienceSharedPickup } from '../../../src/crafting/generate-blueprint-test-helpers';
 import { steelHub } from '../../../src/crafting/container-output.fixture';
@@ -21,7 +22,8 @@ export interface VariantJob {
     config: () => Promise<Config>;
 }
 
-const backedUp = (config: Config): Config => ({ ...config, overrides: { ...config.overrides, backed_up_belts: true } });
+/** The sample with its belts backed up: a dead end on each lane that states no end and no consumption */
+const backedUp = (config: Config): Config => withUnstatedLaneEnds(config, 'dead_end');
 const sample = (path: string, change: (config: Config) => Config) => async () => change(await loadConfigFromFile(path));
 
 export function variantJobs(): VariantJob[] {
@@ -34,8 +36,6 @@ export function variantJobs(): VariantJob[] {
         { name: 'STEEL_PLATE_26_WAGON_CHEST_IRON_ORE_OUT_OF_PERIOD',
             config: () => steelWagonConfig(steelWagonCases().find(it => it.ignored_lcm_ingredients !== undefined)!),
             qualifies: 'game recording steel-wagon-iron-ore-out-of-period (steel-plate-26-wagon-chest-clock-controls.json)' },
-        { name: 'AGRICULTURAL_SCIENCE_250_BACKED_UP', config: sample(ConfigPaths.AGRICULTURAL_SCIENCE_250, backedUp),
-            qualifies: 'scaffold recordings "agricultural science (belts are backed up)"; per-job checks (job-checks/variants.ts)' },
         // tests
         { name: 'ADVANCED_CIRCUIT_240_BACKED_UP', config: sample(ConfigPaths.ADVANCED_CIRCUIT_240, backedUp),
             qualifies: 'small-batches-fallback.generation.test.ts' },

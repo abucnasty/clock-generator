@@ -8,3 +8,5 @@ object	config object	A JavaScript object of the configuration
 cell	cell [0-9]	A cell number of a save, not a build
 structure	low density structure	The game's item Low density structure
 process	verification process	A process of checking, not a build
+end	(dead|infinite|unknown|lane) ends?	Dead end, infinite end, unknown end and lane end are terms of the glossary (Lane end)
+end	end of each lane	The end of a lane is its lane end, a term of the glossary (Lane end)

@@ -3,6 +3,7 @@ import path from "path";
 import {expect, test} from "vitest";
 import {Config} from "../../../../src/config";
 import {loadConfigFromFile} from "../../../../src/config/loader";
+import {withEveryLaneEnd} from "../../../../src/entities/traits/lane-ends";
 import {recordInFactorio} from "../../../../src/harness/factorio-harness";
 import {BELT_SPEEDS, configAtSpeed, speedCapture} from "../../helpers/belt-speed-fixtures";
 import {GameFixturePaths} from "../../helpers/fixture-paths";
@@ -25,9 +26,8 @@ for (const speed of BELT_SPEEDS) for (const geometry of ["straight-belt", "under
             const capture = replayRoot ? {directory: path.resolve(replayRoot, name), cleanup() {}} : speedCapture(name);
             const fixture = GameFixturePaths.DIFFERENT_ITEMS;
             try {
-                const config = await loadConfigFromFile(path.join(fixture, "config.json"));
+                const config = withEveryLaneEnd(await loadConfigFromFile(path.join(fixture, "config.json")), backed ? "dead_end" : "infinite");
                 configAtSpeed(config, speed);
-                config.overrides = {...config.overrides, backed_up_belts: backed};
                 const input = config.inserters.find(inserter => inserter.source.type === "belt")!;
                 if (input.source.type !== "belt") throw new Error("Expected belt source");
                 const length = geometry === "straight-belt" ? 1 : 0.5;
@@ -86,7 +86,7 @@ for (const speed of BELT_SPEEDS) for (const geometry of ["straight-belt", "under
                 }
                 const moving = backed ? undefined : assessSameItemPickups(report, speed.units, 2, 65);
                 const jammed = backed ? replayJammedPickups(report, 64, 2) : undefined;
-                const quantityDifferences = compareContinuousSimulator(config, report, speed);
+                const quantityDifferences = compareContinuousSimulator(config, report, speed, backed);
                 const patterns = new Set<string>();
                 let grabs: number[] = [], hands = 0;
                 for (let index = 1; index < report.samples.length; index++) {

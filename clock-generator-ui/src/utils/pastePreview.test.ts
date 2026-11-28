@@ -102,7 +102,7 @@ describe('atomic selective Paste', () => {
             ...current(), machines: [formMachine(1, { recipe: '' })], inserters: [formInserter(2, { _forced_always: true })],
             belts: [belt(4, { lanes: [{ ingredient: '', stack_size: 1 }] })], drills: { configs: [formDrill(3)] },
             chests: [infinityChest(5, { _chest_settings: { buffer_filter: 'coal', storage_size: 2 } })],
-            setpoint: { item: '', copies: 0, items_per_second: 0 }, overrides: { backed_up_belts: true },
+            setpoint: { item: '', copies: 0, items_per_second: 0 }, overrides: { kick_start_items: 3 },
         };
         const before = structuredClone({ form, incoming });
         for (let mask = 0; mask < 32; mask++) {

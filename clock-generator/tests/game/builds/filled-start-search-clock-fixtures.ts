@@ -1,5 +1,6 @@
 import path from "path";
 import {Config} from "../../../src/config";
+import {withUnstatedLaneEnds} from "../../../src/entities/traits/lane-ends";
 import {ConfigPaths} from "../../../src/config/config-paths";
 import {carScenario} from "./iron-plate-80-car-chest-clock-fixtures";
 import {lithiumSiloScenario} from "./lithium-plate-80-silo-chest-clock-fixtures";
@@ -36,7 +37,7 @@ export const SEARCH_FAMILY_CASES: SearchFamilyCase[] = [
     },
     {
         name: "processing-unit-80-backed-up-from-every-start", job: "variants-PROCESSING_UNIT_80_CIRCUIT_EXPORT_BACKED_UP", config: "PROCESSING_UNIT_80_CIRCUIT_EXPORT",
-        variant: config => ({...config, overrides: {...config.overrides, backed_up_belts: true}}),
+        variant: config => withUnstatedLaneEnds(config, "dead_end"),
         scenario: () => processingUnitCircuitExportClockScenario({name: "processing-unit-80-backed-up-from-every-start", backed: true, alternative: ALTERNATIVE}),
     },
     {

@@ -50,7 +50,7 @@ for (const reflected of [false, true]) for (let delay = 0; delay < 8; delay++) {
             const hand = report.samples.filter(sample => sample.tick <= full.tick);
             const grabs = hand.filter((sample, index) => sample.held > (hand[index - 1]?.held ?? 0));
             expect(grabs.map(sample => sample.tick - first.tick)).toEqual(phase >= 32 ? [0, 1, 3, 4] : [0, 1, 2, 3]);
-            expect(compareContinuousSimulator(config, {...report, samples: hand}, speed)).toEqual([]);
+            expect(compareContinuousSimulator(config, {...report, samples: hand}, speed, false)).toEqual([]);
             const exported = result.recording.config.inserters.find(inserter => inserter.source.type === "belt")!;
             expect(exported.source).toMatchObject({near_lane: reflected ? 2 : 1, pickup_layout: "side-entrance",
                 pickup_capture: {status: "supported", model_version: 2}});

@@ -3,7 +3,7 @@
   "job": "pickup-same-item-turbo-underground-exit-moving",
   "group": "pickup",
   "name": "same-item-turbo-underground-exit-moving",
-  "config_sha256": "6ce5d710e2711a67375164225b409493194ab252dfafa54dedd62097754cac31",
+  "config_sha256": "a3340e69aa085e52935d2fb34e85ebd6618bc5c2b2f6c364402f05c1f5b76c2a",
   "job_results_sha256": "004fafcf75a6198592d5125bffea68a3befc9b7894e553e9c291b2f2ac1af8f0",
   "selected": "takt_batches_observed",
   "selected_windows": {

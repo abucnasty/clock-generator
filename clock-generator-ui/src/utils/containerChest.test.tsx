@@ -196,4 +196,13 @@ describe('the fields of each type', () => {
         expect(formDataToConfig(saved).chests![0]).toEqual({ ...build(CONTAINERS.car).chests![0],
             slot_filters: [{ slot: 1, item: 'iron-plate' }, { slot: 2, blocked: true }, { slot: 3, blocked: true }] });
     });
+
+    it('shows a slot filter that names a marker as its item as that item filter, as its counts and the generator read it', () => {
+        const chest = containerChest(1, ChestType.CAR, { slot_filters: [{ slot: 1, item: 'iron-plate' }, { slot: 2, item: 'deconstruction-planner' },
+            { slot: 3, item: 'no-item' }, { slot: 4, blocked: true }] });
+        showFields(chest);
+        expect(slots().slice(0, 4)).toEqual(['Slot 1: iron-plate filter', 'Slot 2: deconstruction-planner filter', 'Slot 3: no-item filter',
+            'Slot 4: Blocked (no-item)'].map(name => screen.getByRole('button', { name })));
+        expect(screen.getByText(/^3 filtered · 1 blocked · 76 free/)).toBeDefined();
+    });
 });

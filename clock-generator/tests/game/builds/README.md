@@ -17,7 +17,7 @@ uses it. Setup, selective execution and artifact retention are in the [game veri
 - `lithium-plate-80-silo-chest-clock.game.test.ts`: the lithium plate build, a rocket silo taken as a chest between two cryogenic plants and six furnaces.
 - `iron-plate-80-car-chest-clock.game.test.ts`: the iron plate build, a car taken as a chest between a big mining drill and two furnaces.
 - `steel-plate-26-wagon-chest-clock.game.test.ts`: the steel build, a cargo wagon taken as a chest that a big mining drill and two furnaces fill and empty, the steel leaving through it.
-- `inserter-crafting-240-shared-signal-clock.game.test.ts`: the inserter build on three copies, once with the hand-made clock and once with the generated clock, and the sample's scaffold of one copy under the generator's Round-Robin Polling clock with 6 output swings for the config with backpressure on its belts (`backed_up_belts`; `round_robin_polling_swings_6`, 72 ticks), with the ore and the circuits cut and the output blocked (#442).
+- `inserter-crafting-240-shared-signal-clock.game.test.ts`: the inserter build on three copies, once with the hand-made clock and once with the generated clock, and the sample's scaffold of one copy under the generator's Round-Robin Polling clock with 6 output swings for the config with backpressure on its belts (a dead end on each lane; `round_robin_polling_swings_6`, 72 ticks), with the ore and the circuits cut and the output blocked (#442).
 - `logistic-science-240-direct-insert-clock.game.test.ts`: the logistic science build with direct insertion, the sample's scaffold of one copy, under the generated clock for the config as it is (fractional swings, 96 ticks), with the inserters cut from the belts and the output blocked (#442). The scaffold's inserter belts end closed, so in the game their lanes have backpressure. The config states those lanes as dead ends, so the clock is made for belts with backpressure.
 - `grenade-clock.game.test.ts`: the grenade build on one copy and on its full build of seven, each with the hand-made clock and with the generated clock.
 - `processing-unit-80-circuit-export-clock.game.test.ts`: the circuit export build (processing units from two circuit machines and two advanced circuit machines, an export belt) on its throttled scaffold with the generated clock, as it is and with the belts backed up.
@@ -475,7 +475,7 @@ BELT_SPEED_CAPTURE_DIR=.scratch/judged-start-9 npm run test:game -- tests/game/b
 - **Front exit, backed up, 8:** the electromagnetic-plant [fixture](../mechanics/belt-pickup/fixtures/front-underground-exit/README.md)
   at four speeds and both mirroring states, with the ordinary electromagnetic targets (30/s turbo to 7.5/s normal)
   and the ordinary disturbances.
-- **Front exit on a moving config, 8:** the same eight builds generated with `backed_up_belts: false`. The input
+- **Front exit on a moving config, 8:** the same eight builds generated with an infinite end on each lane. The input
   stands on the exit's output tile, so the belt is backed up in the game whatever the config says; recovery is
   assessed as for backed-up supply.
 
@@ -1099,12 +1099,12 @@ state to the first loss, and the whole window cycles of the last minute after th
 | --- | --- | --- | --- | --- | --- | --- |
 | `AUTOMATION_SCIENCE_240_ONE_OUTPUT_SWING` (`automation-science-240-one-output-swing`) | Coordinated Sources (72, `37805909`) | 9 of 9 | 50 / 50 | 7,701 | 28,403 (gear wheel cut 18,159, output block 22,574, copper plate cut 28,403) | holds |
 | `AGRICULTURAL_SCIENCE_250` (`agricultural-science-250`) | Takt Batches Observed, 2 swings (960, `997b3c3c`) | 5 of 5 | 3 / 3 | 6,524 | 24,959 (bioflux cut 15,841, output block 19,572, nutrients cut 24,959) | holds |
-| `AGRICULTURAL_SCIENCE_250_BACKED_UP` (`agricultural-science-250-backed-up`) | the same clock | 5 of 5 | 3 / 3 | 6,524 | 24,959 | holds |
+| `AGRICULTURAL_SCIENCE_250` (`agricultural-science-250-backed-up`) | the same clock | 5 of 5 | 3 / 3 | 6,524 | 24,959 | holds |
 | `IRON_BACTERIA_380_CULTIVATION` | see "Loop builds and ruling 60's start" above | 1 of 1 | 2 / 2 each | 7,056 | 14,348 / 14,131 / 14,621 | holds |
 | `AUTOMATION_SCIENCE_240` (`automation-science-240`) | Coordinated Sources (72, `0bc638ab`) | 9 of 9 | 50 / 50 | 7,200 | 16,823 | holds: every copy, copy 2 over whole repeats; pinned |
 | `ELECTROMAGNETIC_SCIENCE_330` (`electromagnetic-science-330`) | Takt Batches Observed (2,112, `c3b310df`) | 11 of 11 | 1 / 1 | 5,712 | 37,644 | holds: every copy, copies 1 and 3 over whole repeats; pinned |
 
-- **Agricultural science.** The harness does not read `backed_up_belts`, so the build and its variant with belts under backpressure are the same run: the same clock, the same result to the tick (as their scaffold pins say). The scaffold's four loaders
+- **Agricultural science.** The sample states a dead end on each of its lanes, so its build with belts under backpressure is the sample itself, one record job: the same clock, the same result to the tick (as their scaffold pins say). The scaffold's four loaders
   drain the bioflux and nutrients belts and the packs go into infinity chests, so the case sets `block_sinks` (the output block fills those chests). All five copies make 800 in every window cycle judged.
 - **Automation science 240, copy 2.** In the case with three losses in a row the output block and the copper plate cut last 5 and 4 ticks (the gear wheel cut recovers over the target before it is over the baseline's lowest minute), and after them
   copy 2 settles into a cycle of five window cycles that makes 30 of 32 once and 34 once (a hand of 2 moves from one window cycle to the next); it makes 1,600 of 1,600 over the 50 window cycles of the last minute,

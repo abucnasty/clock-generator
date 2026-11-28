@@ -4,6 +4,7 @@ import path from "path";
 import zlib from "zlib";
 import {expect, test} from "vitest";
 import {loadConfigFromFile} from "../../../../src/config/loader";
+import {withEveryLaneEnd} from "../../../../src/entities/traits/lane-ends";
 import {recordInFactorio} from "../../../../src/harness/factorio-harness";
 import {GameFixturePaths} from "../../helpers/fixture-paths";
 import {composeProbeSource} from "../../helpers/probe-source";
@@ -23,8 +24,7 @@ interface Sample {
 const stacks = (line: Line): Stack[] => Object.values(line.stacks);
 
 function ordinaryBeltHand(config: Config, backedUp: boolean, item = "iron-plate", startTick = 0): number[] {
-    const candidate = structuredClone(config);
-    candidate.overrides = {...candidate.overrides, backed_up_belts: backedUp};
+    const candidate = withEveryLaneEnd(structuredClone(config), backedUp ? "dead_end" : "infinite");
     candidate.inserters[1].filters = [item];
     const simulation = SimulationContext.fromConfig(candidate);
     const input = simulation.inserters.find(i => i.entity_id.number === 2)!.inserter_state;

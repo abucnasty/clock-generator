@@ -50,11 +50,13 @@
       "lanes": [
         {
           "ingredient": "electromagnetic-science-pack",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {"kind": "infinite"}
         },
         {
           "ingredient": "",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {"kind": "infinite"}
         }
       ]
     },
@@ -64,15 +66,16 @@
       "lanes": [
         {
           "ingredient": "accumulator",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {"kind": "infinite"}
         },
         {
           "ingredient": "supercapacitor",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {"kind": "infinite"}
         }
       ]
     }
   ],
-  "chests": [],
-  "overrides": {"backed_up_belts": false}
+  "chests": []
 }

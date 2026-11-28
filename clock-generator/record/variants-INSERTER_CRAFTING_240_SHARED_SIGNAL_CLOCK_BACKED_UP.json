@@ -3,7 +3,7 @@
   "job": "variants-INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK_BACKED_UP",
   "group": "variants",
   "name": "INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK_BACKED_UP",
-  "config_sha256": "c2951345936a114bcdc11628ef09fa427f6692c860ccd0356e4838c2a3399088",
+  "config_sha256": "49431f64afe452d14d4eae517ef5b27a72e98bdd341eadfae52865feb4ecffdb",
   "job_results_sha256": "a23dad72aef089dbdfba6fb139bb776f388035920c4a33581806c8c7f2c0f9de",
   "selected": "coordinated_sources",
   "selected_windows": {

@@ -1,6 +1,7 @@
 import { GameFixturePaths } from "../../tests/game/helpers/fixture-paths";
 import { beforeAll, describe, expect, it } from "vitest";
 import { loadConfigFromFile } from "../config/loader";
+import { withEveryLaneEnd } from "../entities/traits/lane-ends";
 import { Config } from "../config";
 import { simulateRecording } from "../verification/simulated-recording";
 import { outputPerWindowCycle, recipesMaking } from "../harness/recording-output";
@@ -46,7 +47,7 @@ describe("moving pickup affects the verdict of the old default clock", () => {
     });
 
     it("retains the recorded backed-up behavior when the config says its input belts are backed up", () => {
-        expect(outputCounts({ ...config, overrides: { ...config.overrides, backed_up_belts: true } })).toEqual(new Set([528]));
+        expect(outputCounts(withEveryLaneEnd(config, "dead_end"))).toEqual(new Set([528]));
     });
 
     it("uses straight-belt timing for omitted geometry, including direct unparsed engine inputs", () => {

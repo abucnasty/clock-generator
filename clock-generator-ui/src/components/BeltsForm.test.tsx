@@ -266,16 +266,10 @@ describe('a stated value is never hidden', () => {
 });
 
 describe('the grey default follows the engine', () => {
-    it.each([
-        [false, 'Infinite, not stated'],
-        [undefined, 'Dead end, not stated'],
-        [true, 'Dead end, not stated'],
-    ])('with backed_up_belts %s a taken lane that states no end shows %s', async (backed_up_belts, shown) => {
-        const form = withoutEnds(exampleForm(AUTOMATION));
-        if (backed_up_belts !== undefined) form.overrides = { ...form.overrides, backed_up_belts };
-        const { user } = showBelts(form);
+    it('shows a taken lane that states no end as a dead end, not stated', async () => {
+        const { user } = showBelts(withoutEnds(exampleForm(AUTOMATION)));
         await openLanes(user, 1);
-        expect(combo('Lane end, Belt 1, lane 1')!.textContent).toBe(shown);
+        expect(combo('Lane end, Belt 1, lane 1')!.textContent).toBe('Dead end, not stated');
     });
 });
 

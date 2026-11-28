@@ -90,7 +90,7 @@ describe('pickup type edits and saved assumptions', () => {
         const before = generatedForOf(config);
         restored.inserters[0].source = withPickupType(restored.inserters[0].source, 'side-exit');
         expect(isStale(before, configKeyOf(formDataToConfig(restored)))).toBe(true);
-        expect(isStale(before, configKeyOf({ ...config, overrides: { backed_up_belts: true } }))).toBe(true);
+        expect(isStale(before, configKeyOf({ ...config, overrides: { ...config.overrides, kick_start_items: 17 } }))).toBe(true);
         expect(isStale(before, configKeyOf(config))).toBe(false);
     });
     it('lists only missing belt pickups with stable inserter IDs, independently of movement', () => {

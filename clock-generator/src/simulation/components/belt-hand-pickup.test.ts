@@ -8,6 +8,7 @@ import { EntityState } from "../../state";
 import { BeltHandPickup } from "./belt-hand-pickup";
 import { bindHandPorts } from "./hand-ports";
 import { isDeadEnd } from "../../entities/traits/lane-facts";
+import { withEveryLaneEnd } from "../../entities/traits/lane-ends";
 
 let sample: Config;
 beforeAll(async () => { sample = await loadConfigFromFile(GameFixturePaths.SAME_ITEM_CONFIG); });
@@ -50,8 +51,7 @@ describe("physical belt lane fallback", () => {
     });
 
     it.each([1, 2] as const)("front underground entrance with the same item on both backed-up lanes: preferred=%i", async preferred => {
-        const config = await loadConfigFromFile(GameFixturePaths.FRONT_UNDERGROUND_ENTRANCE_SAME_ITEM_CONFIG);
-        config.overrides = { ...config.overrides, backed_up_belts: true };
+        const config = withEveryLaneEnd(await loadConfigFromFile(GameFixturePaths.FRONT_UNDERGROUND_ENTRANCE_SAME_ITEM_CONFIG), "dead_end");
         const source = config.inserters[1].source;
         if (source.type !== "belt") throw new Error("expected belt input");
         source.near_lane = preferred;
@@ -88,8 +88,7 @@ describe("physical belt lane fallback", () => {
         { backedUp: false, start: 1, ticks: [0, 1, 2, 4] },
         { backedUp: true, start: 0, ticks: [0, 1, 2, 3] },
     ])(`front underground entrance: mirrored=${mirrored}, lane ${preferred}, backedUp=$backedUp, phase start=$start`, async ({ backedUp, start, ticks }) => {
-        const config = await loadConfigFromFile(path.join(GameFixturePaths.FRONT_UNDERGROUND_ENTRANCE, "config.json"));
-        config.overrides = { ...config.overrides, backed_up_belts: backedUp };
+        const config = withEveryLaneEnd(await loadConfigFromFile(path.join(GameFixturePaths.FRONT_UNDERGROUND_ENTRANCE, "config.json")), backedUp ? "dead_end" : "infinite");
         const source = config.inserters[1].source;
         if (source.type !== "belt") throw new Error("expected belt input");
         source.near_lane = preferred;
@@ -187,23 +186,13 @@ describe("physical belt lane fallback", () => {
 
     it("retains geometry while explicitly backed-up supply allows consecutive grabs", () => {
         for (const length of [1, 0.5] as const) {
-            const config = copy();
-            config.overrides = { backed_up_belts: true };
+            const config = withEveryLaneEnd(copy(), "dead_end");
             config.inserters[1].source = { type: "belt", id: 1, near_lane: 1, pickup_length: length, pickup_layout: length === 1 ? "side-straight" : "side-entrance" };
             const input = pickup(config);
             expect(input.state.inserter.pickup_length).toBe(length);
             expect(input.state.inserter.belt_lane_facts!.every(isDeadEnd)).toBe(true);
             expect([...input.source.lanes[0].pickupIds()].length).toBe(1);
             expect([0, 1, 2, 3].map(input.take)).toEqual([4, 4, 4, 4]);
-        }
-    });
-
-    it("keeps the facts of both lanes of the source belt on the inserter, by lane", () => {
-        for (const backed_up_belts of [false, true]) {
-            const config = copy();
-            config.overrides = { backed_up_belts };
-            const facts = pickup(config).state.inserter.belt_lane_facts!;
-            expect(facts.map(lane => lane.lane_end.kind)).toEqual(backed_up_belts ? ["dead_end", "dead_end"] : ["infinite", "infinite"]);
         }
     });
 });

@@ -170,7 +170,7 @@ reduction from scheduling changes; do not report a faster test from a less busy 
 
 ## The record of the blast jobs
 
-[`clock-generator/record/`](clock-generator/record/README.md) holds one small JSON file for each of the 88 blast jobs: the clock the generator selects for the
+[`clock-generator/record/`](clock-generator/record/README.md) holds one small JSON file for each of the 87 blast jobs: the clock the generator selects for the
 sample or fixture and every clock it weighed (verdict, holds, rate, window cycle time, wakeups, windows, clock hash). The check named "Rec summary" in CI
 generates the jobs in two shards (`Rec 1/2` and `Rec 2/2`, dealt out by the seconds each job took on a runner,
 `clock-generator/ci/record-durations.json`), joins them and compares them with the committed files field by field; a difference fails with a table of job,
@@ -258,7 +258,7 @@ is never loosened because a job fails it.
 | --- | --- | --- |
 | `Unit 1/4` to `Unit 4/4` and `Code checks`, then `Unit tests` | `npm test` (the units, `clock-controls.test.ts` among them) dealt out by `ci/unit-durations.json`; knip, typecheck, build and lint in `Code checks` | every pull request that changes more than documentation |
 | `Gen 1/5` to `Gen 5/5`, then `Gen summary` | the `*.generation.test.ts` files, dealt out by `ci/generation-durations.json` | ready pull requests to `master` or `hotfix/` that change more than documentation, and releases; on a draft the shards do not run and the check fails (below) |
-| `Rec 1/2` and `Rec 2/2`, then `Rec summary` | the 88 jobs, joined, compared with `record/`, with the properties, the per-job checks and the never-worse rule | ready pull requests to `master` or `hotfix/` that change more than documentation; on a draft the shards do not run and the check fails (below) |
+| `Rec 1/2` and `Rec 2/2`, then `Rec summary` | the 87 jobs, joined, compared with `record/`, with the properties, the per-job checks and the never-worse rule | ready pull requests to `master` or `hotfix/` that change more than documentation; on a draft the shards do not run and the check fails (below) |
 | `UI build`, `UI samples`, `UI browser` | the UI | every pull request that changes more than documentation |
 | `Docs checks` | PORTAL.md and the configuration file fields topic are current, and the bold labels of the user topics are strings of the site, the sidecar or the game ([docs/README.md](docs/README.md#checks)) | every pull request |
 

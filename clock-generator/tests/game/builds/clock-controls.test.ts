@@ -307,7 +307,7 @@ describe("the record", () => {
         test("each pin is the record's selected clock of its config, and its earlier clock is still made", () => {
             const found: string[] = [];
             for (const [name, pin] of pins) {
-                const job = pin.backed_up_belts ? variant(`${pin.config}_BACKED_UP`) : `config-${pin.config}`;
+                const job = `config-${pin.config}`;
                 const made = readRecordJob(job);
                 if (made === undefined) { found.push(`${name}: ${job} has no result in the record`); continue; }
                 const selected = made.alternatives.find(it => it.id === made.selected)!;
@@ -321,10 +321,6 @@ describe("the record", () => {
                 }
             }
             expect(found).toEqual([]);
-        });
-        test("a pin of a config with its belts backed up is of the variant's job, the others of the config's", () => {
-            expect(pins.filter(([, pin]) => pin.backed_up_belts).map(([name, pin]) => `${name}: ${variant(`${pin.config}_BACKED_UP`)}`))
-                .toEqual(["agricultural science (belts are backed up): variants-AGRICULTURAL_SCIENCE_250_BACKED_UP"]);
         });
     });
 

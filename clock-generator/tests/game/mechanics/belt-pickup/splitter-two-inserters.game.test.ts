@@ -4,6 +4,7 @@ import path from "path";
 import zlib from "zlib";
 import {expect, test} from "vitest";
 import {loadConfigFromFile} from "../../../../src/config/loader";
+import {withEveryLaneEnd} from "../../../../src/entities/traits/lane-ends";
 import {recordInFactorio} from "../../../../src/harness/factorio-harness";
 import {GameFixturePaths} from "../../helpers/fixture-paths";
 import {composeProbeSource} from "../../helpers/probe-source";
@@ -244,8 +245,7 @@ for (const speed of BELT_SPEEDS) for (const {name, swapped, leftMirrored, rightM
             // Compare only collection with the engine's infinite backed-up supply assumption, forcing
             // the observed item and feeding the previous native inventory before each grab decision.
             // This is not a replay of the shared splitter network or its arm movements.
-            const candidate = structuredClone(config);
-            candidate.overrides = {...candidate.overrides, backed_up_belts: true};
+            const candidate = withEveryLaneEnd(structuredClone(config), "dead_end");
             candidate.inserters[1].filters = ["copper-cable"];
             const simulation = SimulationContext.fromConfig(candidate);
             const input = simulation.inserters.find(i => i.entity_id.number === 2)!.inserter_state;

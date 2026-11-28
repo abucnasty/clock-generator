@@ -5,6 +5,7 @@ import {BackpressurePickupLane, backpressureHandGrabTicks} from "./backpressure-
 import {BeltSpeed} from "../entities/belt";
 import {Config} from "../config";
 import {loadConfigFromFile} from "../config/loader";
+import {withEveryLaneEnd} from "../entities/traits/lane-ends";
 import {SimulationContext} from "../crafting/sequence/simulation-context";
 import {bindHandPorts} from "../simulation/components/hand-ports";
 import {EntityState} from "./entity-state";
@@ -21,8 +22,7 @@ beforeAll(async () => {config = await loadConfigFromFile(path.join(GameFixturePa
 
 // Collection and stock are independently predicted. Native arm arrival and drop boundaries remain inputs.
 for (const clip of fixture.clips) test(`production backpressure stock matches native clip: ${clip.name}`, () => {
-    const copy = structuredClone(config);
-    copy.overrides = {...copy.overrides, backed_up_belts: true};
+    const copy = withEveryLaneEnd(structuredClone(config), "dead_end");
     const input = copy.inserters.find(i => i.source.type === "belt")!;
     if (input.source.type !== "belt") throw Error("Expected a belt source");
     input.source.pickup_length = clip.lane_length as 0.5 | 1;
