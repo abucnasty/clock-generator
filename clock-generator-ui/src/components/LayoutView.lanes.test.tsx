@@ -97,4 +97,28 @@ describe('the lane editor mode of the Layout view', () => {
         expect(onEdit).toHaveBeenCalledWith(1, 1, 'copper-plate');
         expect(JSON.stringify(shown)).toBe(before);
     });
+
+    it('shows a number field under the item of a lane that has a rate, for an item picked and for a fixed one, and none for a lane with none', () => {
+        const rated: LaneEditorBelt = { directions: new Map([[tileKey(0.5, 0.5), 4]]), lanes: [
+            { id: 1, side: 'left', item: 'iron-plate', candidates: null, rate: null }, { id: 2, side: 'right', item: 'iron-plate', candidates: null },
+        ] };
+        const { container } = draw(editor(new Map([[1, rated]])), { selection: { kind: 'belt', id: 1 } });
+        const group = within(container).getByRole('group', { name: 'Lanes of Belt 1' });
+        expect(within(group).getByRole('textbox', { name: 'Items a second for lane 1' })).toBeDefined();
+        expect(within(group).queryByRole('textbox', { name: /lane 2/ })).toBeNull();
+    });
+
+    it('calls back with the belt id, the lane and the rate typed, when the field is left', async () => {
+        const onRate = vi.fn();
+        const rated: LaneEditorBelt = { directions: new Map([[tileKey(0.5, 0.5), 4]]), lanes: [
+            { id: 1, side: 'left', item: 'iron-plate', candidates: null, rate: 40 }, { id: 2, side: 'right', item: 'iron-plate', candidates: null },
+        ] };
+        const { container, user } = draw({ ...editor(new Map([[1, rated]])), onRate }, { selection: { kind: 'belt', id: 1 } });
+        const field = within(container).getByRole('textbox', { name: 'Items a second for lane 1' }) as HTMLInputElement;
+        expect(field.value).toContain('40');
+        await user.clear(field);
+        await user.type(field, '25');
+        await user.tab();
+        expect(onRate).toHaveBeenLastCalledWith(1, 1, 25);
+    });
 });

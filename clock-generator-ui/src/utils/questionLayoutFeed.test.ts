@@ -123,6 +123,35 @@ describe('the lanes the layout view edits, from a paste, the questions the panel
         expect(belts.get(3)?.lanes.map(lane => [lane.id, lane.item, lane.candidates])).toEqual([[1, null, null], [2, 'copper-plate', null]]);
     });
 
+    describe('the rate of a lane', () => {
+        const rateQuestion = (first: number, lane: 1 | 2): FeedQuestion => ({ key: `lane-export:${first}:${lane}`, kind: 'lane-export', subject: { label: 'Belt 1', entity_number: first, lane, item: 'iron-plate' }, candidates: [] });
+
+        it('gives a lane its rate where its question is shown and asked, empty until it is answered, with the key of that question', () => {
+            const asked = [rateQuestion(40, 1)];
+            const { belts, rateKeyOf } = questionLanes(asking(...asked), shownOf(...asked), {});
+            expect(belts.get(1)?.lanes.map(lane => [lane.id, lane.rate])).toEqual([[1, null], [2, undefined]]);
+            expect(rateKeyOf(1, 1)).toEqual({ first: 40, key: 'lane-export:40:1' });
+            expect(rateKeyOf(1, 2)).toEqual({ first: 40, key: 'lane-export:40:2' });
+            expect(rateKeyOf(9, 1)).toBeNull();
+        });
+
+        it('gives a lane that is answered, and no longer asked, the rate answered', () => {
+            const { belts } = questionLanes(asking(), shownOf(rateQuestion(40, 1)), { 'lane-export:40:1': '40' });
+            expect(belts.get(1)?.lanes.map(lane => lane.rate)).toEqual([40, undefined]);
+        });
+
+        it('gives a lane no rate where its question was never shown, or is neither asked nor answered, and leaves the lane\'s item key as it was', () => {
+            expect(questionLanes(asking(), shownOf(), {}).belts.get(1)?.lanes.map(lane => lane.rate)).toEqual([undefined, undefined]);
+            expect(questionLanes(asking(), shownOf(rateQuestion(40, 1)), {}).belts.get(1)?.lanes.map(lane => lane.rate)).toEqual([undefined, undefined]);
+            expect(questionLanes(asking(), shownOf(), {}).keyOf(1, 1)).toEqual({ first: 40, key: 'lane-item:40:1' });
+        });
+
+        it('takes an answer that is no positive number for an empty field', () => {
+            const asked = [rateQuestion(40, 1)];
+            expect(questionLanes(asking(...asked), shownOf(...asked), { 'lane-export:40:1': 'abc' }).belts.get(1)?.lanes[0].rate).toBeNull();
+        });
+    });
+
     it('gives each tile a piece covers the direction of the piece: one tile, and two for a piece whose centre is on a tile edge', () => {
         const lines = [{ first: 10, place: 1, belt: null, lane_lines: [1, 2], pieces: [
             { entity_number: 10, x: 0.5, y: 0.5, direction: 4, shape: 'straight' }, { entity_number: 11, x: 2, y: 0.5, direction: 0, shape: null }, { entity_number: 12, x: 4.5, y: 3, direction: 8, shape: null },
