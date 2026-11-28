@@ -691,7 +691,7 @@
   },
   "chemical-science-240-shared-foundry": {
    "recorded": {
-    "pr": 0,
+    "pr": 924,
     "commit": "dde66446",
     "frozen_head": "dde66446",
     "note": "recorded again on the one-copy clock under the protocol in game ticks from ruling 60's start (the harness's backpressure start), Factorio 2.1.24; the second run gave the same summary; pr is set when the PR is opened",
@@ -769,7 +769,7 @@
   },
   "chemical-science-240-shared-foundry-backed-up": {
    "recorded": {
-    "pr": 0,
+    "pr": 924,
     "commit": "dde66446",
     "frozen_head": "dde66446",
     "note": "recorded again on the one-copy clock under the protocol in game ticks from ruling 60's start (the harness's backpressure start), Factorio 2.1.24; the second run gave the same summary; pr is set when the PR is opened",
