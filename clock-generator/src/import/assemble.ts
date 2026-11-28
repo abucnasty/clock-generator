@@ -344,7 +344,7 @@ function assemble(entities: readonly BlueprintEntityRead[], inputs: ImportInputs
         };
     });
 
-    // ------------------------------------------------ belts (d): one id may join lines of the same items
+    // ------------------------------------------------ belts (d): each id is one physical line (the merge below is of that one line)
     const belts: BeltConfig[] = ids.belts.map((b) => {
         const lines = b.lines.map((n) => lineOf.get(n)).filter((l): l is NonNullable<typeof l> => l !== undefined);
         const first = lineOf.get(b.first_line) ?? lines[0];
