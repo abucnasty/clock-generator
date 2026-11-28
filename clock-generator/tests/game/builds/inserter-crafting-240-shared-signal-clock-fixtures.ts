@@ -5,6 +5,7 @@ import {expect} from "vitest";
 import {Config} from "../../../src/config";
 import {ConfigPaths} from "../../../src/config/config-paths";
 import {loadConfigFromFile} from "../../../src/config/loader";
+import {withUnstatedLaneEnds} from "../../../src/entities/traits/lane-ends";
 import {BuiltClock, builtClockIdentity} from "../../../src/harness/built-clock";
 import {Recording} from "../../../src/verification/recording";
 import {CLOCK_TEST_SPEEDS} from "../helpers/belt-speed-fixtures";
@@ -34,14 +35,14 @@ import {assertFeedBacksUp, PickupClockScenario} from "./pickup-clock-capture";
  * is the build's own, not the config's: its inserters lose their circuit wires (the one behind the relay too) and run free.
  *
  * A third run is the sample's own scaffold, one copy with its ore lines and circuit belts closed (they back up, in the game), under the
- * clock the generator selects for the config with `backed_up_belts` on (#442).
+ * clock the generator selects for the config with its belts backed up (#442).
  */
 export interface InserterCraftingClockCase {
     name: string;
     kind: "hand-made clock" | "generated clock";
     /** The alternative recorded, for the generated clock */
     alternative?: string;
-    /** The config has its belts backed up (`overrides.backed_up_belts`) and the sample's scaffold of one copy is the build */
+    /** The config has its belts backed up (a dead end on each lane of the config that states no end) and the sample's scaffold of one copy is the build */
     backed_up_one_copy?: boolean;
     /** The run starts from ruling 60's start (the harness's backpressure start, `staged_start.backpressure`), not from a free warm-up */
     staged?: boolean;
@@ -156,7 +157,7 @@ export async function inserterCraftingClockScenario(variant: InserterCraftingClo
     const loaded = await loadConfigFromFile(ConfigPaths.INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK);
     const generated = variant.kind === "generated clock";
     if (variant.backed_up_one_copy) {
-        const config = {...loaded, overrides: {...loaded.overrides, backed_up_belts: true}};
+        const config = withUnstatedLaneEnds(loaded, "dead_end");
         return {
             name: variant.name, speed: CLOCK_TEST_SPEEDS[0], backed: true,
             config: () => config,

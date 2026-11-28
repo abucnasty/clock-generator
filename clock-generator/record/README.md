@@ -19,7 +19,7 @@ A field's name and meaning do not change; a new field, a field less or a changed
 | `job_results_sha256` | the digest of what belongs to the job and to no single clock: why it is not stable, the selected index, the clocks' ids |
 | `selected` | the id of the selected clock (one of `alternatives`) |
 | `selected_windows` | the recommended clock's windows: for each inserter or drill, `start-end` pairs in ticks of the window cycle (`0-10,54-64`: the opening edge and the closing edge of each window); empty when the machine has none |
-| `alternatives` | every clock, in the generator's order, one per line. Only the recommended clock's windows are written out; every other clock carries the hash of its windows (`windows_sha256`), since written out they would be about four times the size of everything else (on the first record, of 75 jobs, 325 KB, they came to about 1.4 MB; the record now holds 88 job files, 394 KB) |
+| `alternatives` | every clock, in the generator's order, one per line. Only the recommended clock's windows are written out; every other clock carries the hash of its windows (`windows_sha256`), since written out they would be about four times the size of everything else (on the first record, of 75 jobs, 325 KB, they came to about 1.4 MB; the record now holds 87 job files, 394 KB) |
 | `error` | instead of the fields from `job_results_sha256` on, when the config failed to generate: the error |
 
 A clock in `alternatives`:
@@ -49,7 +49,7 @@ difference. A pin of a game test (`selection.id`) is of the record's ids: its cl
 ## Regenerating it
 
 ```bash
-# all seven groups, every job (the record covers all 88), then write the files
+# all seven groups, every job (the record covers all 87), then write the files
 BLAST_GROUPS=config,pickup,overhood,front,blocked,containers,variants bash scripts/blast/blast.sh run .. <out>
 bash scripts/blast/blast.sh record write <out>          # or the cache entry's key, as `blast.sh list` prints it
 bash scripts/blast/blast.sh record check <out>          # the table of differences against the committed files; exit 1 on any

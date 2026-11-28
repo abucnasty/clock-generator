@@ -14,8 +14,7 @@ export function timelineRequestFor(config: Config | null | undefined, clock: Clo
     // Read former saved-result spellings only at this compatibility boundary.
     const overrides = config.overrides;
     const legacy = clock as ClockAlternativeView & { nonMovingBelts?: boolean };
-    const backedUp = clock.backedUpBelts ?? legacy.nonMovingBelts ?? (['backed-up', 'non-moving'].includes(clock.beltLabel) ? true
-        : clock.beltLabel.startsWith('moving') ? false : overrides?.backed_up_belts === true);
+    const backedUp = clock.backedUpBelts ?? legacy.nonMovingBelts ?? ['backed-up', 'non-moving'].includes(clock.beltLabel);
     // the clock's replay shows a window cycle the long run judges, not the first after warm-up, where it judges the build later
     const clock_tick = mode === 'clock' ? clock.asBuilt?.clock_tick_at_first_judged : undefined;
     const settle = mode === 'clock' && clock_tick === undefined

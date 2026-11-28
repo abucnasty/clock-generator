@@ -451,7 +451,7 @@ const InserterBeltSourceConfigSchema = z.object({
      */
     near_lane: z.union([z.literal(1), z.literal(2)]).optional().describe("The lane, 1 or 2, from which the inserter takes items first."),
     /** Exposed pickup line in tiles: 1 on a straight belt (default), 0.5 at either underground endpoint.
-     * Geometry is independent of the moving/backed-up supply setting (backed_up_belts).
+     * Geometry is independent of whether the lane is backed up or moving (its end).
      */
     pickup_length: z.union([z.literal(0.5), z.literal(1)]).default(1).describe("The length of belt from which the inserter can take items, in tiles: 1 on a straight belt, 0.5 at an underground belt end."),
     /** Physical approach and endpoint; required for manual underground pickups. */
@@ -612,7 +612,7 @@ const BeltLaneConfigSchema = z.object({
     ingredient: z.string().describe("The name of the item on the lane."),
     stack_size: z.number().int().positive().describe("The number of items in each stack on the lane."),
     supply_rate: z.number().positive().optional().describe("The items per second that come onto the lane where it starts. The default is the lane's capacity."),
-    lane_end: LaneEndConfigSchema.optional().describe("The end of the lane. Without it, the deprecated backed_up_belts sets the end if the configuration states it. If not, the role of the lane sets the end: an input or a buffer lane is a dead end, an output lane is an infinite end."),
+    lane_end: LaneEndConfigSchema.optional().describe("The end of the lane. Without it, the role of the lane sets the end: an input or a buffer lane is a dead end, an output lane is an infinite end."),
     sharing: LaneSharingConfigSchema.optional().describe("shared (default): all copies take from or drop onto this lane. per_copy: each copy has a lane of its own."),
     /**
      * The supply length: the belt before copy 1's pickup, in tiles along the flow from the middle of the first tile where the
@@ -832,23 +832,29 @@ export type ChestConfig = z.infer<typeof ChestConfigSchema>;
 // Config Overrides
 // ============================================================================
 
-export const ConfigOverridesSchema = z.object({
+/**
+ * The belt settings of the overrides from before each lane stated its end: `backed_up_belts` and, before it,
+ * `non_moving_belts`. Neither is read; a config that states one, with any value, is refused with a message that names the
+ * field and says to state the end of each lane, so that no lane takes another end without a word.
+ */
+const RETIRED_BELT_SETTINGS = ["backed_up_belts", "non_moving_belts"] as const;
+
+function refuseRetiredBeltSettings(value: unknown, context: z.RefinementCtx): void {
+    if (typeof value !== "object" || value === null) return;
+    for (const key of RETIRED_BELT_SETTINGS) {
+        if (!(key in value)) continue;
+        context.addIssue({ code: "custom", path: [key],
+            message: `\`overrides.${key}\` is not read. State the end of each lane instead: \`"lane_end": {"kind": "dead_end"}\` where the belt is backed up, \`{"kind": "infinite"}\` where it moves.` });
+    }
+}
+
+export const ConfigOverridesSchema = z.unknown().superRefine(refuseRetiredBeltSettings).pipe(z.object({
     lcm: z.number().int().positive().optional().describe("The number of output cycles in one window cycle; without it, the generator calculates the number."),
     /**
      * Forces the number of output swings per crafting cycle. Without it the generator picks the count and lowers it
      * until the output is stable.
      */
     terminal_swing_count: z.number().int().positive().optional().describe("The number of output swings in each output cycle; without it, the generator chooses the number."),
-    /**
-     * Input supply is backed up at the pickup: items stop between grabs and upstream supply refills the gaps at belt
-     * speed, so a hand takes the stacks in reach a tick each and then waits for the belt to bring the rest. Geometry is
-     * retained independently of this rule.
-     *
-     * Where it is true, every lane that states no lane end is a dead end (an export lane apart: an infinite end); where it
-     * is false, every such lane is an infinite end. Without it, the role of each such lane gives its end (lane-facts.ts).
-     * The simulation times each pickup from the lane as it is.
-     */
-    backed_up_belts: z.boolean().optional().describe("Deprecated. State the lane_end of each lane instead. true: each lane without a lane_end is a dead end. false: each such lane is an infinite end. Without it, the role of the lane sets the end."),
     /**
      * Run the four searches for every build: observed windows, uneven output swings, shifted swings and full-hand
      * output swings. They take most of the time of a generation.
@@ -915,7 +921,7 @@ export const ConfigOverridesSchema = z.object({
      * regardless of the window cycle.
      */
     ignored_lcm_ingredients: z.array(z.string()).optional().describe("The items that do not change the window cycle time; set each inserter that moves only these items to ALWAYS.")
-});
+}));
 
 export type ConfigOverrides = z.infer<typeof ConfigOverridesSchema>;
 

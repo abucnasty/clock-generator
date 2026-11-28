@@ -2,6 +2,7 @@ import path from "path";
 import {beforeAll, expect, test} from "vitest";
 import {Config} from "../config";
 import {loadConfigFromFile} from "../config/loader";
+import {withEveryLaneEnd} from "../entities/traits/lane-ends";
 import {OpenRange} from "../data-types";
 import {SimulationContext} from "./sequence/simulation-context";
 import {backpressureHandTicks, withWindowsAtLeast} from "./clock";
@@ -12,10 +13,9 @@ import {GameFixturePaths} from "../../tests/game/helpers/fixture-paths";
 let config: Config;
 beforeAll(async () => {config = await loadConfigFromFile(path.join(GameFixturePaths.FRONT_UNDERGROUND_EXIT, "config.json"));});
 
-function handTicksAt(prefix: "" | "fast-" | "express-" | "turbo-", backed_up_belts: boolean, layout?: {pickup_layout: "side-straight"; pickup_length: 1}) {
-    const copy = structuredClone(config);
+function handTicksAt(prefix: "" | "fast-" | "express-" | "turbo-", backed: boolean, layout?: {pickup_layout: "side-straight"; pickup_length: 1}) {
+    const copy = withEveryLaneEnd(structuredClone(config), backed ? "dead_end" : "infinite");
     copy.belts.forEach(belt => {belt.type = `${prefix}transport-belt`;});
-    copy.overrides = {...copy.overrides, backed_up_belts};
     const input = copy.inserters.find(inserter => inserter.source.type === "belt")!;
     if (layout && input.source.type === "belt") Object.assign(input.source, layout);
     return backpressureHandTicks(SimulationContext.fromConfig(copy).entity_registry);

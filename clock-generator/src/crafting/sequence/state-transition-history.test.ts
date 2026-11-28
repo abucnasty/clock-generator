@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { ConfigPaths } from "../../config/config-paths";
 import { loadConfigFromFile } from "../../config/loader";
+import { withUnstatedLaneEnds } from "../../entities/traits/lane-ends";
 import { generateClockAlternatives } from "../alternatives";
 import { quiet } from "../generate-blueprint-test-helpers";
 import { runBuild } from "../plan/unclocked-run";
@@ -47,10 +48,10 @@ describe("a run's sealed state transition history, read back", () => {
         ["drills", ConfigPaths.GRENADE_240_FILLS_BELT_EXACTLY, false],
         ["drills into a furnace", ConfigPaths.STONE_BRICK_120_DRILL_DIRECT_INSERT, false],
         ["an inserter that does not move in some runs", ConfigPaths.UTILITY_SCIENCE_120, true],
-    ])("equals what was serialized before, for every run of the generation of %s", async (_, path, backed_up_belts) => {
+    ])("equals what was serialized before, for every run of the generation of %s", async (_, path, backed) => {
         const config = await loadConfigFromFile(path);
         const recorded = recordedBothWays(() => generateClockAlternatives(
-            backed_up_belts ? { ...config, overrides: { ...config.overrides, backed_up_belts } } : config, { logger: quiet }));
+            backed ? withUnstatedLaneEnds(config, "dead_end") : config, { logger: quiet }));
         expectReadBackAsBefore(recorded);
         read_back.push(...recorded.flatMap(({ sealed }) => expandStateTransitionHistory(sealed).entities));
         // a whole generation with its loss trials: 30 s for the belt-fed build on a desktop, twice that on the GitHub runner

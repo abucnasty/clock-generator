@@ -13,6 +13,7 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 
 ### Added
 - ui: paste a blueprint of your build to fill its machines, inserters, belts and chests
+- ui: the paste's questions show your build's layout, where you pick each belt lane's item
 - ui: change the research profile of a build made from a blueprint
 - ui: keep your research numbers as named profiles in this browser, started from two templates
 
@@ -23,6 +24,7 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 
 ### Removed
 - ui: the site no longer reads exports of the Clock Generator Sidecar mod
+- generation: a configuration that states backed_up_belts or non_moving_belts is refused: state the end of each lane instead
 
 ## [0.32.0] - 2026-11-26
 

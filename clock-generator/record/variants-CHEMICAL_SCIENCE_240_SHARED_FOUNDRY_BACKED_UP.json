@@ -3,7 +3,7 @@
   "job": "variants-CHEMICAL_SCIENCE_240_SHARED_FOUNDRY_BACKED_UP",
   "group": "variants",
   "name": "CHEMICAL_SCIENCE_240_SHARED_FOUNDRY_BACKED_UP",
-  "config_sha256": "85a154e14cc42937dca8a51ca23430941e84c110d2991e477ede7d79207c1e9d",
+  "config_sha256": "6968338e24277794d579c9bd8dc5e23456c62667e597895b0409d3b057bb1d77",
   "job_results_sha256": "58c2516f4f387716ae6565f6c8188ba6d006a452656c8e88738dd8616b8040cd",
   "selected": "coordinated_sources",
   "selected_windows": {

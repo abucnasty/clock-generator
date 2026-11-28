@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import {expect, test} from "vitest";
 import {loadConfigFromFile} from "../../../../src/config/loader";
+import {withEveryLaneEnd} from "../../../../src/entities/traits/lane-ends";
 import {recordInFactorio} from "../../../../src/harness/factorio-harness";
 import {Config} from "../../../../src/config";
 import {SimulationContext} from "../../../../src/crafting/sequence/simulation-context";
@@ -11,6 +12,7 @@ import {EntityState} from "../../../../src/state";
 import {GameFixturePaths} from "../../helpers/fixture-paths";
 import {composeProbeSource} from "../../helpers/probe-source";
 import {CLOCK_TEST_SPEEDS, configAtSpeed, speedCapture} from "../../helpers/belt-speed-fixtures";
+import {inputLanesAreDeadEnds} from "../../helpers/fixture-mechanics";
 import {ordinaryAtSpeed} from "./ordinary-speed-fixtures";
 import {compareContinuousSimulator} from "./ordinary-pickup-comparison";
 import {makeInputBeltBackedUp, useAccumulatorsOnBothLanes} from "./belt-pickup-fixtures";
@@ -21,7 +23,7 @@ import {JammedPickupReport, replayJammedPickups} from "./jammed-pickup-replay";
 /** Compare hand collection, allowing the explicitly uncalibrated initial lane phases. */
 function simulatorPatterns(config: Config) {
     const patterns = new Set<string>();
-    const backed = config.overrides?.backed_up_belts;
+    const backed = inputLanesAreDeadEnds(config);
     for (let phase = 0; phase < (backed ? 1 : 8); phase++) {
         const context = SimulationContext.fromConfig(config);
         const input = context.inserters.find(i => i.entity_id.number === 2)!.inserter_state;
@@ -54,9 +56,8 @@ for (const speed of CLOCK_TEST_SPEEDS) for (const geometry of ["straight-belt", 
             const capture = replayRoot ? {directory: path.resolve(replayRoot, name), cleanup() {}} : speedCapture(name);
             const fixture = GameFixturePaths.DIFFERENT_ITEMS;
             try {
-                const config = await loadConfigFromFile(path.join(fixture, "config.json"));
+                const config = withEveryLaneEnd(await loadConfigFromFile(path.join(fixture, "config.json")), backed ? "dead_end" : "infinite");
                 configAtSpeed(config, speed);
-                config.overrides = {...config.overrides, backed_up_belts: backed};
                 const input = config.inserters.find(i => i.source.type === "belt")!;
                 if (input.source.type !== "belt") throw new Error("Expected belt source");
                 const length = geometry === "straight-belt" ? 1 : 0.5;
@@ -126,7 +127,7 @@ for (const speed of CLOCK_TEST_SPEEDS) for (const geometry of ["straight-belt", 
                 expect(patterns.size).toBeGreaterThan(0);
                 expect(completedHands).toBeGreaterThan(20);
                 const simulated = simulatorPatterns(config);
-                const differences = compareContinuousSimulator(config, report, speed);
+                const differences = compareContinuousSimulator(config, report, speed, backed);
                 const summary = {name, native_patterns: [...patterns].sort(),
                     fresh_full_hand_patterns: [...simulated], hands: completedHands, replay_differences: assessment?.differences.length,
                     simulator_differences: differences, independent_replay_differences: assessment?.differences ?? []};

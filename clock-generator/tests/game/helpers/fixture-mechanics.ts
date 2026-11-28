@@ -3,6 +3,7 @@ import path from "path";
 import {expect} from "vitest";
 import {Config} from "../../../src/config";
 import {loadConfigFromFile} from "../../../src/config/loader";
+import {withEveryLaneEnd} from "../../../src/entities/traits/lane-ends";
 import {SimulationContext} from "../../../src/crafting/sequence/simulation-context";
 import {bindHandPorts} from "../../../src/simulation/components/hand-ports";
 import {BeltPickupLane} from "../../../src/state/belt-pickup-lane";
@@ -35,9 +36,8 @@ export function readFixtureFigures<T>(fixtureDir: string, file: string): Record<
  */
 export async function sidePickupConfig(speed: FixtureBeltSpeed, geometry: PickupGeometry, backed: boolean,
     ingredient: PickupIngredient): Promise<Config> {
-    const config = await loadConfigFromFile(path.join(GameFixturePaths.DIFFERENT_ITEMS, "config.json"));
+    const config = withEveryLaneEnd(await loadConfigFromFile(path.join(GameFixturePaths.DIFFERENT_ITEMS, "config.json")), backed ? "dead_end" : "infinite");
     configAtSpeed(config, speed);
-    config.overrides = {...config.overrides, backed_up_belts: backed};
     const input = config.inserters.find(inserter => inserter.source.type === "belt")!;
     if (input.source.type !== "belt") throw new Error("expected a belt input");
     input.source.pickup_length = geometry === "straight-belt" ? 1 : 0.5;
@@ -53,9 +53,16 @@ export async function sidePickupConfig(speed: FixtureBeltSpeed, geometry: Pickup
  * `"0,1,2,3"`: one pattern per starting lane phase of a moving belt (the eight the game starts a pickup tile in), one
  * for a backed-up belt. The simulator's answer to the "patterns" the game records per case.
  */
+/** Whether every lane of the belt the input inserter takes from states a dead end: the belt is backed up */
+export function inputLanesAreDeadEnds(config: Config): boolean {
+    const input = config.inserters.find(inserter => inserter.source.type === "belt");
+    const belt = input && config.belts.find(it => it.id === input.source.id);
+    return belt !== undefined && belt.lanes.every(lane => (lane as {lane_end?: {kind: string}}).lane_end?.kind === "dead_end");
+}
+
 export function firstHandPatterns(config: Config, handSize = 16): Set<string> {
     const patterns = new Set<string>();
-    const backed = config.overrides?.backed_up_belts === true;
+    const backed = inputLanesAreDeadEnds(config);
     for (let phase = 0; phase < (backed ? 1 : 8); phase++) {
         const context = SimulationContext.fromConfig(config);
         const input = context.inserters.find(inserter => inserter.inserter_state.inserter.source.entity_id.type === "belt")!.inserter_state;

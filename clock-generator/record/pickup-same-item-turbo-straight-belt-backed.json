@@ -3,7 +3,7 @@
   "job": "pickup-same-item-turbo-straight-belt-backed",
   "group": "pickup",
   "name": "same-item-turbo-straight-belt-backed",
-  "config_sha256": "6aeca157287c68af60c4a64ef3cb6f68e4e9d2423c4aaba977bbd3e17e97e55c",
+  "config_sha256": "91f9622f2e499c2e03bda3e8980242dc3f9b7bd9994c6bf8fae349638b55adff",
   "job_results_sha256": "004fafcf75a6198592d5125bffea68a3befc9b7894e553e9c291b2f2ac1af8f0",
   "selected": "takt_batches_observed",
   "selected_windows": {

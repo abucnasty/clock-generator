@@ -47,7 +47,7 @@ inserter then switches selection from lane 2 to lane 1 with the same ingredients
 the preferred lane in this northbound front-exit setup.
 
 The existing simulator matches these items and grab counts with `source.near_lane: 2` when mirrored,
-`source.near_lane: 1` for the flipped case, `source.pickup_length: 0.5`, and `overrides.backed_up_belts: true`.
+`source.near_lane: 1` for the flipped case, `source.pickup_length: 0.5`, and a dead end on each lane (`lane_end`).
 `config.json` holds the original mirrored case; the game test applies each scenario's lane and mirror changes.
 Here `near_lane` selects the observed lane order: neither lane is geometrically nearer to this centered inserter. No engine change was needed.
 The supplied clock target is not a verified default-clock throughput claim for this fixture.

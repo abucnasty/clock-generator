@@ -12,7 +12,9 @@ import { layoutOf, type EntityRef, type Layout } from '../utils/layoutOf';
 import { regionTintsOf } from '../utils/layoutRegions';
 import { tileSizeOf } from '../utils/layoutSizes';
 import type { EntityClickType } from './ConfigFlowDiagram';
+import type { LaneEditor } from '../utils/layoutLanes';
 import { LayoutGround, LayoutPicture, type BoxName } from './LayoutPicture';
+import { LayoutLanePopover } from './LayoutLanePopover';
 import { FactorioIcon } from './FactorioIcon';
 import { CombinatorTag } from './CombinatorTag';
 import type { ClockInstallFacts } from '../worker/installFacts';
@@ -42,6 +44,11 @@ interface LayoutViewProps {
      */
     install?: ClockInstallFacts | null;
     height?: number;
+    /**
+     * The lane editor mode, off where it is null or absent: each belt it has lanes for is drawn with its two lanes, and the
+     * selected one shows an editor for them. An edit goes to its `onEdit`; the view changes no list
+     */
+    laneEditor?: LaneEditor | null;
 }
 
 interface Transform { x: number; y: number; zoom: number }
@@ -128,7 +135,7 @@ function Legend({ layout, regions, belts, combinators, selectedCombinator, onSel
  * The Layout view of the Build panel: the build drawn from above from the positions its config holds, north up, with the
  * numbers of its inserters and the belts they reach. It only reads: a click selects, as in the diagram, and nothing is edited.
  */
-export function LayoutView({ machines, inserters, belts, chests, drills, orbits, selection, onSelectionChange, install = null, height = 640 }: LayoutViewProps) {
+export function LayoutView({ machines, inserters, belts, chests, drills, orbits, selection, onSelectionChange, install = null, height = 640, laneEditor = null }: LayoutViewProps) {
     const { recipeLabel, itemLabel } = useGameNames();
     const layout = useMemo(() => layoutOf({ machines, drills, inserters, belts, chests }, tileSizeOf), [machines, drills, inserters, belts, chests]);
     const tints = useMemo(() => regionTintsOf(orbits), [orbits]);
@@ -145,6 +152,13 @@ export function LayoutView({ machines, inserters, belts, chests, drills, orbits,
             corner: drill.type, detail: itemLabel(drill.mined_item_name) }] as const),
         ...chests.map(chest => [`chest:${chest.id}`, { title: chestLabel(chest), id: chest.id, icon: chestTypeIcon(chest.type) }] as const),
     ]), [machines, drills, chests, recipeLabel, itemLabel]);
+
+    // the lane editor: the selected belt's tile that its editor stands beside
+    const [anchor, setAnchor] = useState<SVGGElement | null>(null);
+    const editedBelt = laneEditor !== null && selection?.kind === 'belt' ? selection.id : null;
+    const laneBelts = laneEditor?.belts ?? null;
+    const editedLanes = editedBelt === null ? undefined : laneBelts?.get(editedBelt);
+    const lanes = useMemo(() => laneBelts === null ? null : { belts: laneBelts, anchorBelt: editedLanes === undefined ? null : editedBelt, onAnchor: setAnchor }, [laneBelts, editedBelt, editedLanes]);
 
     const [frame, setFrame] = useState<SVGSVGElement | null>(null);
     const [size, setSize] = useState({ width: 0, height: 0 });
@@ -225,7 +239,7 @@ export function LayoutView({ machines, inserters, belts, chests, drills, orbits,
                     onClickCapture={event => { if (drag.current?.moved) event.stopPropagation(); }}>
                     <LayoutGround x={transform.x} y={transform.y} zoom={transform.zoom} />
                     <g transform={`translate(${transform.x} ${transform.y}) scale(${transform.zoom})`}>
-                        <LayoutPicture layout={layout} names={names} tints={tints} selection={selection} onSelect={onSelect} combinators={combinators} />
+                        <LayoutPicture layout={layout} names={names} tints={tints} selection={selection} onSelect={onSelect} combinators={combinators} lanes={lanes} />
                     </g>
                 </svg>
                 <Box sx={{ position: 'absolute', left: 8, bottom: 8, display: 'flex', flexDirection: 'column', bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
@@ -234,6 +248,9 @@ export function LayoutView({ machines, inserters, belts, chests, drills, orbits,
                     <IconButton size="small" aria-label="Fit View" title="Fit View" onClick={fit}><CenterFocusStrong fontSize="small" /></IconButton>
                 </Box>
             </Box>
+            {laneEditor !== null && editedBelt !== null && editedLanes !== undefined && anchor !== null && (
+                <LayoutLanePopover beltId={editedBelt} belt={editedLanes} editor={laneEditor} anchor={anchor} followed={transform} onClose={() => onSelectionChange(null)} />
+            )}
             <Legend layout={layout} regions={tints} belts={belts} combinators={combinatorList} selectedCombinator={selectedCombinator}
                 onSelectCombinator={combinator => onSelectionChange({ kind: combinator.kind, id: combinator.ids[0] })} />
             <Notes layout={layout} chests={chests} />

@@ -8,6 +8,7 @@ import { parseConfig } from "../config/loader";
 import { assertOutputTransferGenerationSupported } from "../config/output-transfer-generation";
 import { validateCopies } from "../config/copies-validator";
 import { Config } from "../config/schema";
+import { withUnstatedLaneEnds } from "../entities/traits/lane-ends";
 import Fraction, { fraction } from "../data-types/fraction";
 import { Belt, Entity, handSizeFor, isNeverBlockingSink, Machine, ReadableEntityRegistry } from "../entities";
 import { laneItemsPerSecond, laneStackFor } from "../entities/belt/belt-speed";
@@ -283,10 +284,10 @@ function checkConfig(config: Config): void {
     checkBeltCounts(registry);
 }
 
-/** Configs derived from a config as the search derives them, each a new object: the belts' supply turned over, one copy more */
+/** Configs derived from a config as the search derives them, each a new object: the belts backed up, one copy more */
 function derivedConfigsOf(config: Config): Config[] {
     return [
-        { ...config, overrides: { ...config.overrides, backed_up_belts: config.overrides?.backed_up_belts !== true } },
+        withUnstatedLaneEnds(config, "dead_end"),
         { ...config, setpoint: { ...config.setpoint, copies: (config.setpoint.copies ?? 1) + 1 } },
     ];
 }

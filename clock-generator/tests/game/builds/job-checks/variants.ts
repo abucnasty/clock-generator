@@ -14,12 +14,13 @@ const quiet = { log() { }, info() { }, warn() { }, error() { }, debug() { } };
 const selectedOf = (generated: ClockAlternativesResult): ClockAlternative => generated.alternatives[generated.selected_index];
 const byMaker = (generated: ClockAlternativesResult, maker: string): ClockAlternative => generated.alternatives.find(alternative => alternative.maker === maker)!;
 
-// Agricultural science with its belts backed up (AGRICULTURAL_SCIENCE_250_BACKED_UP). Three inserters (1, 2 and 11) take bioflux off a belt
+// Agricultural science with its belts backed up, which is the sample as it is (config-AGRICULTURAL_SCIENCE_250, whose checks in samples.ts
+// these run beside: each lane of the sample states a dead end). Three inserters (1, 2 and 11) take bioflux off a belt
 // for their biochambers, and the nutrients the biochambers burn, with the nutrients on their near lane. The batched swings do not hold the
 // expected output, so they are made again with room for the hand a hand of fuel delays (6 ticks each). That clock does not hold either,
 // and a clock made again is kept only where it holds: the batched swings are offered without the room, and their description names none.
 // The words of the room on a clock that keeps it: fuel-on-near-lane.generation.test.ts.
-const agriculturalBackedUp: JobCheck[] = [{
+export const agriculturalBackedUp: JobCheck[] = [{
     name: 'offers the batched swings for a backed-up belt with no room for fuel, and their description names none',
     run: ({ generated }) => {
         const batched = byMaker(generated, 'planned-belt-slack');
@@ -251,7 +252,6 @@ const fractionalSwings: JobCheck[] = [{
 }];
 
 export const VARIANT_CHECKS: Record<string, JobCheck[]> = {
-    'variants-AGRICULTURAL_SCIENCE_250_BACKED_UP': agriculturalBackedUp,
     'variants-PROCESSING_UNIT_80_CIRCUIT_EXPORT_BACKED_UP': circuitExportBackedUp,
     'variants-INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK_BACKED_UP': inserterCraftingBackedUp,
     'variants-AUTOMATION_SCIENCE_240_ONE_OUTPUT_SWING': automation,
