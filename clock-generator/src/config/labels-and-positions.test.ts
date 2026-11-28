@@ -13,7 +13,7 @@ describe("labels and positions in a config", () => {
     it("are kept as the config gives them", () => {
         const parsed = ConfigSchema.parse({
             ...base,
-            machines: [{ id: 1, recipe: "iron-plate", productivity: 0, crafting_speed: 1, type: "furnace",
+            machines: [{ id: 1, recipe: "iron-plate", productivity: 0, crafting_speed: 1,
                 prototype: "electric-furnace", quality: "legendary", recipe_quality: "normal", position: at }],
             inserters: [{ source: { type: "chest", id: 1 }, sink: { type: "machine", id: 1 }, position: at, direction: 4 }],
             chests: [

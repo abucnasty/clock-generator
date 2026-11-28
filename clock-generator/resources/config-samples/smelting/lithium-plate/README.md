@@ -12,11 +12,6 @@ is 80 plates a second from one copy.
 
 - `lithium-plate-80-silo-chest.scaffold`: the build's blueprint as given by abucnasty on 2026-10-21. The infinity chests, infinity pipes, loader and disposal
   chest are part of it.
-- `lithium-plate-80-silo-chest.sidecar-export.json`: what Sidecar 0.14.0 exports from the blueprint built in the harness game, taken again on
-  2026-10-23, which also exports each machine's `prototype` and quality and each entity's position (and an inserter's or
-  drill's direction), and marks inserters 15 and 16 (`drop_capture` on their sinks) as dropping onto a belt that
-  side-loads onto another. The game test `tests/game/mechanics/belt-drop/sideload-drop-capture.game.test.ts` takes it
-  from the scaffold again and holds it equal to this file.
 - `lithium-plate-80-silo-chest.json`: an earlier export of the same build as the paste reads it (each list through its schema), with the
   target added. It is the export above without the qualities, positions and directions; each machine's `prototype`
   (`cryogenic-plant` for machines 1 and 2 and `electric-furnace` for 3 to 8) was taken from the scaffold and is the one

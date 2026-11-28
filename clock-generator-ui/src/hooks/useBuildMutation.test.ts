@@ -25,10 +25,12 @@ const run = <T>(action: () => T): T => { let value!: T; act(() => { value = acti
 /** Awaits an async action in React's scope, so the updates it makes when it settles are committed */
 const settle = <T>(promise: Promise<T>) => act(() => promise);
 const tick = () => act(() => Promise.resolve());
+/** The form the worker loads: without the format of its saved text */
+const unmarked = (config: unknown) => { const { format: _format, ...form } = config as Record<string, unknown>; void _format; return form; };
 beforeEach(() => {
     localStorage.clear(); sessionStorage.clear(); ask.mockReset();
     // the saved build's check gives back the build as it loads it, its machines' former types read
-    ask.mockImplementation(async (query: { kind: string; config?: unknown }) => query.kind === 'saved-config' ? { problem: null, form: query.config } : null);
+    ask.mockImplementation(async (query: { kind: string; config?: unknown }) => query.kind === 'saved-config' ? { problem: null, form: unmarked(query.config) } : null);
     notify.mockReset(); notify.mockReturnValue(1);
 });
 
@@ -56,12 +58,12 @@ function savedBuilds() {
 
 /** Another tab saves `form` over the open build */
 const changedElsewhere = (form: ConfigFormData) => act(() => {
-    window.dispatchEvent(new StorageEvent('storage', { storageArea: localStorage, key: buildKey(latest().library.currentId), newValue: JSON.stringify(form) }));
+    window.dispatchEvent(new StorageEvent('storage', { storageArea: localStorage, key: buildKey(latest().library.currentId), newValue: JSON.stringify({ format: 1, ...form }) }));
 });
 
 /** Starts up on the saved build, its check waiting, while another tab saves it with 4 copies, which starts loading */
 function startupOvertaken(before: () => void) {
-    localStorage.setItem(buildKey('default'), JSON.stringify(saved));
+    localStorage.setItem(buildKey('default'), JSON.stringify({ format: 1, ...saved }));
     const initial = pendingCheck(), hook = mount();
     changedElsewhere(withCopies(saved, 4));
     const newer = pendingCheck();
@@ -76,7 +78,7 @@ describe('async build loading ownership', () => {
         if (outcome === 'failed') initial.reject(new Error('Old worker failure'));
         await tick();
         expect(latest().isLoaded).toBe(false);
-        expect(localStorage.getItem(buildKey('default'))).toBe(JSON.stringify(saved));
+        expect(localStorage.getItem(buildKey('default'))).toBe(JSON.stringify({ format: 1, ...saved }));
         expect(latest().loadError).toBeNull();
         expect(latest().loadNotice).toBeNull();
         newer.resolve(null);
@@ -97,7 +99,7 @@ describe('async build loading ownership', () => {
     });
 
     it('keeps the replayed startup validation current after effect cleanup', async () => {
-        localStorage.setItem(buildKey('default'), JSON.stringify(saved));
+        localStorage.setItem(buildKey('default'), JSON.stringify({ format: 1, ...saved }));
         // StrictMode starts the check, cleans it up, and starts it again
         const older = pendingCheck(), newer = pendingCheck();
         mount({ reactStrictMode: true });
@@ -226,7 +228,7 @@ describe('authoritative build mutation with whole-build Undo', () => {
     });
 
     it('does not accept delayed initial saved data after a build switch away and back', async () => {
-        localStorage.setItem(buildKey('default'), JSON.stringify(saved));
+        localStorage.setItem(buildKey('default'), JSON.stringify({ format: 1, ...saved }));
         const check = pendingCheck(), hook = mount(), initial = hook.captureBuildMutation();
         const meta = hook.library.currentMeta;
         act(() => { hook.library.newBuild(); hook.library.restore({ meta, form: initial.form }); });

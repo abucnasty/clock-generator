@@ -1,4 +1,5 @@
 {
+  "format": 1,
   "setpoint": {
     "item": "low-density-structure",
     "items_per_second": 240,

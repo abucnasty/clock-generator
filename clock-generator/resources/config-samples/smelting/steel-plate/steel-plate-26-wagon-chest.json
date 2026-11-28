@@ -1,4 +1,5 @@
 {
+  "format": 1,
   "setpoint": {
     "item": "steel-plate",
     "items_per_second": 26,

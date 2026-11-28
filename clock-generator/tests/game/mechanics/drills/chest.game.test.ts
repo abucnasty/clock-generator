@@ -60,7 +60,7 @@ function chestBlueprint(variant: ChestCase): string {
 export function chestConfig(slots: number, productivity: number, speed_bonus: number): Config {
     return ConfigSchema.parse({
         setpoint: {item: "iron-plate", items_per_second: 1, copies: 1}, belts: [], inserters: [],
-        machines: [{id: 1, recipe: "iron-plate", crafting_speed: 1, productivity: 0, type: "furnace"}],
+        machines: [{id: 1, recipe: "iron-plate", crafting_speed: 1, productivity: 0, prototype: "electric-furnace"}],
         drills: {configs: [{id: 1, type: "big-mining-drill", mined_item_name: "iron-ore", speed_bonus, productivity, target: {type: "chest", id: 1}}]},
         chests: [{id: 1, type: "buffer-chest", storage_size: slots, item_filter: "iron-ore"}],
     });

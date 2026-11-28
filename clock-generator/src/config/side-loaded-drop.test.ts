@@ -15,7 +15,7 @@ const gears = (mark?: object): Config => ConfigSchema.parse({
     belts: [{ id: 1, type: "turbo-transport-belt", lanes: [{ ingredient: "iron-gear-wheel", stack_size: 4 }] }],
     chests: [{ id: 1, type: "infinity-chest", item_filter: [{ item_name: "iron-plate", request_count: 100 }] }],
 });
-const MARK = { status: "side-loaded", tiles: 3, sidecar_version: "0.13.0" };
+const MARK = { status: "side-loaded", tiles: 3 };
 const warnings = () => {
     const warned: string[] = [];
     return { warned, logger: { log() { }, warn: (message: string) => { warned.push(message); }, error() { }, debug() { } } };

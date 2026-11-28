@@ -1,4 +1,4 @@
-import { canonicalRate, rateText } from 'clock-generator/light';
+import { canonicalRate, rateText, withConfigFormat } from 'clock-generator/light';
 import type { Config } from 'clock-generator/browser';
 import { cleanName, recipeTitle } from './buildLibrary';
 import { formatNumberText } from './numberText';
@@ -8,7 +8,8 @@ import { countOf } from './undoSnapshot';
  * Share links: `{origin}{pathname}#build=1.{data}`, where `{data}` is base64url (no padding) of the deflate-raw bytes
  * of the UTF-8 of `JSON.stringify({ name, config })`. The part after `#` never reaches the server. The browser's own
  * CompressionStream does the compression (Chrome and Edge 103+, Firefox 113+, Safari 16.4+), so there is no library.
- * The `1` versions only this wrapper; the build inside is read and checked as a build file is, which migrates old ones.
+ * The `1` versions only this wrapper; the build inside carries the configuration's own `format` and is read and checked as
+ * a build file is, which refuses one of another format.
  */
 
 const SHARE_PARAM = 'build';
@@ -24,8 +25,6 @@ export interface SharedBuild {
     /** The sender's name for it; null when it is named after its target recipe */
     name: string | null;
     config: Config;
-    /** Which entities held the Never on override, which is removed, and now use Auto; null when none did */
-    never_note: string | null;
 }
 
 type ShareProblem = 'broken' | 'newer-version' | 'too-big' | 'unsupported';
@@ -88,7 +87,7 @@ async function inflate(bytes: Uint8Array, limit: number): Promise<Uint8Array | '
 
 /** The link that carries the build; `base` is the page's address without its hash */
 export async function encodeShareLink(payload: { name: string | null; config: Config }, base: string): Promise<string> {
-    const json = JSON.stringify({ name: payload.name, config: canonicalRate(payload.config) });
+    const json = JSON.stringify({ name: payload.name, config: withConfigFormat(canonicalRate(payload.config)) });
     const data = toBase64Url(await deflate(new TextEncoder().encode(json)));
     return `${base}#${SHARE_PARAM}=${SHARE_VERSION}.${data}`;
 }
@@ -181,8 +180,8 @@ export function shareInvalidMessage(engineMessage: string): string {
     return `The build in this share link has a problem, so nothing was opened: ${engineMessage}`;
 }
 
-export function sharedOpenedMessage(name: string, note: string | null = null): string {
-    return `Shared build opened: ${name}.${note === null ? '' : ` ${note}`}`;
+export function sharedOpenedMessage(name: string): string {
+    return `Shared build opened: ${name}.`;
 }
 
 /** Where the shared build goes, said in the dialog that asks first */

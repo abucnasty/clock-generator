@@ -1,24 +1,24 @@
 import { describe, expect, it } from 'vitest';
-import ironCar from '../../../clock-generator/resources/config-samples/smelting/iron-plate/iron-plate-80-car-chest.sidecar-export.json?raw';
-import lithiumSilo from '../../../clock-generator/resources/config-samples/smelting/lithium-plate/lithium-plate-80-silo-chest.sidecar-export.json?raw';
-import steelWagon from '../../../clock-generator/resources/config-samples/smelting/steel-plate/steel-plate-26-wagon-chest.sidecar-export.json?raw';
+// the exports of the Sidecar mod that the engine's import tests keep as reads of the three builds
+import ironCar from '../../../clock-generator/src/import/fixtures/assemble/reads/iron.json?raw';
+import lithiumSilo from '../../../clock-generator/src/import/fixtures/assemble/reads/lithium.json?raw';
+import steelWagon from '../../../clock-generator/src/import/fixtures/assemble/reads/steel.json?raw';
 import type { Config } from 'clock-generator/browser';
 import { ConfigPaths } from '../../../clock-generator/dist/config/config-paths.js';
 import { loadConfigFromFile } from '../../../clock-generator/dist/config/loader.js';
 import { configToFormData } from './configForm/configMapping';
 import { layoutOf, type LayoutLists } from './layoutOf';
 import { tileSizeOf } from './layoutSizes';
-import { readSidecarExport } from './sidecarExport';
 
 const listsOfForm = (config: Config): LayoutLists => {
     const form = configToFormData(config);
     return { machines: form.machines, drills: form.drills?.configs ?? [], inserters: form.inserters, belts: form.belts, chests: form.chests };
 };
-// a Sidecar export's lists as `readSidecarExport` gives them: raw entries, which have no id for an inserter
+// a Sidecar export's lists as they are: raw entries, which have no id for an inserter; its drills under `configs`
 const listsOfExport = (text: string): LayoutLists => {
-    const read = readSidecarExport(text);
-    if (read.kind !== 'export') throw new Error('not an export');
-    return read as unknown as LayoutLists;
+    const read = JSON.parse(text) as Record<string, unknown> & { drills?: { configs?: unknown[] } | unknown[] };
+    const drills = Array.isArray(read.drills) ? read.drills : Array.isArray(read.drills?.configs) ? read.drills.configs : [];
+    return { machines: read.machines, drills, inserters: read.inserters, belts: read.belts ?? [], chests: read.chests ?? [] } as unknown as LayoutLists;
 };
 
 interface Counts {

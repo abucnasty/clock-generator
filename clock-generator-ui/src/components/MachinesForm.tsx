@@ -29,7 +29,6 @@ import { MachineFactsAccordion } from './MachineFactsAccordion';
 import { MachineProductionSummary } from './MachineProductionSummary';
 import { OutputTransferPanel } from './OutputTransferPanel';
 import { InputRoutesPanel } from './InputRoutesPanel';
-import { SidecarModLink } from './IntroCard';
 import { SortableList } from './SortableList';
 import { AddButton } from './AddRow';
 import { EntityRow, EntityRowActions, EntityRowTop } from './EntityRow';
@@ -113,10 +112,6 @@ function MachinesFormComponent({
                         {common.length > 0 && <Typography variant="body2" sx={{ mb: 1 }}>
                             All {machines.length} machines: {common.join(' · ')}. Each machine's values remain editable.
                         </Typography>}
-                        <Typography variant="body2" sx={{ mb: 1 }}>
-                            The <SidecarModLink /> copies the crafting speeds of your build: then click Paste from
-                            Factorio.
-                        </Typography>
                         <Typography variant="body2" sx={{ mb: 1 }}>
                             Without it, hover over a machine in Factorio and run this command. A /c command turns off
                             achievements for that save.

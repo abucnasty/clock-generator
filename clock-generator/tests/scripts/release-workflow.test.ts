@@ -116,3 +116,15 @@ describe('release.yml', () => {
         });
     });
 });
+
+// The sidecar mod's version is written twice: in its info.json and in the newest entry of its changelog.txt. A release
+// that bumps one and not the other ships a mod whose changelog does not name it.
+describe('the sidecar mod version', () => {
+    const sidecar = path.resolve(__dirname, '../../../clock-generator-sidecar');
+
+    it('is the same in info.json and in the newest entry of changelog.txt', () => {
+        const version = (JSON.parse(fs.readFileSync(path.join(sidecar, 'info.json'), 'utf8')) as { version: string }).version;
+        const changelog = fs.readFileSync(path.join(sidecar, 'changelog.txt'), 'utf8');
+        expect(changelog.match(/^Version: (\S+)/m)?.[1]).toBe(version);
+    });
+});

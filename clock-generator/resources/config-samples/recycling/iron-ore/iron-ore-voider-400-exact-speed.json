@@ -1,4 +1,5 @@
 {
+  "format": 1,
   "setpoint": {
     "item": "iron-ore",
     "items_per_second": 400,

@@ -3,7 +3,6 @@ import type { Config, RuleSet } from 'clock-generator/browser';
 import { ChestType } from 'clock-generator/light';
 import { withDefaultPickupType } from '../pickupGeometry';
 import { isContainerChest } from './formData';
-import { formSlotFilters } from '../containerSlotFilters';
 import type {
     BeltLaneFormData,
     ChestFormData,
@@ -94,8 +93,7 @@ export function configToFormData(imported: Config, prototypeSource?: MachineForm
         chests: (imported.chests ?? []).map((raw): ChestFormData => {
             // a car, a tank, a cargo wagon or a rocket silo is kept as it is: the form does not edit it yet
             if (raw.type !== undefined && raw.type !== ChestType.BUFFER_CHEST && raw.type !== ChestType.INFINITY_CHEST) {
-                return { ...raw, ...('slot_filters' in raw && raw.slot_filters && { slot_filters: formSlotFilters(raw.slot_filters) }),
-                    _uuid: crypto.randomUUID() } as ChestFormData;
+                return { ...raw, _uuid: crypto.randomUUID() } as ChestFormData;
             }
             const c = raw as { type?: string; id: number; storage_size?: number; remove_unfiltered_items?: boolean; prototype?: string;
                 position?: { x: number; y: number }; item_filter: string | { item_name: string; request_count: number }[] };

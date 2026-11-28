@@ -17,7 +17,7 @@ interface ImpFixture {
     clock_windows: Record<string, { start: number; end: number }[]>;
 }
 const fixture = JSON.parse(readFileSync(path.join(__dirname, "fixtures/imp-sampled-output.json"), "utf8")) as ImpFixture;
-/** The archived config with the infinite ends of its sulfur and coal lanes stated (belts 1 and 3); the file keeps its archived bytes */
+/** The archived config with the infinite ends of its sulfur and coal lanes stated (belts 1 and 3); the file keeps its archived bytes, its setpoint in the current spelling */
 function archivedConfig(): unknown {
     const config = structuredClone(fixture.config) as { belts: { id: number; lanes: { lane_end?: { kind: string } }[] }[] };
     for (const belt of config.belts) if (belt.id === 1 || belt.id === 3) belt.lanes[0].lane_end = { kind: "infinite" };
@@ -47,7 +47,7 @@ describe("the archived imp plan's sampled output shortfall", () => {
     });
 
     it("preserves the recovered planning arithmetic and exact 96-tick clock", () => {
-        expect(sha(fixture.config)).toBe("1d228e72d35b157bfa5cc1a4468ddd0080d30219287b1564855caf2784f38dae");
+        expect(sha(fixture.config)).toBe("021bf64bc32c008f4fecb2a93421d3ae55b1c4ca2a2efd2cc2bae5b35ef88f27");
         expect(sha(fixture.clock_windows)).toBe("ba6f0240839f99ff3f285ba6d4d8edbd7841292cf0b720b7f4bc023637d5f09d");
         expect(fixture.used_lcm).toBe(1);
         expect(fixture.used_terminal_swing_count).toBe(1);

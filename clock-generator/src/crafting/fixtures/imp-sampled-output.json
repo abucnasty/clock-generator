@@ -7,8 +7,8 @@
     "contract": "Behavior: exact explicit archived plan; no selection or new native mechanic assertion"
   },
   "config": {
-    "target_output": {
-      "recipe": "chemical-science-pack",
+    "setpoint": {
+      "item": "chemical-science-pack",
       "items_per_second": 10,
       "copies": 1
     },

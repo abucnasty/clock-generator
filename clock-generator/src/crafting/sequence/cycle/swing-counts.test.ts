@@ -26,8 +26,8 @@ describe("the transfers of a cycle", () => {
     const config = {
         setpoint: { item: "electronic-circuit", items_per_second: 10, copies: 1 },
         machines: [
-            { id: 1, recipe: "copper-cable", productivity: 0, crafting_speed: 1, type: "machine" },
-            { id: 2, recipe: "electronic-circuit", productivity: 0, crafting_speed: 1, type: "machine" },
+            { id: 1, recipe: "copper-cable", productivity: 0, crafting_speed: 1, prototype: "electromagnetic-plant" },
+            { id: 2, recipe: "electronic-circuit", productivity: 0, crafting_speed: 1, prototype: "electromagnetic-plant" },
         ],
         belts: [
             { id: 1, type: "turbo-transport-belt", lanes: [{ ingredient: "copper-plate", stack_size: 4, lane_end: { kind: "infinite" } }, { ingredient: "iron-plate", stack_size: 4, lane_end: { kind: "infinite" } }] },
@@ -59,8 +59,8 @@ describe("the transfers of a cycle through belts", () => {
     const configWithCableBelt = (cable_belt: object) => ({
         setpoint: { item: "electronic-circuit", items_per_second: 10, copies: 1 },
         machines: [
-            { id: 1, recipe: "copper-cable", productivity: 0, crafting_speed: 1, type: "machine" },
-            { id: 2, recipe: "electronic-circuit", productivity: 0, crafting_speed: 1, type: "machine" },
+            { id: 1, recipe: "copper-cable", productivity: 0, crafting_speed: 1, prototype: "electromagnetic-plant" },
+            { id: 2, recipe: "electronic-circuit", productivity: 0, crafting_speed: 1, prototype: "electromagnetic-plant" },
         ],
         belts: [
             { id: 1, type: "turbo-transport-belt", lanes: [{ ingredient: "copper-plate", stack_size: 4, lane_end: { kind: "infinite" } }, { ingredient: "iron-plate", stack_size: 4, lane_end: { kind: "infinite" } }] },
@@ -187,7 +187,7 @@ describe("EntityTransferCountMap.divide", () => {
     it("divides the hands a machine needs along with the hands planned", () => {
         const config = {
             setpoint: { item: "electronic-circuit", items_per_second: 10, copies: 1 },
-            machines: [{ id: 1, recipe: "electronic-circuit", productivity: 0, crafting_speed: 1, type: "machine" }],
+            machines: [{ id: 1, recipe: "electronic-circuit", productivity: 0, crafting_speed: 1, prototype: "electromagnetic-plant" }],
             belts: [{ id: 1, type: "turbo-transport-belt", lanes: [{ ingredient: "copper-cable", stack_size: 4, lane_end: { kind: "infinite" } }, { ingredient: "iron-plate", stack_size: 4, lane_end: { kind: "infinite" } }] }],
             inserters: [{ id: 1, source: { type: "belt", id: 1 }, sink: { type: "machine", id: 1 }, stack_size: 16 }],
         };
