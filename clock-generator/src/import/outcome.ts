@@ -18,18 +18,20 @@ export interface ImportInputs {
     setpoint?: { item?: string; copies?: number };
 }
 
-export type QuestionKind = "drill-ore" | "lane-item" | "lane-sharing";
+export type QuestionKind = "drill-ore" | "lane-item" | "lane-export" | "lane-sharing";
 
 export interface ImportQuestion {
-    /** `drill-ore:<drill>`, `lane-item:<line>:<lane>`, `lane-sharing:<line>`: entity numbers of the blueprint, never an id */
+    /** `drill-ore:<drill>`, `lane-item:<line>:<lane>`, `lane-export:<line>:<lane>`, `lane-sharing:<line>`: entity numbers of the blueprint, never an id */
     key: string;
     kind: QuestionKind;
     /**
      * The entity asked about and its lane. `label` names it by its place in a list that only the blueprint fixes, from 1:
-     * "Drill 2" among the drills, "Belt 3" among the belt lines that inserters reach. It is never a config id.
+     * "Drill 2" among the drills, "Belt 3" among the belt lines that inserters reach. It is never a config id. A
+     * `lane-export` question also names the item of the lane (empty while that item is asked), and its answer is the number of items a
+     * second that leave the lane, as the text of a number above 0.
      */
-    subject: { label: string; entity_number: number; lane?: 1 | 2 };
-    /** Sorted; for a sharing question the two ways */
+    subject: { label: string; entity_number: number; lane?: 1 | 2; item?: string };
+    /** Sorted; for a sharing question the two ways; none for a rate question */
     candidates: string[];
 }
 
