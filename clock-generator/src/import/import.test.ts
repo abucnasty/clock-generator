@@ -615,6 +615,32 @@ describe("the sharing of a line", () => {
     });
 });
 
+describe("the other lane of a line that no drop or loader feeds", () => {
+    /** A belt line of four pieces with a taker into a machine that makes logistic science packs and a taker into a chest */
+    function oneLeft(): string {
+        const belt = (n: number, y: number) => ({ entity_number: n, name: "transport-belt", position: { x: 0.5, y }, direction: 8 });
+        const entities: Raw[] = [
+            belt(1, 0.5), belt(2, 1.5), belt(3, 2.5), belt(4, 3.5),
+            { entity_number: 5, name: "stack-inserter", position: { x: 1.5, y: 0.5 }, direction: 12 },
+            { entity_number: 6, name: "assembling-machine-3", position: { x: 3.5, y: 0.5 }, recipe: "logistic-science-pack" },
+            { entity_number: 7, name: "stack-inserter", position: { x: 1.5, y: 3.5 }, direction: 12 },
+            { entity_number: 8, name: "steel-chest", position: { x: 2.5, y: 3.5 } },
+        ];
+        return pack({ blueprint: { item: "blueprint", version: VERSION_2, entities } });
+    }
+    const at = (answers: Record<string, string>) => buildOf(importBlueprint(oneLeft(), { ...NO_RESEARCH, answers }, DATA), "one item left");
+
+    it("gives the belt both items after the first lane is answered, as the dialog asks the import again with the answers so far", () => {
+        const none = at({});
+        expect(none.questions.map((q) => [q.key, q.candidates])).toEqual([["lane-item:1:1", ["inserter", "transport-belt"]], ["lane-item:1:2", ["inserter", "transport-belt"]]]);
+        const one = at({ "lane-item:1:1": "inserter" });
+        expect(one.questions).toEqual([]);
+        expect(one.belts.map((b) => b.lanes.map((l) => l.ingredient))).toEqual([["inserter", "transport-belt"]]);
+        // the outcome holds no field that only repeats the answers given
+        expect(one).toEqual(at({ "lane-item:1:1": "inserter", "lane-item:1:2": "transport-belt" }));
+    });
+});
+
 describe("notes", () => {
     it("lists an entity off the grid as a note, and still gives the build", () => {
         const build = changed("steel", (es) => { (entity(es, 8).position as Point).x += 0.25; });
