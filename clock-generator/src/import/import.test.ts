@@ -14,6 +14,7 @@ import path from "path";
 import pako from "pako";
 import { describe, expect, it } from "vitest";
 import { ConfigSchema } from "../config/schema";
+import { beltPickupSinkRefusal } from "../config/inserter-scope";
 import { pickupCaptureProblem } from "../config/pickup-capture";
 import type { FactorioData } from "../data/factorio-data-types";
 import { applyResearch } from "./apply-research";
@@ -811,6 +812,17 @@ describe("a throttle: an inserter from a belt into an infinity chest that remove
             "note unread:lane-end 1 lane 1",
             "rows 1=b1 2=b1 3=b1 4=b1 5=b1 6=b1 30=i2 31=c2",
         ]);
+    });
+
+    it("reads the four throttles of the processing unit circuit export scaffold, and the build has no belt pickup into a chest that the generator refuses", () => {
+        const text = read(path.join(ENGINE, "resources", "config-samples", "intermediates", "processing-unit", "processing-unit-80-circuit-export.scaffold")).trim();
+        const build = buildOf(importBlueprint(text, { ...NO_RESEARCH, answers: {}, setpoint: { item: "processing-unit", copies: 1 } }, DATA), "circuit export");
+        expect(build.questions).toEqual([]);
+        // the four throttles (97, 99, 107 and 109) and their chests (96, 100, 106 and 110) are in no row
+        for (const n of [96, 97, 99, 100, 106, 107, 109, 110]) expect(build.entities.find((e) => e.entity_number === n)!.row, `entity ${n}`).toBeUndefined();
+        const circuits = build.belts.filter((b) => b.lanes.some((l) => l.ingredient === "electronic-circuit"));
+        expect(circuits.map((b) => b.lanes.map((l) => l.lane_end))).toEqual([[{ kind: "infinite" }, { kind: "infinite" }]]);
+        expect(beltPickupSinkRefusal({ inserters: build.inserters, chests: build.chests, belts: build.belts })).toBeNull();
     });
 
     describe("keeps the inserter and the chest, with today's outcome, where", () => {
