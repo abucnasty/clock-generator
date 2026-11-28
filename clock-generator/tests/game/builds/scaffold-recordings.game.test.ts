@@ -8,6 +8,7 @@ import { encodeBlueprintFile } from "../../../src/blueprints/serde";
 import { ConfigPaths } from "../../../src/config/config-paths";
 import type { Config } from "../../../src/config";
 import { loadConfigFromFile } from "../../../src/config/loader";
+import { withUnstatedLaneEnds } from "../../../src/entities/traits/lane-ends";
 import { generateClockAlternatives } from "../../../src/crafting/generate-blueprint";
 import { builtCopies, clockWindowCycleTicks, HarnessOptions, HarnessResult, HarnessSession, partCopiesOf, recordInFactorio, Seed } from "../../../src/harness/factorio-harness";
 import { outputInserters, outputPerWindowCycle, recipesMaking } from "../../../src/harness/recording-output";
@@ -116,8 +117,8 @@ interface ScaffoldBuild {
     seed: Seed[];
     /** Ticks the build runs before it is seeded, so belts are full; the clock is not wired yet, so no window cycle runs in them */
     warmup_ticks: number;
-    /** The clock is made for backed-up belts (`overrides.backed_up_belts`), which is what a scaffold has */
-    backed_up_belts?: boolean;
+    /** The clock is made for backed-up belts (a dead end on each lane of the config that states no end), which is what a scaffold has */
+    backed_up?: boolean;
     /**
      * How many times the scaffold holds the config (default 1): a build of several copies that share belts. The harness is told
      * (`HarnessOptions.copies`) and wires the clock to every copy; what the build has to make in a window cycle and in the settle's
@@ -227,7 +228,7 @@ const BUILDS: Record<string, ScaffoldBuild> = {
     // Windows, clock 8de16d68): recorded 2026-11-11 at Factorio 2.1.24, 400 on each of the five copies in each of the 7
     // window cycles checked. Since windows on the four egg inserters (#818) the same clock is Takt Batches (997b3c3c), and the
     // entry is recorded from the staged start, as the build with belts that move is and as the judged start of the generator
-    // is (the harness does not read `backed_up_belts`: only the clock differs, and it is the same): the same start-up as that
+    // is (the harness does not read the lane ends: only the clock differs, and it is the same): the same start-up as that
     // build, judged the same way (from the first third of the samples on), 2026-11-18, Factorio 2.1.24. Its start before, a warm-up of 300 ticks and a seed of 200 eggs until steady state
     // and a minute more (4 window cycles), left copy 2 short in each of the 3 window cycles checked (768, 720, 720 of 800) and
     // copy 5 in the first (720) on this clock: a settling the minute does not show the end of, so the entry no longer starts there.
@@ -236,7 +237,7 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         config: ConfigPaths.AGRICULTURAL_SCIENCE_250,
         seed: [{ target: { recipe: "pentapod-egg" }, item: "pentapod-egg", count: 200 }],
         warmup_ticks: 300,
-        backed_up_belts: true,
+        backed_up: true,
         copies: 5,
         staged_start: {
             dips: [],
@@ -262,7 +263,7 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         config: ConfigPaths.AUTOMATION_SCIENCE_240,
         seed: [],
         warmup_ticks: 3600,
-        backed_up_belts: true,
+        backed_up: true,
         copies: 9,
     },
     "automation science with a belted buffer": {
@@ -292,7 +293,7 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         config: ConfigPaths.LOGISTIC_SCIENCE_240_DIRECT_INSERT,
         seed: [],
         warmup_ticks: 3600,
-        backed_up_belts: true,
+        backed_up: true,
     },
     // abucnasty's full build (2026-11-04): 22 legendary assemblers in two rows of 11 (6 tiles apart), 120 beacons and 10 infinity
     // chests, the hand-made clock removed. The config is one row: 240 a second over 11 copies; the build is two of them, 480 over 22.
@@ -325,7 +326,7 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         config: ConfigPaths.INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK,
         seed: [],
         warmup_ticks: 3600,
-        backed_up_belts: true,
+        backed_up: true,
         wake_ups_open: LOGISTIC_INSERTER_CRAFTING_WAKE_UPS_OPEN,
     },
     // The build of issue 98: two foundries, two electromagnetic plants and a cryogenic plant, 240 a second over three
@@ -431,7 +432,7 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         config: ConfigPaths.UTILITY_SCIENCE_120,
         seed: [],
         warmup_ticks: 3600,
-        backed_up_belts: true,
+        backed_up: true,
     },
     // abucnasty's two copies of the build (2026-11-10), 9 tiles apart in one row: each a legendary utility science assembler (4
     // legendary productivity modules, 10 legendary beacons: 63.0078) taking flying robot frames from one turbo belt and low density
@@ -450,7 +451,7 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         config: ConfigPaths.UTILITY_SCIENCE_120_PROCESSING_UNIT_AND_LDS_ON_ONE_BELT,
         seed: [],
         warmup_ticks: 3600,
-        backed_up_belts: true,
+        backed_up: true,
         copies: 2,
     },
     "low density structure": {
@@ -653,13 +654,12 @@ afterAll(async () => {
 }, 60_000);
 
 /** The clocks the values of nine builds belong to (scaffold-recordings-clock-pins.json); clock-controls.test.ts checks the selection against the record, and clock-belt.generation.test.ts the build with backed-up belts */
-const clockPins = readControls<{ cases: Record<string, { config: string; backed_up_belts: boolean; clock_sha256: string }> }>("scaffold-recordings-clock-pins.json").cases;
+const clockPins = readControls<{ cases: Record<string, { config: string; clock_sha256: string }> }>("scaffold-recordings-clock-pins.json").cases;
 
 test("every build with a pinned clock is a build of this file", () => {
     for (const [name, pin] of Object.entries(clockPins)) {
         expect(BUILDS[name], `${name} is in scaffold-recordings-clock-pins.json and not among the builds`).toBeDefined();
         expect(BUILDS[name].config, name).toBe((ConfigPaths as Record<string, string>)[pin.config]);
-        expect(!!BUILDS[name].backed_up_belts, name).toBe(pin.backed_up_belts);
     }
 });
 
@@ -679,13 +679,13 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
 
             const sample = await loadConfigFromFile(build.config);
             const loaded = build.setpoint ? { ...sample, setpoint: { ...sample.setpoint, ...build.setpoint } } : sample;
-            const config = build.backed_up_belts ? { ...loaded, overrides: { ...loaded.overrides, backed_up_belts: true } } : loaded;
+            const config = build.backed_up ? withUnstatedLaneEnds(loaded, "dead_end") : loaded;
             const blueprint = fs.readFileSync(build.scaffold, "utf-8").trim();
             // the build's own clock is kept and nothing is generated; else the clock the generator selects
             const generated = build.own_clock ? null : generateClockAlternatives(config, { logger: quiet });
             const selected = generated?.alternatives[generated.selected_index];
             if (selected) {
-            if (build.backed_up_belts) {
+            if (build.backed_up) {
                 expect(selected.belt, `the selected clock (${selected.label}) is made without belt pickup slack`).toEqual({ kind: "backed_up" });
             }
             // stable, but for a build with a deadlock risk: there a clock that holds its expected output is selected
@@ -834,7 +834,7 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
                 if (simulated_run) fs.writeFileSync(`${base}.simulated.json`, JSON.stringify(simulated_run));
                 fs.writeFileSync(`${base}.meta.json`, JSON.stringify({
                     name, label: selected?.label ?? "the build's own clock", verdict: selected?.verdict ?? null, period: window_cycle_ticks, expected,
-                    clock_windows: selected?.result.clock_windows ?? null, simulation_ticks: selected?.result.simulation_duration.ticks ?? null, backed_up_belts: !!build.backed_up_belts,
+                    clock_windows: selected?.result.clock_windows ?? null, simulation_ticks: selected?.result.simulation_duration.ticks ?? null, backed_up: !!build.backed_up,
                     staged_start: !!build.staged_start, issues: compared?.issues ?? [], config, harness_build: result.build,
                     harness_start: result.start, periods: window_cycles, steady, copies, expected_per_copy, rows, per_copy,
                 }, null, 1));

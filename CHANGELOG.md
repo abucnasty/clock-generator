@@ -23,6 +23,7 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 
 ### Removed
 - ui: the site no longer reads exports of the Clock Generator Sidecar mod
+- generation: a configuration that states backed_up_belts or non_moving_belts is refused: state the end of each lane instead
 
 ### Fixed
 - ui: the note on drops landing on each other follows output belts and partial copies, and says only what it checked

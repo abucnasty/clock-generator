@@ -20,8 +20,8 @@ import { droppedOntoSharedLanes, isNotChecked, sharedLanesNotChecked, type Share
  * (shared-lane-verdict.ts). A cause is written only where the run of the copies shows it; a loss is said in swings missed.
  */
 
-/** Where the end of a lane comes from: the lane states it, the config's `backed_up_belts` switch, an export lane, or the lane's role */
-export type LaneEndGivenBy = "lane" | "switch" | "export" | "role";
+/** Where the end of a lane comes from: the lane states it, an export lane, or the lane's role */
+export type LaneEndGivenBy = "lane" | "export" | "role";
 
 /** One lane of the build, as the result lists it once */
 export interface BuildLane {
@@ -31,7 +31,7 @@ export interface BuildLane {
     item: string;
     role: LaneRole | null;
     end: LaneEnd["kind"];
-    /** Whether the config states the end (on the lane, by the switch, as an export lane) or the lane's role gives it */
+    /** Whether the config states the end (on the lane, as an export lane) or the lane's role gives it */
     end_given_by: LaneEndGivenBy;
     sharing: LaneSharing;
     /** Items a second entering the lane at its upstream end */
@@ -236,7 +236,6 @@ function endGivenBy(config: Config, belt: Config["belts"][number], index: number
     const stated = listed[index];
     if (stated.lane_end !== undefined) return "lane";
     if (stated.consumption_per_second !== undefined) return "export";
-    if (config.overrides?.backed_up_belts !== undefined) return "switch";
     // a lane with no item has the end of the other lane of its belt
     const other = listed[1 - index];
     if (stated.ingredient === "" && other !== undefined && other.ingredient !== "") return other.lane_end !== undefined ? "lane" : other.consumption_per_second !== undefined ? "export" : "role";

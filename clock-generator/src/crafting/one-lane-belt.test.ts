@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { Config, ConfigSchema } from "../config/schema";
 import { OpenRange } from "../data-types";
 import { Entity } from "../entities";
-import { everyInputLaneIsDeadEnd } from "../entities/traits/lane-ends";
+import { everyInputLaneIsDeadEnd, withUnstatedLaneEnds } from "../entities/traits/lane-ends";
 import { laneFactsOfConfig } from "../entities/traits/build-traits";
 import { isDeadEnd } from "../entities/traits/lane-facts";
 import { backpressureHandTicks } from "./clock";
@@ -15,15 +15,15 @@ type Lane = Config["belts"][number]["lanes"][number];
 
 const iron = (fields: Partial<Lane> = {}): Lane => ({ ingredient: "iron-plate", stack_size: 1, ...fields });
 
-/** One machine fed by one inserter from belt 1, which has the lanes given; with `backed_up_belts` set as given */
-function configOf(lanes: Lane[], backed_up_belts?: boolean): Config {
-    return ConfigSchema.parse({
+/** One machine fed by one inserter from belt 1, which has the lanes given; with a dead end (`backed`) or an infinite end on each lane that states none, where `backed` is given */
+function configOf(lanes: Lane[], backed?: boolean): Config {
+    const config = ConfigSchema.parse({
         setpoint: { item: "iron-gear-wheel", items_per_second: 1, copies: 1 },
         machines: [{ id: 1, recipe: "iron-gear-wheel", crafting_speed: 1, productivity: 0 }],
         inserters: [{ id: 1, source: { type: "belt", id: 1 }, sink: { type: "machine", id: 1 } }],
         belts: [{ id: 1, type: "transport-belt", lanes }],
-        ...(backed_up_belts !== undefined && { overrides: { backed_up_belts } }),
     }) as Config;
+    return backed === undefined ? config : withUnstatedLaneEnds(config, backed ? "dead_end" : "infinite");
 }
 
 /** Whether every input lane of the config is a dead end, by the ends its lane facts give */
@@ -48,15 +48,15 @@ function pickupOf(config: Config) {
 
 describe("a belt that states one lane", () => {
     it("has one lane: its lane facts hold no fact for the lane it does not state", () => {
-        for (const backed_up_belts of [true, false, undefined]) {
-            const facts = laneFactsOfConfig(configOf([iron()], backed_up_belts));
+        for (const backed of [true, false, undefined]) {
+            const facts = laneFactsOfConfig(configOf([iron()], backed));
             expect(facts.lanesOf(1)).toHaveLength(1);
             expect(() => facts.of(1, 2)).toThrow("Lane 2 of belt 1 is not in the config");
         }
     });
 
-    it("is backed up where its lane is a dead end, stated, by the switch or by its role, and gets a clock for backed-up belts", () => {
-        // a lane an inserter takes from that states no end, in a config that states no switch, is an input lane: a dead end
+    it("is backed up where its lane is a dead end, stated on the lane, stated for the whole build or by its role, and gets a clock for backed-up belts", () => {
+        // a lane an inserter takes from that states no end is an input lane: a dead end
         for (const config of [configOf([iron({ lane_end: { kind: "dead_end" } })]), configOf([iron()], true), configOf([iron()])]) {
             expect(inputLanesAreDeadEnds(config)).toBe(true);
             expect(clockBelt(config)).toEqual({ kind: "backed_up" });
@@ -64,7 +64,7 @@ describe("a belt that states one lane", () => {
         }
     });
 
-    it("moves where its lane is an infinite end, stated or by the switch", () => {
+    it("moves where its lane is an infinite end, stated on the lane or for the whole build", () => {
         for (const config of [configOf([iron()], false), configOf([iron({ lane_end: { kind: "infinite" } })])]) {
             expect(inputLanesAreDeadEnds(config)).toBe(false);
             expect(clockBelt(config)).toEqual({ kind: "moving" });
@@ -83,7 +83,7 @@ describe("a belt that states one lane", () => {
 });
 
 describe("a belt that states two lanes", () => {
-    const two = (first: Lane, second: Lane, backed_up_belts?: boolean) => configOf([first, second], backed_up_belts);
+    const two = (first: Lane, second: Lane, backed?: boolean) => configOf([first, second], backed);
 
     it("is backed up only where both lanes are dead ends", () => {
         const dead_end = iron({ lane_end: { kind: "dead_end" } });
@@ -101,10 +101,10 @@ describe("a belt that states two lanes", () => {
         }
     });
 
-    it("keeps a stated lane with no item as a lane, with the end it states, the switch gives it or the other lane has", () => {
+    it("keeps a stated lane with no item as a lane, with the end it states, the build states for it or the other lane has", () => {
         const empty = (fields: Partial<Lane> = {}) => ({ ingredient: "", stack_size: 1, ...fields });
         const dead_end = iron({ lane_end: { kind: "dead_end" } });
-        // without the switch, a lane with no item that states no end has the end of the other lane
+        // a lane with no item that states no end has the end of the other lane
         expect(inputLanesAreDeadEnds(two(dead_end, empty()))).toBe(true);
         expect(clockBelt(two(dead_end, empty()))).toEqual({ kind: "backed_up" });
         expect(laneFactsOfConfig(two(dead_end, empty())).lanesOf(1).map(facts => isDeadEnd(facts))).toEqual([true, true]);
@@ -112,7 +112,7 @@ describe("a belt that states two lanes", () => {
         expect(inputLanesAreDeadEnds(two(dead_end, empty({ lane_end: { kind: "infinite" } })))).toBe(false);
         expect(inputLanesAreDeadEnds(two(dead_end, empty({ lane_end: { kind: "dead_end" } })))).toBe(true);
         expect(inputLanesAreDeadEnds(two(iron(), empty(), true))).toBe(true);
-        // the switch false gives every lane that states no end an infinite end, the lane with no item too
+        // an infinite end stated on every lane that states none reaches the lane with no item too
         expect(laneFactsOfConfig(two(dead_end, empty(), false)).lanesOf(1).map(facts => isDeadEnd(facts))).toEqual([true, false]);
     });
 });

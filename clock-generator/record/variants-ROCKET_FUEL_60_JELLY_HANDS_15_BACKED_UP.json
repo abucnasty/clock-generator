@@ -3,7 +3,7 @@
   "job": "variants-ROCKET_FUEL_60_JELLY_HANDS_15_BACKED_UP",
   "group": "variants",
   "name": "ROCKET_FUEL_60_JELLY_HANDS_15_BACKED_UP",
-  "config_sha256": "42c7e42fbc6a6bc34b281c1436c87b59e51f78d9228c1543e8b56c3fc621a2ca",
+  "config_sha256": "cec48b12d57fc5a6da0e0b70ca527094b024e723767e707af0ef918e996598fb",
   "job_results_sha256": "14763ea279c68e619a05aad8054a6ba2ec567e52ed9a8e9188760270213d26e5",
   "selected": "euclidean_swings",
   "selected_windows": {

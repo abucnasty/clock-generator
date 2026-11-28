@@ -548,23 +548,20 @@ it('passes on what was checked on the shared lanes of each clock, and every lane
     expect(Object.entries(clock.assumptions.machineOfInserter ?? {}).map(([id, machine]) => [Number(id), machine])).toEqual(expected);
 }, 30_000);
 
-describe('a build that states no lane end and no belt setting', () => {
-    /** The military sample with no lane end and no belt setting stated: the engine gives each lane the end of its role */
+describe('a build that states no lane end', () => {
+    /** The military sample with no lane end stated: the engine gives each lane the end of its role */
     const statingNothing = () => {
         const sample = JSON.parse(militarySample) as Config;
-        const { backed_up_belts: _switch, ...overrides } = sample.overrides ?? {};
-        void _switch;
         const belts = sample.belts.map(belt => ({ ...belt, lanes: belt.lanes.map(lane => {
             const stated: { lane_end?: unknown } = { ...lane };
             delete stated.lane_end;
             return stated;
         }) }));
-        return { ...sample, overrides, belts } as Config;
+        return { ...sample, belts } as Config;
     };
 
-    it('reads as backed up, loaded and generated with the belt setting untouched', async () => {
+    it('reads as backed up, loaded and generated', async () => {
         const loaded = formDataToConfig(readSavedConfig(serializeConfig(configToFormData(statingNothing())))!);
-        expect(loaded.overrides?.backed_up_belts).toBeUndefined();
         const { primary } = await primaryOf(loaded);
         expect(primary?.alternatives.map(it => [it.beltLabel, it.backedUpBelts, it.replayReadsConfig])).toEqual([['backed-up', true, true]]);
     }, 30_000);
@@ -604,7 +601,6 @@ describe("a clock's replay", () => {
 
     it('gives a clock kept before the belt it was made for on every lane, a lane that states its end too', async () => {
         const request = timelineRequestFor(mixed, { ...clock, beltLabel: 'backed-up', backedUpBelts: true }, 'clock');
-        expect(request?.config.overrides?.backed_up_belts).toBeUndefined();
         expect(await endsOf(request!.config)).toEqual([['dead_end'], ['dead_end'], ['dead_end']]);
     });
 });
@@ -907,6 +903,15 @@ describe("the format key at the site's doors", () => {
         // an old file the schema would refuse anyway is still refused for its format
         expect(await failed({ kind: 'config-file', config: { target_output: { recipe: 'iron-gear-wheel' } } })).toBe('old');
         expect(REFUSED_CONFIG_ERRORS.old).not.toBe(REFUSED_CONFIG_ERRORS.newer);
+    });
+
+    it('refuses a build file of this format that states a belt setting of the overrides, and says to state the end of each lane', async () => {
+        for (const overrides of [{ backed_up_belts: true }, { backed_up_belts: false }, { non_moving_belts: true }]) {
+            const key = Object.keys(overrides)[0];
+            const response = await send({ type: 'query', requestId: 92, query: { kind: 'config-file', config: { format: 1, ...build, overrides } } });
+            expect(response.type, key).toBe('query-failed');
+            expect((response as { message: string }).message, key).toContain(`\`overrides.${key}\` is not read. State the end of each lane instead`);
+        }
     });
 
     it('loads a saved build of this format, and refuses one without the key or of a newer format', async () => {

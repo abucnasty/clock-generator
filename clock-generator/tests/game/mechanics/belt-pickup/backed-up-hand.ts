@@ -2,6 +2,7 @@ import path from "path";
 import { expect } from "vitest";
 import { Config } from "../../../../src/config";
 import { loadConfigFromFile } from "../../../../src/config/loader";
+import { withEveryLaneEnd } from "../../../../src/entities/traits/lane-ends";
 import { SimulationContext } from "../../../../src/crafting/sequence/simulation-context";
 import { bindHandPorts } from "../../../../src/simulation/components/hand-ports";
 import { EntityState } from "../../../../src/state";
@@ -14,8 +15,7 @@ export type BackedUpGeometry = typeof BACKED_UP_GEOMETRIES[number];
 
 /** The different-items fixture with its input belt backed up, laid out as `geometry` and taking only `item` */
 export async function backedUpPickupConfig(geometry: BackedUpGeometry, item: string): Promise<Config> {
-    const config = await loadConfigFromFile(path.join(GameFixturePaths.DIFFERENT_ITEMS, "config.json"));
-    config.overrides = { ...config.overrides, backed_up_belts: true };
+    const config = withEveryLaneEnd(await loadConfigFromFile(path.join(GameFixturePaths.DIFFERENT_ITEMS, "config.json")), "dead_end");
     const input = config.inserters.find(inserter => inserter.source.type === "belt")!;
     if (input.source.type !== "belt") throw new Error("expected belt input");
     input.source.pickup_length = geometry === "straight-belt" ? 1 : 0.5;

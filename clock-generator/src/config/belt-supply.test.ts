@@ -1,11 +1,38 @@
+import fs from "fs";
+import os from "os";
+import path from "path";
 import { describe, expect, it } from "vitest";
 import { ConfigOverridesSchema, ConfigSchema } from "./schema";
-import { parseConfig } from "./loader";
+import { loadConfigFromFile, parseConfig } from "./loader";
 
-describe("backed-up belt configuration", () => {
-    it("keeps moving supply as the default and rejects invalid values", () => {
+describe("the belt settings of the overrides before each lane stated its end", () => {
+    const configWith = (overrides: Record<string, unknown>) => JSON.stringify({
+        format: 1,
+        setpoint: { item: "iron-gear-wheel", items_per_second: 1, copies: 1 },
+        machines: [], inserters: [],
+        belts: [{ id: 1, type: "turbo-transport-belt", lanes: [{ ingredient: "iron-plate", stack_size: 4 }] }],
+        overrides,
+    });
+    const refusal = (key: string) => `\`overrides.${key}\` is not read. State the end of each lane instead: \`"lane_end": {"kind": "dead_end"}\` where the belt is backed up, \`{"kind": "infinite"}\` where it moves.`;
+
+    it.each<[string, unknown]>([["backed_up_belts", true], ["backed_up_belts", false], ["non_moving_belts", true]])("refuses overrides.%s (%s), and says to state the end of each lane", async (key, value) => {
+        const text = configWith({ [key]: value, kick_start_items: 0 });
+        expect(ConfigOverridesSchema.safeParse({ [key]: value }).success).toBe(false);
+        await expect(parseConfig(text)).rejects.toThrow(refusal(key));
+        const folder = fs.mkdtempSync(path.join(os.tmpdir(), "belt-settings-"));
+        try {
+            const file = path.join(folder, "config.json");
+            fs.writeFileSync(file, text);
+            const error = await loadConfigFromFile(file).then(() => null, (thrown: Error) => thrown);
+            expect(error?.message).toBe(`Configuration check failed at 'overrides.${key}': ${refusal(key)}`);
+        } finally {
+            fs.rmSync(folder, { recursive: true, force: true });
+        }
+    });
+
+    it("reads overrides that state neither", () => {
         expect(ConfigOverridesSchema.parse({})).toEqual({});
-        expect(ConfigOverridesSchema.safeParse({ backed_up_belts: "true" }).success).toBe(false);
+        expect(ConfigOverridesSchema.parse({ kick_start_items: 0 })).toEqual({ kick_start_items: 0 });
     });
 });
 

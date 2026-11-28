@@ -282,7 +282,6 @@ describe('pickRuleOf', () => {
     it('reads the search mode from the overrides, and nothing of the belts', () => {
         const config = (overrides?: Config['overrides']) => ({ overrides }) as Config;
         expect(pickRuleOf(config())).toEqual(WHEN_NEEDED);
-        expect(pickRuleOf(config({ backed_up_belts: true }))).toEqual(WHEN_NEEDED);
         expect(pickRuleOf(config({ search_for_fewer_wake_ups: true }))).toEqual(SEARCHED);
     });
 });

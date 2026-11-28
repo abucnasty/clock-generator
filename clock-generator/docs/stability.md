@@ -180,7 +180,7 @@ Recorded on the same nine machines taken as one build, with the same clock (Fact
 
 #### What the result says was checked
 
-The result lists each lane of the build one time (`lanes`): its item, its **lane role**, its **lane end** and where the end comes from (`end_given_by`: the lane, the deprecated `backed_up_belts` switch, an export lane, or the role), its sharing, its supply rate and its capacity. A build of one copy has this list too.
+The result lists each lane of the build one time (`lanes`): its item, its **lane role**, its **lane end** and what gives it (`end_given_by`: the lane, an export lane, or the role), its sharing, its supply rate and its capacity. A build of one copy has this list too.
 
 Each clock of a build of copies has `checked_lanes` (`clock-generator/src/crafting/checked-lanes.ts`). It has one row for each lane that the copies share and that has an item and a role. A lane that is per copy has no row. A row gives what the copies take from the lane or drop onto it together, in items a second, and a state:
 

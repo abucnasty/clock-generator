@@ -6,6 +6,7 @@ import {expect, test} from "vitest";
 import {encodeBlueprintFile} from "../../../src/blueprints/serde";
 import {ConfigPaths} from "../../../src/config/config-paths";
 import {loadConfigFromFile} from "../../../src/config/loader";
+import {withUnstatedLaneEnds} from "../../../src/entities/traits/lane-ends";
 import {generateClockAlternatives} from "../../../src/crafting/generate-blueprint";
 import {recordInFactorio} from "../../../src/harness/factorio-harness";
 import {recipesMaking} from "../../../src/harness/recording-output";
@@ -43,7 +44,7 @@ for (const backed of [false, true]) {
         const directory = path.join(kept ? path.resolve(kept) : fs.mkdtempSync(path.join(os.tmpdir(), "utility-science-120-")), name);
         fs.mkdirSync(directory, {recursive: true});
         const loaded = await loadConfigFromFile(ConfigPaths.UTILITY_SCIENCE_120);
-        const config = backed ? {...loaded, overrides: {...loaded.overrides, backed_up_belts: true}} : loaded;
+        const config = backed ? withUnstatedLaneEnds(loaded, "dead_end") : loaded;
         const generated = generateClockAlternatives(config, {logger: quiet});
         const selected = generated.alternatives[generated.selected_index];
         const exported = selected.result.subtick ?? selected.result;

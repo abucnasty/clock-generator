@@ -22,6 +22,7 @@ import { geometryDataOf, worldDataOf } from "./assemble";
 import { decodeBlueprint } from "./decode";
 import { geometryOf } from "./geometry";
 import { importBlueprint, NOTE_CODES, type ImportBuild, type ImportInputs, type ImportOutcome, type NoteCode } from "./index";
+import { drillsOf, samePoint, settleAnswers, type Asked, type End, type Point, type Raw, type ReadFile, type ReadLane } from "./paste-clock/paste-clock-helpers";
 import { worldOf } from "./world";
 
 const ENGINE = path.resolve(__dirname, "../..");
@@ -29,7 +30,6 @@ const FIXTURES = path.join(__dirname, "fixtures", "assemble");
 const read = (file: string) => fs.readFileSync(file, "utf8");
 const DATA = JSON.parse(read(path.join(ENGINE, "resources", "data-filtered.json"))) as FactorioData;
 
-type Point = { x: number; y: number };
 type Bonuses = ImportInputs["research"]["bonuses"];
 type NotHeld = { kind: "inserter" | "belt"; entity_number?: number; read_belt?: number; line?: number; lane?: number; field: string; class: string; source: string };
 type Tier1Build = {
@@ -52,21 +52,6 @@ const ALLOWED: Allowed[] = (() => {
     return lines.slice(1).map((l) => Object.fromEntries(l.split("\t").map((v, i) => [header[i], v])) as Allowed);
 })();
 
-// ---------------------------------------------------------------- the shapes of a read
-
-type Raw = Record<string, unknown>;
-type End = { type: string; id: number } & Raw;
-type ReadLane = { ingredient?: string; stack_size?: number; lane_end?: { kind: string }; sharing?: string };
-type ReadBelt = { id: number; type?: string; flow_direction?: number; lanes?: ReadLane[] };
-type ReadFile = {
-    machines?: (Raw & { id: number; position?: Point; result_target?: End })[];
-    drills?: { configs?: (Raw & { id: number; position?: Point; mined_item_name?: string; target?: End })[] };
-    inserters?: (Raw & { position?: Point; source: End; sink: End })[];
-    belts?: ReadBelt[];
-    chests?: (Raw & { id: number; type: string; position?: Point })[];
-};
-const drillsOf = (file: ReadFile) => (Array.isArray(file.drills?.configs) ? file.drills!.configs! : []);
-
 // ---------------------------------------------------------------- one build: paste, answer, compare
 
 type Run = {
@@ -75,7 +60,7 @@ type Run = {
     outcome: ImportBuild;
     first: ImportBuild;
     answers: Record<string, string>;
-    asked: { key: string; label: string; candidates: string[]; answer: string | undefined }[];
+    asked: Asked[];
     unanswered: string[];
 };
 
@@ -86,64 +71,12 @@ function buildOf(outcome: ImportOutcome, what: string): ImportBuild {
     return outcome;
 }
 
-const samePoint = (a: Point | undefined, b: Point | undefined, translation: Point) =>
-    a !== undefined && b !== undefined && a.x - translation.x === b.x && a.y - translation.y === b.y;
-
 /** The answers the build's configuration (or its export) gives, asked again until no question is open */
 function settle(build: Tier1Build): Run {
     const text = read(path.join(ENGINE, build.blueprint)).trim();
-    const decoded = decodeBlueprint(text);
-    if (decoded.kind !== "blueprint") throw new Error(`${build.name}: not a blueprint`);
-    const entities = decoded.entities;
-    const world = worldOf(entities, worldDataOf(DATA));
-    const geometry = geometryOf(world, entities, geometryDataOf(DATA));
     const source = JSON.parse(read(build.read_kind === "config" ? path.join(ENGINE, build.blueprint.replace(/\.scaffold$/, ".json")) : path.join(FIXTURES, build.read))) as ReadFile;
-    const t = build.frame.translation;
-    const at = (n: number) => entities.find((e) => e.entity_number === n)?.position;
-
-    /** The belt of the answering file at a line: through an inserter whose end is on one of its pieces */
-    const beltAtLine = (first: number): ReadBelt | undefined => {
-        const line = geometry.lines.find((l) => l.first === first);
-        for (const end of [...geometry.ends].sort((a, b) => a.inserter - b.inserter)) {
-            for (const side of ["source", "sink"] as const) {
-                const e = end[side];
-                if (!e || e.target !== "belt" || !line?.pieces.includes(e.entity_number)) continue;
-                const arm = source.inserters?.find((r) => samePoint(r.position, at(end.inserter), t));
-                const readEnd = arm?.[side];
-                if (readEnd?.type === "belt") return source.belts?.find((b) => b.id === readEnd.id);
-            }
-        }
-        return undefined;
-    };
-    const answerOf = (q: ImportBuild["questions"][number]): string | undefined => {
-        if (q.kind === "drill-ore") return drillsOf(source).find((d) => samePoint(d.position, at(q.subject.entity_number), t))?.mined_item_name;
-        const belt = beltAtLine(q.subject.entity_number);
-        if (q.kind === "lane-item") {
-            const lanes = belt?.lanes ?? [];
-            if (lanes.length === 2) return lanes[(q.subject.lane as number) - 1].ingredient;
-            return lanes.length === 1 && q.subject.lane === 2 ? lanes[0].ingredient : undefined;
-        }
-        // a lane that states no sharing is shared, as is a line the configuration holds no belt for
-        return (belt?.lanes ?? []).find((l) => l.sharing !== undefined)?.sharing ?? "shared";
-    };
-
-    const answers: Record<string, string> = {};
-    const asked: Run["asked"] = [];
-    const unanswered = new Set<string>();
-    const first = buildOf(importBlueprint(text, inputsOf(build, {}), DATA), build.name);
-    let outcome = first;
-    for (let round = 0; round < 12; round += 1) {
-        const fresh = outcome.questions.filter((q) => answers[q.key] === undefined && !unanswered.has(q.key));
-        if (fresh.length === 0) return { build, text, outcome, first, answers, asked, unanswered: [...unanswered] };
-        for (const q of fresh) {
-            const answer = answerOf(q);
-            asked.push({ key: q.key, label: q.subject.label + (q.subject.lane ? ` lane ${q.subject.lane}` : ""), candidates: q.candidates, answer });
-            if (answer === undefined) unanswered.add(q.key);
-            else answers[q.key] = answer;
-        }
-        outcome = buildOf(importBlueprint(text, inputsOf(build, answers), DATA), build.name);
-    }
-    throw new Error(`${build.name}: the answers did not settle`);
+    const settled = settleAnswers({ name: build.name, text, data: DATA, source, translation: build.frame.translation, research: build.research, setpoint: build.setpoint });
+    return { build, text, ...settled };
 }
 
 /** The class of a closed-list row where the read's export gave one belt id to two or more physical lines */

@@ -1,0 +1,370 @@
+{
+ "scaffold": "resources/config-samples/intermediates/grenade/grenade-240-fills-belt-exactly.scaffold",
+ "sample": "resources/config-samples/intermediates/grenade/grenade-240-fills-belt-exactly.json",
+ "record": "config-GRENADE_240_FILLS_BELT_EXACTLY",
+ "translation": {
+  "x": 979,
+  "y": 665
+ },
+ "research": {
+  "profile": "save force",
+  "template": null,
+  "bonuses": {
+   "mining_drill_productivity_bonus": 79990.00000001134,
+   "inserter_stack_size_bonus": 3,
+   "bulk_inserter_capacity_bonus": 11,
+   "belt_stack_size_bonus": 3,
+   "recipes": {}
+  }
+ },
+ "id_map": {
+  "machine": {
+   "1": 1,
+   "2": 4,
+   "3": 2,
+   "4": 3,
+   "5": 5
+  },
+  "drill": {
+   "1": 1,
+   "2": 3,
+   "3": 2,
+   "4": 4
+  },
+  "inserter": {
+   "1": 1,
+   "2": 7,
+   "3": 4,
+   "4": 6,
+   "5": 3,
+   "6": 5,
+   "7": 2,
+   "8": 8
+  },
+  "chest": {}
+ },
+ "left_out": {
+  "chest": [
+   1
+  ]
+ },
+ "read": {
+  "belts": [
+   {
+    "id": 1,
+    "lanes": [
+     {
+      "ingredient": "grenade",
+      "stack_size": 4
+     },
+     {
+      "ingredient": "grenade",
+      "stack_size": 4
+     }
+    ],
+    "type": "turbo-transport-belt"
+   }
+  ],
+  "chests": [
+   {
+    "id": 1,
+    "position": {
+     "x": 387.5,
+     "y": 0.5
+    },
+    "remove_unfiltered_items": true,
+    "type": "infinity-chest"
+   }
+  ],
+  "drills": {
+   "configs": [
+    {
+     "direction": 4,
+     "id": 1,
+     "mined_item_name": "coal",
+     "position": {
+      "x": 394.5,
+      "y": -5.5
+     },
+     "productivity": 79990.00000001134,
+     "speed_bonus": 17.725,
+     "target": {
+      "id": 1,
+      "type": "machine"
+     },
+     "type": "electric-mining-drill"
+    },
+    {
+     "direction": 4,
+     "id": 2,
+     "mined_item_name": "coal",
+     "position": {
+      "x": 394.5,
+      "y": 6.5
+     },
+     "productivity": 79990.00000001134,
+     "speed_bonus": 17.725,
+     "target": {
+      "id": 2,
+      "type": "machine"
+     },
+     "type": "electric-mining-drill"
+    },
+    {
+     "direction": 12,
+     "id": 3,
+     "mined_item_name": "coal",
+     "position": {
+      "x": 403.5,
+      "y": -5.5
+     },
+     "productivity": 79990.00000001134,
+     "speed_bonus": 19.0575,
+     "target": {
+      "id": 3,
+      "type": "machine"
+     },
+     "type": "electric-mining-drill"
+    },
+    {
+     "direction": 12,
+     "id": 4,
+     "mined_item_name": "coal",
+     "position": {
+      "x": 403.5,
+      "y": 6.5
+     },
+     "productivity": 79990.00000001134,
+     "speed_bonus": 19.0575,
+     "target": {
+      "id": 5,
+      "type": "machine"
+     },
+     "type": "electric-mining-drill"
+    }
+   ]
+  },
+  "inserters": [
+   {
+    "direction": 8,
+    "position": {
+     "x": 397.5,
+     "y": -6.5
+    },
+    "prototype": "stack-inserter",
+    "quality": "legendary",
+    "sink": {
+     "belt_direction": 12,
+     "id": 1,
+     "type": "belt"
+    },
+    "source": {
+     "id": 1,
+     "type": "machine"
+    },
+    "stack_size": 16
+   },
+   {
+    "direction": 0,
+    "position": {
+     "x": 397.5,
+     "y": 7.5
+    },
+    "prototype": "stack-inserter",
+    "quality": "legendary",
+    "sink": {
+     "belt_direction": 12,
+     "id": 1,
+     "type": "belt"
+    },
+    "source": {
+     "id": 2,
+     "type": "machine"
+    },
+    "stack_size": 16
+   },
+   {
+    "direction": 8,
+    "position": {
+     "x": 398.5,
+     "y": -2.5
+    },
+    "prototype": "stack-inserter",
+    "quality": "legendary",
+    "sink": {
+     "id": 1,
+     "type": "machine"
+    },
+    "source": {
+     "id": 4,
+     "type": "machine"
+    },
+    "stack_size": 16
+   },
+   {
+    "direction": 0,
+    "position": {
+     "x": 398.5,
+     "y": 3.5
+    },
+    "prototype": "stack-inserter",
+    "quality": "legendary",
+    "sink": {
+     "id": 2,
+     "type": "machine"
+    },
+    "source": {
+     "id": 4,
+     "type": "machine"
+    },
+    "stack_size": 16
+   },
+   {
+    "direction": 8,
+    "position": {
+     "x": 399.5,
+     "y": -2.5
+    },
+    "prototype": "stack-inserter",
+    "quality": "legendary",
+    "sink": {
+     "id": 3,
+     "type": "machine"
+    },
+    "source": {
+     "id": 4,
+     "type": "machine"
+    },
+    "stack_size": 16
+   },
+   {
+    "direction": 0,
+    "position": {
+     "x": 399.5,
+     "y": 3.5
+    },
+    "prototype": "stack-inserter",
+    "quality": "legendary",
+    "sink": {
+     "id": 5,
+     "type": "machine"
+    },
+    "source": {
+     "id": 4,
+     "type": "machine"
+    },
+    "stack_size": 16
+   },
+   {
+    "direction": 8,
+    "position": {
+     "x": 400.5,
+     "y": -6.5
+    },
+    "prototype": "stack-inserter",
+    "quality": "legendary",
+    "sink": {
+     "belt_direction": 12,
+     "id": 1,
+     "type": "belt"
+    },
+    "source": {
+     "id": 3,
+     "type": "machine"
+    },
+    "stack_size": 16
+   },
+   {
+    "direction": 0,
+    "position": {
+     "x": 400.5,
+     "y": 7.5
+    },
+    "prototype": "stack-inserter",
+    "quality": "legendary",
+    "sink": {
+     "belt_direction": 12,
+     "id": 1,
+     "type": "belt"
+    },
+    "source": {
+     "id": 5,
+     "type": "machine"
+    },
+    "stack_size": 16
+   }
+  ],
+  "machines": [
+   {
+    "crafting_speed": 70.4159375,
+    "id": 1,
+    "position": {
+     "x": 397.5,
+     "y": -4.5
+    },
+    "productivity": 0,
+    "prototype": "assembling-machine-3",
+    "quality": "legendary",
+    "recipe": "grenade",
+    "recipe_quality": "normal"
+   },
+   {
+    "crafting_speed": 70.4159375,
+    "id": 2,
+    "position": {
+     "x": 397.5,
+     "y": 5.5
+    },
+    "productivity": 0,
+    "prototype": "assembling-machine-3",
+    "quality": "legendary",
+    "recipe": "grenade",
+    "recipe_quality": "normal"
+   },
+   {
+    "crafting_speed": 70.4159375,
+    "id": 3,
+    "position": {
+     "x": 400.5,
+     "y": -4.5
+    },
+    "productivity": 0,
+    "prototype": "assembling-machine-3",
+    "quality": "legendary",
+    "recipe": "grenade",
+    "recipe_quality": "normal"
+   },
+   {
+    "crafting_speed": 143.75,
+    "id": 4,
+    "position": {
+     "x": 400.5,
+     "y": 0.5
+    },
+    "productivity": 150,
+    "prototype": "foundry",
+    "quality": "legendary",
+    "recipe": "casting-iron",
+    "recipe_quality": "normal"
+   },
+   {
+    "crafting_speed": 70.4159375,
+    "id": 5,
+    "position": {
+     "x": 400.5,
+     "y": 5.5
+    },
+    "productivity": 0,
+    "prototype": "assembling-machine-3",
+    "quality": "legendary",
+    "recipe": "grenade",
+    "recipe_quality": "normal"
+   }
+  ],
+  "suggested_target": {
+   "copies": 1,
+   "items_per_second": 35.20796875,
+   "recipe": "grenade"
+  }
+ }
+}

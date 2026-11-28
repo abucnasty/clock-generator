@@ -42,7 +42,6 @@ describe("the underground entrances of a lane", () => {
     it("are taken on a lane of each copy or one that does not end in a dead end, which runs as one line: an end or a sharing chosen later meets no refusal", () => {
         expect(problems(configWith({ sharing: "per_copy", underground_entrances: [1, 10] }))).toEqual([]);
         for (const lane_end of [{ kind: "infinite" }, { kind: "unknown" }]) expect(problems(configWith({ lane_end, underground_entrances: [1, 10] }))).toEqual([]);
-        expect(problems(configWith({ underground_entrances: [1, 10] }, { overrides: { backed_up_belts: false } }))).toEqual([]);
         expect(problems(configWith({ underground_entrances: [1, 10] }, { strategy: "export", consumption: 30 }))).toEqual([]);
     });
 

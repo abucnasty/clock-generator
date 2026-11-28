@@ -3,6 +3,7 @@ import { Config } from "../../config";
 import { ConfigPaths } from "../../config/config-paths";
 import { TestConfigPaths } from "../../../tests/configs/paths";
 import { loadConfigFromFile } from "../../config/loader";
+import { withEveryLaneEnd } from "../../entities/traits/lane-ends";
 import { DebugSettingsProvider } from "../sequence/debug/debug-settings-provider";
 import { SimulationContext } from "../sequence/simulation-context";
 import { generateClockAlternatives } from "../alternatives";
@@ -137,7 +138,7 @@ describe("the memo of the runs of a generation", () => {
         withRunMemo(() => {
             const memo = currentRunMemo()!;
             runBuild(config, options);
-            runBuild({ ...config, overrides: { ...config.overrides, backed_up_belts: true } }, options);
+            runBuild(withEveryLaneEnd(config, "infinite"), options);
             runBuild(config, { ...options, warmup_window_cycles: 3 });
             runBuild(config, { ...options, factorio_states: true });
             runBuild(config, { ...options, simulate_window_cycles: 2 });
@@ -275,7 +276,7 @@ describe("the memo of the backpressure loss verdicts of a generation", () => {
         const other_window_cycle = { ...clock, simulation_duration: clock.simulation_duration.add(clock.simulation_duration) };
         const other_output = { ...clock, stability_check: { ...clock.stability_check, expected_output_items: clock.stability_check.expected_output_items + 1 } };
         const keys = [other_windows, other_window_cycle, other_output].map(it => disturbanceTrialKey(config, it));
-        keys.push(disturbanceTrialKey({ ...config, overrides: { ...config.overrides, backed_up_belts: true } }, clock));
+        keys.push(disturbanceTrialKey(withEveryLaneEnd(config, "infinite"), clock));
         keys.push(disturbanceTrialKey({ ...config, overrides: { ...config.overrides, kick_start_items: 17 } }, clock));
         expect(new Set([key, ...keys]).size).toBe(keys.length + 1);
     });

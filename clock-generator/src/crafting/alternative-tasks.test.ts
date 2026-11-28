@@ -3,6 +3,7 @@ import {ChestType} from "../common/entity-types";
 import {ConfigPaths} from "../config/config-paths";
 import { TestConfigPaths } from "../../tests/configs/paths";
 import {loadConfigFromFile} from "../config/loader";
+import {withUnstatedLaneEnds} from "../entities/traits/lane-ends";
 import {EnableControlMode} from "../config/schema";
 import {planClockAlternatives, runClockAlternativeTask} from "./alternatives";
 import {quiet} from "./generate-blueprint-test-helpers";
@@ -42,15 +43,15 @@ describe("belt supply alternative tasks", () => {
 
     it("offers no clock for another supply to a config whose belts are backed up, not even as a fallback", async () => {
         const config = await automation();
-        const plan = planClockAlternatives({...config,
-            overrides: {...config.overrides, backed_up_belts: true, search_for_fewer_wake_ups: true}}, options);
+        const plan = planClockAlternatives({...withUnstatedLaneEnds(config, "dead_end"),
+            overrides: {...config.overrides, search_for_fewer_wake_ups: true}}, options);
         expect(otherSupply(plan)).toEqual([]);
         expect(plan.tasks.filter(task => task.only_when_needed && task.fallback === true).map(task => task.id)).not.toContain("planned-moving-belt");
     });
 
     it("has the same tasks whichever supply a config without a belt pickup names", async () => {
         const config = await loadConfigFromFile(ConfigPaths.PROCESSING_UNIT_15_CHEST_FED);
-        const ids = (backed_up_belts: boolean) => planClockAlternatives({...config, overrides: {...config.overrides, backed_up_belts}}, options)
+        const ids = (backed: boolean) => planClockAlternatives(withUnstatedLaneEnds(config, backed ? "dead_end" : "infinite"), options)
             .tasks.map(task => task.id);
         expect(ids(true)).toEqual(ids(false));
     });
