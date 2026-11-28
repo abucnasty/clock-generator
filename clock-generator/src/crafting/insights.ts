@@ -17,7 +17,7 @@ import type { Config } from "../config/schema";
 import { describeSideLoadedDrop, SIDE_LOADED_DROP_ADVICE, SIDE_LOADED_DROP_TITLE, sideLoadedDrops } from "../config/side-loaded-drop";
 import { chestName } from "../common/entity-types";
 import { chestDrillBecause } from "./chest-drill-windows";
-import { describeDropSpacing, dropSpacing, dropSpacingTable } from "../config/drop-spacing";
+import { describeDropSpacing, dropSpacing, dropSpacingTable, partUncheckedText, uncheckedPartDrops } from "../config/drop-spacing";
 import { describeOnePerCopyFeed, lanesExactlyFull, lanesExactlyFullNote, onePerCopyFeeds } from "../config/lane-capacity-validator";
 import { machineNameOf, type MachineToName } from "./machine-name";
 import { buildToNameOf } from "./build-names";
@@ -521,9 +521,13 @@ export function sideLoadedDropInsights(config: Config): ClockInsight[] {
 /**
  * Where the drops of the output inserters onto a shared belt land, for the clock the result follows (config/drop-spacing.ts):
  * whether the hands of all the copies fit between each other or land on each other. None when the config does not say enough
- * (no places, copies without a gap) or no output inserter drops on a belt.
+ * (no places, copies without a gap) or no output inserter drops on a belt. `run_with_copies`: whether the run of the copies was
+ * made for the clock and ran the output belt (checked-lanes.ts), which decides whether the explanation says the simulator counts the
+ * wait of the drops the output belt states. Where copies have a fraction and the model gives no part copy, lines are not judged: the
+ * note says so, and is the only note then.
  */
-export function dropSpacingInsights(result: Pick<BlueprintGenerationResult, "clock_only_run" | "serializable_state_transition_history">, config: Config): ClockInsight[] {
+export function dropSpacingInsights(result: Pick<BlueprintGenerationResult, "clock_only_run" | "serializable_state_transition_history">, config: Config,
+    run_with_copies = false): ClockInsight[] {
     const run = result.clock_only_run?.state_transition_history ?? result.serializable_state_transition_history;
     const starts = new Map<number, number[]>();
     config.inserters.forEach((inserter, index) => {
@@ -531,10 +535,13 @@ export function dropSpacingInsights(result: Pick<BlueprintGenerationResult, "clo
         if (inserter.sink.type === "belt") starts.set(id, dropTicks(run, `inserter:${id}`));
     });
     const spacing = dropSpacing(config, starts, run.total_duration_ticks);
+    // the names are made only where a note is made: building them reads the recipe data of every machine
+    const names = () => ({ build: buildToNameOf(config), numbered: false });
     if (spacing === null) {
-        return [];
+        const part = uncheckedPartDrops(config);
+        return part.length === 0 ? [] : [{ id: "drop-spacing", scope: "clock", title: "Drops of a partial copy are not checked", what: partUncheckedText(part, names()), why: "", explanation: "" }];
     }
-    const text = describeDropSpacing(spacing, { build: buildToNameOf(config), numbered: false });
+    const text = describeDropSpacing(spacing, names(), run_with_copies);
     return [{ id: "drop-spacing", scope: "clock", title: text.title, what: text.what, why: text.why, explanation: text.explanation, table: dropSpacingTable(spacing) }];
 }
 

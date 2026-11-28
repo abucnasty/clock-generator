@@ -1198,6 +1198,8 @@ function runAlternativeOf(
         const description = withResolvedName(definition, definition.description, strategy) + moved_note + shifted_note + belt_note + planning_note + asBuiltNotes(as_built, expected_output_items)
             + disturbanceTrialNote(disturbance_trial, disturbance_trial_not_tried) + loss_note
             + (start_dependence_note === null ? "" : ` ${start_dependence_note[0].toUpperCase()}${start_dependence_note.slice(1)}`) + row.description_suffix;
+        // whether the run of the copies was made for this clock, and ran its output belt: what the drop note says the simulator counts
+        const lanes_run = checkedLanes(tried_as, copies_trial);
         // what a clock that holds says about the build is read from it, whether it gets back from a loss or not
         const insights = [
             ...clockInsights(trial.result, trial.held, config.machines, config.overrides?.kick_start_items ?? DEFAULT_KICK_START_ITEMS, build_names),
@@ -1211,7 +1213,7 @@ function runAlternativeOf(
             ...droppedOntoSharedLaneInsights(config),
             ...outputLineNotJudgedInsights(config),
             ...regionsJoinedInsights(config, currentBuildRegions()),
-            ...dropSpacingInsights(trial.result, config),
+            ...dropSpacingInsights(trial.result, config, lanes_run?.line.run_with_copies === true && lanes_run.line.output_belt !== null),
             ...(start_dependence_note !== null && trial.start_dependence !== null ? [startDependenceInsight(start_dependence_note, trial.start_dependence)] : []),
             ...chestDrillInsights(trial.result, build_names),
         ];

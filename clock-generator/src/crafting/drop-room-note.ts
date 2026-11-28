@@ -1,5 +1,5 @@
 import { Config } from "../config";
-import { crowdedText, DROP_SPACING_COPIES_ALIKE, DROP_SPACING_UNCHECKED, dropLines, dropRoom, dropSpacing, uncheckedDrops, type DropRoom } from "../config/drop-spacing";
+import { crowdedText, DROP_SPACING_COPIES_ALIKE, DROP_SPACING_UNCHECKED, dropLines, dropRoom, dropSpacing, partUncheckedText, uncheckedDrops, uncheckedPartDrops, type DropRoom } from "../config/drop-spacing";
 import { Entity, handSizeFor } from "../entities";
 import { computeMachineTargetRates } from "./machine-target-rates";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
@@ -83,7 +83,11 @@ export function dropRoomNote(config: Config): string | null {
     const window_cycle_ticks = estimatedWindowCycle(config);
     if (window_cycle_ticks === null) return `${DROP_ROOM_NOT_ESTIMATED}${left_out}`;
     const room = dropRoom(config, lines, window_cycle_ticks);
-    if (room === null) return null;
+    if (room === null) {
+        // copies with a fraction whose part copy the model does not give: the check says so, rather than say nothing
+        const part = uncheckedPartDrops(config);
+        return part.length > 0 ? partUncheckedText(part, { build: buildToNameOf(config), numbered: true }) : null;
+    }
     const unchecked = ` ${DROP_SPACING_COPIES_ALIKE}${left_out}`;
     if (room.crowded !== null) return `At about ${window_cycle_ticks} ticks a window cycle, ${crowdedText(room.crowded, copies).replace(/^T/, "t")}${unchecked}`;
     const together = new Map(lines.flatMap(line => line.inserters.map(inserter => [inserter.id, [0]] as const)));

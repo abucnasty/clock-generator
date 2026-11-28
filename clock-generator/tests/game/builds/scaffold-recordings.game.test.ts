@@ -6,6 +6,7 @@ import path from "path";
 import { afterAll, describe, expect, test } from "vitest";
 import { encodeBlueprintFile } from "../../../src/blueprints/serde";
 import { ConfigPaths } from "../../../src/config/config-paths";
+import type { Config } from "../../../src/config";
 import { loadConfigFromFile } from "../../../src/config/loader";
 import { withUnstatedLaneEnds } from "../../../src/entities/traits/lane-ends";
 import { generateClockAlternatives } from "../../../src/crafting/generate-blueprint";
@@ -50,6 +51,8 @@ const WHY_SKIPPED = !FACTORIO ? "FACTORIO_PATH is not set to a Factorio executab
 const SAMPLES = path.join(SAMPLE_BUILDS_DIR);
 /** abucnasty's whole chemical science build, both sides, with the clock it came with (a blueprint string, as he gave it) */
 const CHEMICAL_SCIENCE_WHOLE_BUILD = path.join(__dirname, "chemical-science-240-shared-foundry-full-build.blueprint");
+/** The whole chemical science build as a config: the sample is one block at 480/11 a second, and the build is 5.5 of them, 18 tiles apart, making 240 a second */
+const CHEMICAL_WHOLE_BUILD_SETPOINT = { items_per_second: 240, copies: 5.5, copy_offset: { x: 18, y: 0 } };
 /**
  * The game tests' protocol, timed in game ticks (tests/game/helpers/lua/steady.lua; scaffold-recordings-probe.lua): a build
  * settles until its final machines have made the target over the trailing minute and no less than one clock cycle earlier
@@ -125,6 +128,12 @@ interface ScaffoldBuild {
      * the wake-ups are of one copy and are not made for such a build.
      */
     copies?: number;
+    /**
+     * The setpoint the build is a config of, over the sample's: where the sample is the rate of one block and one copy, the whole build
+     * states its rate and copies (`copies` above is how many times the scaffold holds the config, and the harness refuses a config with
+     * other copies than the test says)
+     */
+    setpoint?: Partial<Config["setpoint"]>;
     /**
      * The build's own clock, kept as the blueprint has it (a clock described "Clock for ...", which the recorder cuts the
      * recording by), in place of the clock the generator selects; with the copies it leaves short in the game, by number as
@@ -341,9 +350,9 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         warmup_ticks: 3600,
     },
     // One block of four chemical science assemblers, four engine assemblers and one foundry casting the pipes of all four
-    // engines, all legendary with legendary modules and 40 legendary beacons: 5.5 copies of it make 240 a second. The
-    // build was given 2026-10-15. Without a clock it makes 44.0 a second, a hair over the 43.636 the target asks of one
-    // block; with the selected clock, 256 in each of 102 window cycles of 352 ticks, recorded 2026-10-15.
+    // engines, all legendary with legendary modules and 40 legendary beacons. The sample is this block as one copy at 480/11 a second
+    // (5.5 copies of it make 240 a second). The build was given 2026-10-15. Without a clock it makes 44.0 a second, a hair over the 43.636 the target asks of one
+    // block; with the selected clock, 256 in each of 11 window cycles of 352 ticks, recorded 2026-11-27.
     "chemical science with a shared foundry": {
         scaffold: path.join(SAMPLES, "science", "chemical", "chemical-240-shared-foundry.scaffold"),
         config: ConfigPaths.CHEMICAL_SCIENCE_240_SHARED_FOUNDRY,
@@ -363,7 +372,8 @@ const BUILDS: Record<string, ScaffoldBuild> = {
     // machines and 6 pipe foundries on the centre line 18 tiles apart, 5 whole blocks of the config and a half block at the east
     // end (a pipe foundry, the engine machine above and below it and the science machine each feeds), and two foundries at the
     // west end that cast the gears and the steel of both engine lines. Every input line ends in an underground entrance with
-    // nothing beyond; the packs of both sides go onto one belt into a void chest. The config's 5.5 copies: 5 whole copies and
+    // nothing beyond; the packs of both sides go onto one belt into a void chest. The sample is one copy at 480/11 a second; this build
+    // states its own setpoint, 240 a second from 5.5 copies 18 tiles apart (CHEMICAL_WHOLE_BUILD_SETPOINT): 5 whole copies and
     // the part copy the generator lays out on the shared lanes (the first taker of each lane, with what it needs: half a block),
     // held to its share, half a copy's packs. The half block's pipe foundry has 5 beacons where the others have 8 (199.75 against
     // 236.78, computed from the blueprint); the config does not say it. Engine line 3 holds gears on the lane taken first,
@@ -371,6 +381,7 @@ const BUILDS: Record<string, ScaffoldBuild> = {
     "chemical science with a shared foundry (abucnasty's whole build, 5.5 copies)": {
         scaffold: CHEMICAL_SCIENCE_WHOLE_BUILD,
         config: ConfigPaths.CHEMICAL_SCIENCE_240_SHARED_FOUNDRY,
+        setpoint: CHEMICAL_WHOLE_BUILD_SETPOINT,
         seed: [],
         warmup_ticks: 3600,
         copies: 5.5,
@@ -385,6 +396,7 @@ const BUILDS: Record<string, ScaffoldBuild> = {
     "chemical science with a shared foundry (abucnasty's whole build on the clock it came with)": {
         scaffold: CHEMICAL_SCIENCE_WHOLE_BUILD,
         config: ConfigPaths.CHEMICAL_SCIENCE_240_SHARED_FOUNDRY,
+        setpoint: CHEMICAL_WHOLE_BUILD_SETPOINT,
         seed: [],
         warmup_ticks: 3600,
         copies: 5.5,
@@ -665,7 +677,8 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
             scratch ??= KEEP ?? fs.mkdtempSync(path.join(os.tmpdir(), "scaffold-recordings-"));
             const base = path.join(scratch, name.replace(/ /g, "-"));
 
-            const loaded = await loadConfigFromFile(build.config);
+            const sample = await loadConfigFromFile(build.config);
+            const loaded = build.setpoint ? { ...sample, setpoint: { ...sample.setpoint, ...build.setpoint } } : sample;
             const config = build.backed_up ? withUnstatedLaneEnds(loaded, "dead_end") : loaded;
             const blueprint = fs.readFileSync(build.scaffold, "utf-8").trim();
             // the build's own clock is kept and nothing is generated; else the clock the generator selects

@@ -11,6 +11,7 @@ void _chests;
 describe('readExampleManifest', () => {
     it.each([
         { why: 'a good list', examples: [logistic] },
+        { why: 'a list with a rate that is an exact fraction', examples: [logistic, { ...chemical(1), items_per_second: { numerator: 480, denominator: 11 } }] },
         ...[5.5, 2.25, 0.5, 0.001, 0.0625].map(copies => ({ why: `a list with supported Copies ${copies}`, examples: [logistic, chemical(copies)] })),
     ])('keeps every example of $why', ({ examples }) => {
         expect(readExampleManifest(JSON.stringify(examples))).toEqual(examples);
@@ -23,6 +24,7 @@ describe('readExampleManifest', () => {
         { why: 'an object instead of a list', text: JSON.stringify({ examples: [logistic] }) },
         { why: 'a list with a row missing a field', text: JSON.stringify([logistic, missingChests]) },
         { why: 'a rate of 0', text: JSON.stringify([{ ...logistic, items_per_second: 0 }]) },
+        { why: 'a fraction that is not reduced', text: JSON.stringify([{ ...logistic, items_per_second: { numerator: 960, denominator: 22 } }]) },
         ...[0, 0.0001, 1 / 3, -1].map(copies => ({ why: `unsupported Copies ${copies}`, text: JSON.stringify([{ ...logistic, copies }]) })),
         { why: 'Copies 5.5 but 1.5 machines', text: JSON.stringify([{ ...logistic, copies: 5.5, machines: 1.5 }]) },
     ])('reads $why as no examples', ({ text }) => {
@@ -42,6 +44,8 @@ describe('exampleTitle', () => {
 describe('exampleSummary', () => {
     it.each([
         { why: '11 copies, 1 machine and 2 inserters', example: logistic, summary: '240/s · 11 copies · 1 machine, 2 inserters' },
+        { why: 'a rate that is an exact fraction', example: { ...logistic, items_per_second: { numerator: 480, denominator: 11 }, copies: 1 },
+            summary: '480/11/s · 1 copy · 1 machine, 2 inserters' },
         { why: '1 copy, 4 machines and 1 inserter', example: { ...logistic, items_per_second: 22.5, copies: 1, machines: 4, inserters: 1 },
             summary: '22.5/s · 1 copy · 4 machines, 1 inserter' },
     ])('gives the rate, the copies and what the build holds, in the singular or plural, for $why', ({ example, summary }) => {

@@ -12,7 +12,10 @@ import { quiet, withoutSharedLaneFacts } from "./generate-blueprint-test-helpers
 // One generation of 245 s: a file of its own (it was in shared-lane-verdict.generation.test.ts).
 describe("a composed clock that is not stable on a lane the copies share", () => {
     it("is not made: the maker keeps the recommended clock, and the result says so in not_made", async () => {
-        const generated = generateClockAlternatives(withoutSharedLaneFacts(await loadConfigFromFile(ConfigPaths.CHEMICAL_SCIENCE_240_SHARED_FOUNDRY)), { logger: quiet });
+        // the sample is one copy at 480/11 a second; this case is its 5.5 copies on a lane they share, 240 a second
+        const sample = await loadConfigFromFile(ConfigPaths.CHEMICAL_SCIENCE_240_SHARED_FOUNDRY);
+        const shared = { ...sample, setpoint: { ...sample.setpoint, items_per_second: 240, copies: 5.5 } };
+        const generated = generateClockAlternatives(withoutSharedLaneFacts(shared), { logger: quiet });
         expect(generated.alternatives.some(it => it.maker === "per-branch")).toBe(false);
         const composed = generated.not_made.find(it => it.id === "per-branch");
         expect(composed).toMatchObject({ label: "Coordinated Sources" });

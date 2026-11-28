@@ -357,7 +357,7 @@ export const MISSING_RECORDING_CASES: MissingRecordingCase[] = [
     // The scaffold builds of the science packs, recorded from ruling 60's start (the judged start) on every copy the harness can build: the
     // sample's scaffold holds one copy of utility science 120, production science 120 and its shared pickup variant (the job has seven), two of
     // utility science 120 with processing units and low density structures on one belt (seven), and five of military science 240 (the job's five);
-    // chemical science 240 with a shared foundry on the sample's one block (the job has 5.5). The
+    // chemical science 240 with a shared foundry on the sample's one block (the job is one copy at 480/11 a second). The
     // losses are the family's standard ones: an ingredient cut, the output block, an ingredient cut (the README, "How a clock run is timed").
     {
         // the pick is "no recovery": the loss the record names for it (the low density structures stop arriving); where the game recovers from it on
@@ -400,7 +400,7 @@ export const MISSING_RECORDING_CASES: MissingRecordingCase[] = [
     {
         name: "chemical-science-240-shared-foundry", job: "config-CHEMICAL_SCIENCE_240_SHARED_FOUNDRY", config: "CHEMICAL_SCIENCE_240_SHARED_FOUNDRY", copies: 1,
         losses: [{kind: "cut", item: "sulfur"}, {kind: "block"}, {kind: "cut", item: "advanced-circuit"}],
-        limit: "the sample's scaffold holds one block, one of the job's 5.5 copies; abucnasty's whole build (5.5 copies) is not built from ruling 60's start: its staged start "
+        limit: "the sample's scaffold holds one block, the job's one copy; abucnasty's whole build (5.5 copies of it, 240 a second) is not built from ruling 60's start: its staged start "
             + "refuses the build (\"The clock names inserters 2, 4, 6, 8, 10, 12, 14, 16, 18, 20 of the config, which match no inserter of the build in copy 6 of 6\": the partial copy "
             + "holds some of the config's inserters, and the staged start's wiring check does not take that into account)",
         start: "backpressure",
@@ -409,7 +409,7 @@ export const MISSING_RECORDING_CASES: MissingRecordingCase[] = [
         name: "chemical-science-240-shared-foundry-backed-up", job: "variants-CHEMICAL_SCIENCE_240_SHARED_FOUNDRY_BACKED_UP", config: "CHEMICAL_SCIENCE_240_SHARED_FOUNDRY", copies: 1,
         variant: config => withUnstatedLaneEnds(config, "dead_end"),
         losses: [{kind: "cut", item: "sulfur"}, {kind: "block"}, {kind: "cut", item: "advanced-circuit"}],
-        limit: "the sample's scaffold holds one block, one of the job's 5.5 copies; abucnasty's whole build (5.5 copies) is not built from ruling 60's start: its staged start "
+        limit: "the sample's scaffold holds one block, the job's one copy; abucnasty's whole build (5.5 copies of it, 240 a second) is not built from ruling 60's start: its staged start "
             + "refuses the build (\"The clock names inserters 2, 4, 6, 8, 10, 12, 14, 16, 18, 20 of the config, which match no inserter of the build in copy 6 of 6\": the partial copy "
             + "holds some of the config's inserters, and the staged start's wiring check does not take that into account)",
         start: "backpressure",

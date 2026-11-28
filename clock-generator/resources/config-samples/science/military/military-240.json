@@ -62,7 +62,8 @@
         "id": 1
       },
       "stack_size": 16,
-      "position": { "x": -15.5, "y": -9.5 }
+      "position": { "x": -15.5, "y": -9.5 },
+      "direction": 4
     },
     {
       "source": {
@@ -74,7 +75,8 @@
         "id": 2
       },
       "stack_size": 16,
-      "position": { "x": -15.5, "y": 10.5 }
+      "position": { "x": -15.5, "y": 10.5 },
+      "direction": 4
     },
     {
       "source": {

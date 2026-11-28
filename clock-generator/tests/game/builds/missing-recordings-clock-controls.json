@@ -691,11 +691,11 @@
   },
   "chemical-science-240-shared-foundry": {
    "recorded": {
-    "pr": 851,
-    "commit": "239eb857",
-    "frozen_head": "239eb857",
-    "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start), Factorio 2.1.24; the second run gave the same summary",
-    "clock_sha256": "f1a4c258c9f84bdc4bec98305e57588b3904cf59d278159476fc6d4734f96899",
+    "pr": 924,
+    "commit": "dde66446",
+    "frozen_head": "dde66446",
+    "note": "recorded again on the one-copy clock under the protocol in game ticks from ruling 60's start (the harness's backpressure start), Factorio 2.1.24; the second run gave the same summary; pr is set when the PR is opened",
+    "clock_sha256": "1fa2ce236e0bc180e851ff75c28cf800bee65a4abbb53e64e2a546cc8d4d0083",
     "clock_basis": "capture"
    },
    "native": {
@@ -718,8 +718,8 @@
       "ticks": 3520,
       "items": 2560,
       "expected": 2559.9999998222224,
-      "stock_start": 40,
-      "stock_end": 40,
+      "stock_start": 32,
+      "stock_end": 32,
       "net": 2560
      }
     },
@@ -727,32 +727,32 @@
      {
       "kind": "cut sulfur",
       "start": 10720,
-      "drop": 11038,
-      "release": 11038,
-      "recovered": 15425
+      "drop": 10817,
+      "release": 10817,
+      "recovered": 15095
      },
      {
       "kind": "block output",
-      "start": 15425,
-      "drop": 15966,
-      "release": 15966,
-      "recovered": 20353
+      "start": 15095,
+      "drop": 15570,
+      "release": 15570,
+      "recovered": 19671
      },
      {
       "kind": "cut advanced-circuit",
-      "start": 20353,
-      "drop": 20542,
-      "release": 20542,
-      "recovered": 24929
+      "start": 19671,
+      "drop": 19827,
+      "release": 19827,
+      "recovered": 23895
      }
     ],
     "stock": {
      "lowest": 0,
-     "end": 40,
+     "end": 80,
      "holds": true
     },
     "result": "holds",
-    "ended": 24929
+    "ended": 23895
    },
    "generation": {
     "period": 352,
@@ -761,19 +761,19 @@
     "selection": {
      "id": "coordinated_sources",
      "holds": true,
-     "rate": 240,
+     "rate": 43.63636363636363,
      "supply": "backed_up"
     },
-    "clock_sha256": "f1a4c258c9f84bdc4bec98305e57588b3904cf59d278159476fc6d4734f96899"
+    "clock_sha256": "1fa2ce236e0bc180e851ff75c28cf800bee65a4abbb53e64e2a546cc8d4d0083"
    }
   },
   "chemical-science-240-shared-foundry-backed-up": {
    "recorded": {
-    "pr": 851,
-    "commit": "239eb857",
-    "frozen_head": "239eb857",
-    "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start), Factorio 2.1.24; the second run gave the same summary",
-    "clock_sha256": "f1a4c258c9f84bdc4bec98305e57588b3904cf59d278159476fc6d4734f96899",
+    "pr": 924,
+    "commit": "dde66446",
+    "frozen_head": "dde66446",
+    "note": "recorded again on the one-copy clock under the protocol in game ticks from ruling 60's start (the harness's backpressure start), Factorio 2.1.24; the second run gave the same summary; pr is set when the PR is opened",
+    "clock_sha256": "1fa2ce236e0bc180e851ff75c28cf800bee65a4abbb53e64e2a546cc8d4d0083",
     "clock_basis": "capture"
    },
    "native": {
@@ -796,8 +796,8 @@
       "ticks": 3520,
       "items": 2560,
       "expected": 2559.9999998222224,
-      "stock_start": 40,
-      "stock_end": 40,
+      "stock_start": 32,
+      "stock_end": 32,
       "net": 2560
      }
     },
@@ -805,32 +805,32 @@
      {
       "kind": "cut sulfur",
       "start": 10720,
-      "drop": 11038,
-      "release": 11038,
-      "recovered": 15425
+      "drop": 10817,
+      "release": 10817,
+      "recovered": 15095
      },
      {
       "kind": "block output",
-      "start": 15425,
-      "drop": 15966,
-      "release": 15966,
-      "recovered": 20353
+      "start": 15095,
+      "drop": 15570,
+      "release": 15570,
+      "recovered": 19671
      },
      {
       "kind": "cut advanced-circuit",
-      "start": 20353,
-      "drop": 20542,
-      "release": 20542,
-      "recovered": 24929
+      "start": 19671,
+      "drop": 19827,
+      "release": 19827,
+      "recovered": 23895
      }
     ],
     "stock": {
      "lowest": 0,
-     "end": 40,
+     "end": 80,
      "holds": true
     },
     "result": "holds",
-    "ended": 24929
+    "ended": 23895
    },
    "generation": {
     "period": 352,
@@ -839,10 +839,10 @@
     "selection": {
      "id": "coordinated_sources",
      "holds": true,
-     "rate": 240,
+     "rate": 43.63636363636363,
      "supply": "backed_up"
     },
-    "clock_sha256": "f1a4c258c9f84bdc4bec98305e57588b3904cf59d278159476fc6d4734f96899"
+    "clock_sha256": "1fa2ce236e0bc180e851ff75c28cf800bee65a4abbb53e64e2a546cc8d4d0083"
    }
   },
   "electric-furnace-20": {

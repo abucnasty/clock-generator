@@ -15,7 +15,7 @@
     },
     "chemical science with a shared foundry": {
       "config": "CHEMICAL_SCIENCE_240_SHARED_FOUNDRY",
-      "clock_sha256": "f1a4c258c9f84bdc4bec98305e57588b3904cf59d278159476fc6d4734f96899"
+      "clock_sha256": "1fa2ce236e0bc180e851ff75c28cf800bee65a4abbb53e64e2a546cc8d4d0083"
     },
     "electromagnetic science": {
       "config": "ELECTROMAGNETIC_SCIENCE_330",

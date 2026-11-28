@@ -3,8 +3,11 @@
   "target": {
     "item": "chemical-science-pack",
     "counts": "made",
-    "items_per_second": 240,
-    "copies": 5.5,
+    "items_per_second": {
+      "numerator": 480,
+      "denominator": 11
+    },
+    "copies": 1,
     "per_copy": {
       "numerator": 480,
       "denominator": 11

@@ -56,6 +56,8 @@ describe("the note under the gap between copies", () => {
     it("says why no spacing fits when the hands of the copies outnumber the tiles the belt moves in a window cycle: automation science, 240 a second, 9 copies", async () => {
         const science = async (change?: (config: Config) => void): Promise<Config> => {
             const config = structuredClone(await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240));
+            // the copies' output inserters dropping straight onto one belt, each copy as the config's own: no output belt states other drops
+            delete config.output_belt;
             config.machines[0].position = { x: 0, y: 0 };
             Object.assign(config.inserters[1], { position: { x: 0, y: 3 }, direction: 8 });
             (config.inserters[1].sink as { belt_direction?: number }).belt_direction = 12;

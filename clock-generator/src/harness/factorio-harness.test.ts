@@ -851,7 +851,9 @@ describe("a build that holds the config a fraction of times: whole copies and on
     // the chemical science sample, 5.5 copies of a block of four science machines (1-4), four engine machines (5-8) and a
     // pipe foundry (9); its part copy, as the generator lays it out on the shared lanes, is the upstream taker of each lane
     // with what it needs: machines 1, 3, 5, 7 and 9 and inserters 1, 3, 5, 7, 9, 11, 13, 15, 17 and 19
-    const config = await loadConfigFromFile(ConfigPaths.CHEMICAL_SCIENCE_240_SHARED_FOUNDRY);
+    // the sample is one copy at 480/11 a second; this block keeps the build it was before: 240 a second from 5.5 copies, 18 tiles apart
+    const sample = await loadConfigFromFile(ConfigPaths.CHEMICAL_SCIENCE_240_SHARED_FOUNDRY);
+    const config = { ...sample, setpoint: { ...sample.setpoint, items_per_second: 240, copies: 5.5, copy_offset: { x: 18, y: 0 } } };
     const PART_MACHINES = [1, 3, 5, 7, 9];
     const PART_INSERTERS = [1, 3, 5, 7, 9, 11, 13, 15, 17, 19];
     const ids = (machines: number[]) => ({

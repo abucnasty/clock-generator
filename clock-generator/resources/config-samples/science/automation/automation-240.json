@@ -52,7 +52,8 @@
       "filters": [
         "automation-science-pack"
       ],
-      "position": { "x": -37.5, "y": 2.5 }
+      "position": { "x": -37.5, "y": 2.5 },
+      "direction": 0
     }
 ,
     {

@@ -37,17 +37,6 @@ const KNOWN_MISMATCHES: KnownMismatch[] = [
     { example: 'electromagnetic-science', inserter: 3, role: 'drop', reason: 'the build has a chest for each of the two output inserters; the example states one for both' },
 ];
 
-/**
- * The output inserters that drop on a belt in these examples state their position and no direction: the check of how drops on a belt
- * fit between each other reads the direction and would describe every copy of these builds on one straight lane, which they do not
- * have. Such an inserter has no pickup or drop tile in the picture. Only these may; each must still have none.
- */
-const NO_DIRECTION: { example: string; inserters: number[]; reason: string }[] = [
-    { example: 'automation-science', inserters: [2], reason: 'its copies drop on the belt in three different ways' },
-    { example: 'chemical-science', inserters: [1, 2, 3, 4], reason: 'the example states 5.5 copies and the build is one copy' },
-    { example: 'military-science', inserters: [1, 2], reason: 'its copies side-load the belt' },
-];
-
 // every example "Try an example" offers: a tenth one is held to the same, whatever its length
 describe.each(EXAMPLES)('the example $id opens in the Layout view as a picture', ({ id, path }) => {
     it('has every entity placed, every inserter facing, and every end on an entity or a belt', async () => {
@@ -58,15 +47,13 @@ describe.each(EXAMPLES)('the example $id opens in the Layout view as a picture',
 
         expect(layout.leftOut, 'entities with no position').toEqual([]);
         expect(layout.inserters, 'inserters drawn').toHaveLength(lists.inserters.length);
-        const undirected = NO_DIRECTION.filter(entry => entry.example === id).flatMap(entry => entry.inserters);
         const withoutDirection = layout.inserters.filter(inserter => inserter.direction === null).map(inserter => inserter.number);
-        expect(withoutDirection.filter(number => !undirected.includes(number)), 'inserters with no direction of 0, 4, 8 or 12').toEqual([]);
-        expect(undirected.filter(number => !withoutDirection.includes(number)), 'inserters listed as having no direction that have one').toEqual([]);
+        expect(withoutDirection, 'inserters with no direction of 0, 4, 8 or 12').toEqual([]);
         const ends = layout.inserters.flatMap(inserter => inserter.ends.map(end => ({ inserter: inserter.number, role: end.role, check: end.check })));
         const known = KNOWN_MISMATCHES.filter(mismatch => mismatch.example === id);
         const isKnown = (end: { inserter: number; role: string }) => known.some(mismatch => mismatch.inserter === end.inserter && mismatch.role === end.role);
-        // an inserter with no direction has no tile at either end; any other end is inside its entity or on a belt
-        expect(ends.filter(end => end.check !== 'inside' && end.check !== 'belt' && !isKnown(end) && !(end.check === 'no-tile' && undirected.includes(end.inserter))),
+        // every end is inside its entity or on a belt
+        expect(ends.filter(end => end.check !== 'inside' && end.check !== 'belt' && !isKnown(end)),
             'ends that are not inside their entity or on a belt').toEqual([]);
         expect(known.filter(mismatch => !ends.some(end => end.inserter === mismatch.inserter && end.role === mismatch.role && end.check === 'outside')),
             'known mismatches that are no longer outside their entity').toEqual([]);

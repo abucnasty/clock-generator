@@ -1,4 +1,4 @@
-import { isShortDecimalCopies } from 'clock-generator/light';
+import { isPositiveRate, isShortDecimalCopies, rateText, type SetpointRate } from 'clock-generator/light';
 import { formatNumberText } from './numberText';
 
 /** Where the examples dialog finds the list, which `scripts/game-data-plugin.ts` writes into `public/` when Vite starts */
@@ -11,7 +11,8 @@ export interface ExampleBuild {
     file: string;
     /** Its Target Output */
     recipe: string;
-    items_per_second: number;
+    /** A number, or an exact fraction as the setpoint holds it */
+    items_per_second: SetpointRate;
     /** "destroyed" when the rate counts the item destroyed; none, the item made */
     counts?: 'destroyed';
     copies: number;
@@ -30,7 +31,7 @@ function isExampleBuild(row: unknown): row is ExampleBuild {
     }
     const r = row as Record<string, unknown>;
     return isText(r.id) && isText(r.file) && isText(r.recipe)
-        && typeof r.items_per_second === 'number' && Number.isFinite(r.items_per_second) && r.items_per_second > 0
+        && isPositiveRate(r.items_per_second)
         && (r.counts === undefined || r.counts === 'destroyed')
         && typeof r.copies === 'number' && Number.isFinite(r.copies) && r.copies > 0 && isShortDecimalCopies(r.copies)
         && isCount(r.machines) && isCount(r.inserters) && isCount(r.belts) && isCount(r.chests);
@@ -68,7 +69,7 @@ const countOf = (n: number, one: string, many: string) => `${n} ${n === 1 ? one 
 /** "240/s · 11 copies · 1 machine, 2 inserters"; "400/s destroyed · 1 copy · …" for a rate that counts the item destroyed */
 export function exampleSummary(example: ExampleBuild): string {
     return [
-        `${formatNumberText(example.items_per_second)}/s${example.counts === 'destroyed' ? ' destroyed' : ''}`,
+        `${typeof example.items_per_second === 'number' ? formatNumberText(example.items_per_second) : rateText(example.items_per_second)}/s${example.counts === 'destroyed' ? ' destroyed' : ''}`,
         countOf(example.copies, 'copy', 'copies'),
         `${countOf(example.machines, 'machine', 'machines')}, ${countOf(example.inserters, 'inserter', 'inserters')}`,
     ].join(' · ');
