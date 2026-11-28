@@ -186,8 +186,11 @@ type DrillRule = {
     steps: OreStep[];
 };
 
-/** What one run of the fixed point gives, with the answers applied */
-type Solved = { flows: BuildFlows; asked: ReadonlySet<string> };
+/**
+ * What one run of the fixed point gives, with the answers applied. `fills`: by question key, the lane that no drop or
+ * loader feeds and one item is left for, once the other lane of its line is answered
+ */
+type Solved = { flows: BuildFlows; asked: ReadonlySet<string>; fills: ReadonlyMap<string, string> };
 
 export function flowsOf(
     world: BuildWorld,
@@ -407,9 +410,11 @@ export function flowsOf(
     const readLines = geometry.lines.filter((l) => touched.has(l.first));
 
     // ------------------------------------------------------------ one run of the fixed point, with the answers given so far
-    function solve(applied: ReadonlyMap<string, string>): Solved {
+    function solve(applied: ReadonlyMap<string, string>, filled: ReadonlyMap<string, string>): Solved {
         const recipe = new Map<number, Found>();
         const lane = new Map<string, Set<string>>();
+        // what drops and loaders put on each lane: an answer or a fill is no drop, so it feeds nothing
+        const dropped = new Map<string, Set<string>>();
         const chest = new Map<number, Set<string>>();
         const tags = new Map<string, Set<Tag>>();
         let changes = 0;
@@ -462,10 +467,10 @@ export function flowsOf(
             }
         }
 
-        // an answered lane goes onto the pieces its line is read at
+        // an answered lane, and a filled one, goes onto the pieces its line is read at
         for (const line of geometry.lines) {
             for (const l of [1, 2] as const) {
-                const answer = applied.get(`lane-item:${line.first}:${l}`);
+                const answer = applied.get(`lane-item:${line.first}:${l}`) ?? filled.get(`lane-item:${line.first}:${l}`);
                 if (answer === undefined) continue;
                 const at = line.pickups.length > 0 ? line.pickups.map((p) => p.piece) : line.pieces;
                 for (const p of at) grow(laneSet(laneKey(p, l)), [answer]);
@@ -514,6 +519,9 @@ export function flowsOf(
             if (seen.has(key)) return;
             seen.add(key);
             grow(laneSet(key), items);
+            let own = dropped.get(key);
+            if (!own) dropped.set(key, (own = new Set()));
+            grow(own, items);
             if (mark) tag(key, mark);
             for (const next of world.lineAfter(piece)) {
                 if (piece.kind === "underground" && piece.end === "input") {
@@ -591,6 +599,7 @@ export function flowsOf(
             return walk(start);
         };
 
+        const fills = new Map<string, string>();
         const lanes: LaneFlow[] = [];
         const unread: UnreadFlow[] = [];
         const questions: FlowQuestion[] = [];
@@ -604,7 +613,8 @@ export function flowsOf(
                 const c = whitelist(ins.n) ?? sinkAccepts(ins);
                 if (c) for (const x of c) takers.add(x);
             }
-            const fed = line.pieces.some((p) => [1, 2].some((l) => (lane.get(laneKey(p, l))?.size ?? 0) > 0));
+            // fed by a drop or a loader: an answer or a fill on a lane feeds nothing
+            const fed = line.pieces.some((p) => [1, 2].some((l) => (dropped.get(laneKey(p, l))?.size ?? 0) > 0));
             for (const l of [1, 2] as const) {
                 const key = `lane-item:${line.first}:${l}`;
                 const answer = applied.get(key);
@@ -615,6 +625,11 @@ export function flowsOf(
                 };
                 const atPick = union(pickupPieces);
                 const readAt: LaneFlow["read_at"] = atPick.size > 0 ? "pickup-pieces" : "whole-line";
+                const droppedAt = (pieces: readonly number[]) => {
+                    const set = new Set<string>();
+                    for (const p of pieces) for (const x of dropped.get(laneKey(p, l)) ?? []) set.add(x);
+                    return set;
+                };
                 const readPieces = atPick.size > 0 ? pickupPieces : line.pieces;
                 let items: Set<string>;
                 let source: LaneSource;
@@ -623,7 +638,9 @@ export function flowsOf(
                     items = new Set([answer]);
                     source = "answered";
                 } else {
-                    const found = atPick.size > 0 ? atPick : union(line.pieces);
+                    const atPickDropped = droppedAt(pickupPieces);
+                    const found = atPickDropped.size > 0 ? atPickDropped : droppedAt(line.pieces);
+                    const otherAnswer = applied.get(`lane-item:${line.first}:${3 - l}`);
                     if (found.size > 0) {
                         items = found;
                         source = "drops";
@@ -633,6 +650,15 @@ export function flowsOf(
                     } else if (fed) {
                         items = new Set();
                         source = "other-lane";
+                    } else if (otherAnswer !== undefined && !waiting) {
+                        // nothing drops onto the line and the other lane is answered: this lane holds what the takers can still take
+                        const left = [...takers].filter((x) => x !== otherAnswer);
+                        items = new Set(left);
+                        if (left.length === 0) source = "other-lane";
+                        else {
+                            source = "takers";
+                            if (left.length === 1) fills.set(key, left[0]);
+                        }
                     } else {
                         items = takers;
                         source = "takers";
@@ -697,17 +723,24 @@ export function flowsOf(
             unread,
             questions,
         };
-        return { flows, asked: new Set(questions.map((q) => q.key)) };
+        return { flows, asked: new Set(questions.map((q) => q.key)), fills };
     }
 
-    // an answer counts only for a key that is asked; one answer can make another key appear, so this repeats until none is added
+    // an answer counts only for a key that is asked; one answer can make another key appear, so this repeats until none is added.
+    // A fill is read from the last run and put on its lane in the next, as an answer is, until the fills it reads are the fills it was given.
     const applied = new Map<string, string>();
+    let filled: ReadonlyMap<string, string> = new Map();
+    const seen = new Set<string>();
     for (;;) {
-        const solved = solve(applied);
+        const solved = solve(applied, filled);
         const added = Object.keys(answers)
             .filter((key) => !applied.has(key) && solved.asked.has(key) && typeof answers[key] === "string")
             .sort(compareText);
-        if (added.length === 0) return solved.flows;
+        const settled = solved.fills.size === filled.size && [...solved.fills].every(([key, item]) => filled.get(key) === item);
+        const state = JSON.stringify([[...applied], [...solved.fills], added]);
+        if ((added.length === 0 && settled) || seen.has(state)) return solved.flows;
+        seen.add(state);
         for (const key of added) applied.set(key, answers[key]);
+        filled = solved.fills;
     }
 }
