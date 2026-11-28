@@ -62,7 +62,7 @@ export function questionLayoutFeed(pasted: FeedSource): LayoutFeed {
 export type FeedQuestion = Pick<ImportQuestion, 'key' | 'kind' | 'subject' | 'candidates'>;
 
 /** The lanes of the lines of a pasted blueprint, for the layout view's lane editor */
-export interface QuestionLanes {
+interface QuestionLanes {
     /** By belt id of the lists of `questionLayoutFeed`, which is the place of the line */
     belts: ReadonlyMap<number, LaneEditorBelt>;
     /** The line, by its first piece, and the key of the question of a lane of a belt of the view; null for a belt that is none */

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Box, IconButton, Paper, Popper, Typography, type PopperProps } from '@mui/material';
+import { Box, IconButton, Paper, Popper, Typography } from '@mui/material';
 import { Close } from '@mui/icons-material';
 import { useGameNames } from '../hooks/useGameNames';
 import { ANOTHER_ITEM } from '../utils/blueprintPaste';
@@ -52,10 +52,10 @@ function LaneEditorRow({ beltId, lane, marked, editor }: { beltId: number; lane:
  * place of the view (no portal), so that a dialog around the view keeps its focus inside the editor.
  */
 export function LayoutLanePopover({ beltId, belt, editor, anchor, followed, onClose }: LayoutLanePopoverProps) {
-    const popper = useRef<Parameters<NonNullable<PopperProps['popperRef']>>[0] | null>(null);
+    const popper = useRef<{ update(): unknown } | null>(null);
     useEffect(() => { void popper.current?.update(); }, [followed, anchor]);
     return (
-        <Popper open anchorEl={anchor} placement="right-start" disablePortal popperRef={popper} popperOptions={{ strategy: 'fixed' }} sx={{ zIndex: 2 }}>
+        <Popper open anchorEl={anchor} placement="right-start" disablePortal popperRef={instance => { popper.current = instance; }} popperOptions={{ strategy: 'fixed' }} sx={{ zIndex: 2 }}>
             <Paper elevation={8} role="group" aria-label={`Lanes of ${entityLabel('belt', beltId)}`} sx={{ p: 1.5, width: 330, ml: 1, border: '1px solid', borderColor: 'divider' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
                     <Typography variant="subtitle2">{entityLabel('belt', beltId)}</Typography>

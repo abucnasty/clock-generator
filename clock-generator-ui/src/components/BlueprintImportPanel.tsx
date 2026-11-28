@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Alert, Box, Checkbox, Chip, FormControl, IconButton, FormControlLabel, FormLabel, Radio, RadioGroup, Typography } from '@mui/material';
 import type { ImportEntity, ImportNote, ImportQuestion, ImportSpeed } from 'clock-generator/browser';
 import { useGameNames } from '../hooks/useGameNames';
@@ -58,8 +58,8 @@ export function BlueprintImportPanel({ pasted, profiles, profileId, onProfileCha
 
     // every question asked while the panel is shown: the import drops an answered one, and its row and its candidates stay
     const [seen, setSeen] = useState<ReadonlyMap<string, ImportQuestion>>(new Map());
-    const shown = useMemo(() => pasted.questions.every(question => seen.get(question.key) === question) ? seen : new Map([...seen, ...pasted.questions.map(question => [question.key, question] as const)]), [seen, pasted.questions]);
-    useEffect(() => { if (shown !== seen) setSeen(shown); }, [shown, seen]);
+    const shown = pasted.questions.every(question => seen.get(question.key) === question) ? seen : new Map([...seen, ...pasted.questions.map(question => [question.key, question] as const)]);
+    if (shown !== seen) setSeen(shown);
     const asked = new Set(pasted.questions.map(question => question.key));
     const rows = [...shown.values()].filter(question => asked.has(question.key) || (question.kind === 'lane-item' && answers[question.key] !== undefined))
         .sort((a, b) => QUESTION_ORDER.indexOf(a.kind) - QUESTION_ORDER.indexOf(b.kind) || a.subject.entity_number - b.subject.entity_number || (a.subject.lane ?? 0) - (b.subject.lane ?? 0));
@@ -79,12 +79,12 @@ export function BlueprintImportPanel({ pasted, profiles, profileId, onProfileCha
     const marked = (question: ImportQuestion) => selection !== null && selection.kind === kindOfSelection(question) && placeOf(question) === selection.id
         && (lane === null || question.kind !== 'lane-item' || question.subject.lane === lane);
 
-    const feed = useMemo(() => questionLayoutFeed(pasted), [pasted]);
-    const lanes = useMemo(() => questionLanes(pasted, shown, answers), [pasted, shown, answers]);
-    const laneEditor = useMemo((): LaneEditor => ({
+    const feed = questionLayoutFeed(pasted);
+    const lanes = questionLanes(pasted, shown, answers);
+    const laneEditor: LaneEditor = {
         belts: lanes.belts, itemNames, markedLane: selection?.kind === 'belt' ? lane : null,
         onEdit: (beltId, laneId, item) => { const target = lanes.keyOf(beltId, laneId); if (target !== null) onAnswer(target.key, item); },
-    }), [lanes, itemNames, selection, lane, onAnswer]);
+    };
 
     return <Box data-blueprint-import="" sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mb: 1 }}>
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center' }}>

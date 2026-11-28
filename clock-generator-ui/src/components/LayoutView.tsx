@@ -156,8 +156,9 @@ export function LayoutView({ machines, inserters, belts, chests, drills, orbits,
     // the lane editor: the selected belt's tile that its editor stands beside
     const [anchor, setAnchor] = useState<SVGGElement | null>(null);
     const editedBelt = laneEditor !== null && selection?.kind === 'belt' ? selection.id : null;
-    const editedLanes = editedBelt === null ? undefined : laneEditor?.belts.get(editedBelt);
-    const lanes = useMemo(() => laneEditor === null ? null : { belts: laneEditor.belts, anchorBelt: editedLanes === undefined ? null : editedBelt, onAnchor: setAnchor }, [laneEditor?.belts, editedBelt, editedLanes]);
+    const laneBelts = laneEditor?.belts ?? null;
+    const editedLanes = editedBelt === null ? undefined : laneBelts?.get(editedBelt);
+    const lanes = useMemo(() => laneBelts === null ? null : { belts: laneBelts, anchorBelt: editedLanes === undefined ? null : editedBelt, onAnchor: setAnchor }, [laneBelts, editedBelt, editedLanes]);
 
     const [frame, setFrame] = useState<SVGSVGElement | null>(null);
     const [size, setSize] = useState({ width: 0, height: 0 });

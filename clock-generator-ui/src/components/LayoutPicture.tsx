@@ -45,7 +45,7 @@ interface LayoutPictureProps {
 }
 
 /** What the picture draws of the lanes of the belts of a lane editor */
-export interface LaneDrawing {
+interface LaneDrawing {
     belts: ReadonlyMap<number, LaneEditorBelt>;
     anchorBelt: number | null;
     onAnchor(element: SVGGElement | null): void;
