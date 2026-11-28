@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { questionLayoutFeed, type FeedSource } from './questionLayoutFeed';
+import { questionLanes, questionLayoutFeed, type FeedQuestion, type FeedSource } from './questionLayoutFeed';
+import { tileKey } from './layoutLanes';
 
 const machine = (id: number) => ({ id, recipe: '', productivity: 0, crafting_speed: 1, position: { x: id * 4, y: 0 } });
 const belt = (id: number, ingredients: string[]) => ({ id, type: 'transport-belt' as const, lanes: ingredients.map(ingredient => ({ ingredient, stack_size: 1 })) });
@@ -83,5 +84,57 @@ describe('the lists the layout view is given while the import is asked', () => {
         expect(feed.chests).toEqual([]);
         expect(ids(feed.machines)).toEqual([1, 2]);
         expect(questionLayoutFeed({ ...paste(), machines: [] }).machines).toEqual([]);
+    });
+});
+
+const question = (first: number, lane: 1 | 2, candidates = ['iron-plate', 'copper-plate']): FeedQuestion =>
+    ({ key: `lane-item:${first}:${lane}`, kind: 'lane-item', subject: { label: `Belt ${first}`, entity_number: first, lane }, candidates });
+const shownOf = (...questions: FeedQuestion[]) => new Map(questions.map(q => [q.key, q]));
+
+/** The paste of the feed, with the questions that are asked now */
+const asking = (...asked: FeedQuestion[]) => ({ ...paste(), questions: asked });
+
+describe('the lanes the layout view edits, from a paste, the questions the panel has shown and the answers', () => {
+    it('maps each asked lane of a line to the key of its question, with its candidates, on the belt of the line\'s place', () => {
+        const asked = [question(40, 1), question(40, 2, ['steel-plate'])];
+        const { belts, keyOf } = questionLanes(asking(...asked), shownOf(...asked), {});
+        expect(belts.get(1)?.lanes.map(lane => [lane.id, lane.side, lane.item, lane.candidates])).toEqual([[1, 'left', null, ['iron-plate', 'copper-plate']], [2, 'right', null, ['steel-plate']]]);
+        expect(keyOf(1, 1)).toEqual({ first: 40, key: 'lane-item:40:1' });
+        expect(keyOf(1, 2)).toEqual({ first: 40, key: 'lane-item:40:2' });
+        expect(keyOf(9, 1)).toBeNull();
+    });
+
+    it('gives a lane that is answered, and no longer asked, its answer as the item and the candidates of its shown question', () => {
+        const first = question(40, 1);
+        const { belts } = questionLanes(asking(question(40, 2)), shownOf(first, question(40, 2)), { 'lane-item:40:1': 'copper-plate' });
+        expect(belts.get(1)?.lanes.map(lane => [lane.item, lane.candidates])).toEqual([['copper-plate', ['iron-plate', 'copper-plate']], [null, ['iron-plate', 'copper-plate']]]);
+    });
+
+    it('gives a lane that the import filled its item with no control, though its question was shown and no answer was given', () => {
+        // lane 1 of the line is answered; lane 2 was asked in the first round and is filled now
+        const filled = { ...paste(), questions: [], belts: [belt(1, ['copper-plate', 'iron-plate']), belt(2, ['copper-plate'])] as FeedSource['belts'] };
+        const { belts } = questionLanes(filled, shownOf(question(10, 1), question(10, 2)), { 'lane-item:10:1': 'copper-plate' });
+        expect(belts.get(2)?.lanes.map(lane => [lane.id, lane.item, lane.candidates !== null])).toEqual([[1, 'copper-plate', true], [2, 'iron-plate', false]]);
+    });
+
+    it('gives a lane with an item and no shown question a fixed item, and a lane with neither no item and no control', () => {
+        const { belts } = questionLanes(asking(), shownOf(), {});
+        // belt 3 is a line whose lanes are the one lane 2
+        expect(belts.get(3)?.lanes.map(lane => [lane.id, lane.item, lane.candidates])).toEqual([[1, null, null], [2, 'copper-plate', null]]);
+    });
+
+    it('gives each tile a piece covers the direction of the piece: one tile, and two for a piece whose centre is on a tile edge', () => {
+        const lines = [{ first: 10, place: 1, belt: null, lane_lines: [1, 2], pieces: [
+            { entity_number: 10, x: 0.5, y: 0.5, direction: 4, shape: 'straight' }, { entity_number: 11, x: 2, y: 0.5, direction: 0, shape: null }, { entity_number: 12, x: 4.5, y: 3, direction: 8, shape: null },
+        ] }];
+        const { belts } = questionLanes({ ...asking(), layout: { ...paste().layout, lines } } as never, shownOf(), {});
+        expect([...belts.get(1)!.directions].sort()).toEqual([
+            [tileKey(0.5, 0.5), 4], [tileKey(1.5, 0.5), 0], [tileKey(2.5, 0.5), 0], [tileKey(4.5, 2.5), 8], [tileKey(4.5, 3.5), 8],
+        ].sort());
+    });
+
+    it('has no belt for a line that no inserter end reaches', () => {
+        const lines = [{ first: 10, place: 1, belt: null, lane_lines: [1, 2], pieces: [] }];
+        expect(questionLanes({ ...asking(), layout: { ...paste().layout, lines } } as never, shownOf(), {}).belts.size).toBe(0);
     });
 });
