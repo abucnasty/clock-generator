@@ -443,6 +443,12 @@ export interface DropSpacingLine {
     /** Ticks at which each inserter of the line starts a hand */
     starts: { inserter_id: number; ticks: number[] }[];
     fits: boolean;
+    /**
+     * For a line that fits and is repeated by the config's own copy: whether moving any one of its inserters a tile along the belt,
+     * either way, puts hands on top of each other (with every way the belt may run and every part copy the line is judged with).
+     * False for a line of stated drops and for a line that does not fit: nothing was tried.
+     */
+    tile_move_collides: boolean;
     /** Pairs of hands that land on each other */
     pairs: number;
     /** The most ticks a hand waits for room (0 when they fit) */
@@ -491,6 +497,16 @@ function checkLine(config: Config, line: DropLine, starts: ReadonlyMap<number, r
     return { hands, pairs: hands.length > 0 ? collidingPairs(hands, line.tiles_per_tick, window_cycle_ticks) : [] };
 }
 
+/** Whether every move of one inserter of a line by a tile, either way, puts hands on top of each other */
+function tileMoveCollides(config: Config, line: DropLine, starts: ReadonlyMap<number, readonly number[]>, window_cycle_ticks: number, step: CopyStep | null,
+    senses: readonly (1 | -1)[], parts: readonly (ReadonlySet<number> | null)[]): boolean {
+    const ids = [...new Set(line.inserters.filter(inserter => (starts.get(inserter.id) ?? []).length > 0).map(inserter => inserter.id))];
+    return ids.every(id => ([1, -1] as const).every(shift => {
+        const moved = { ...line, inserters: line.inserters.map(inserter => inserter.id === id ? { ...inserter, along: inserter.along + shift } : inserter) };
+        return parts.every(part => senses.every(sense => checkLine(config, moved, starts, window_cycle_ticks, step, sense, part).pairs.length > 0));
+    }));
+}
+
 /**
  * Whether the run counts the waits of a line's hands (as belt-hand-drop.ts, belt-lane.ts and output-belt-run.ts put them down): a
  * hand with a drop spot of the config shares its lane's traffic with the other such hands of its copy, and every copy has belts of
@@ -533,6 +549,7 @@ export function dropSpacing(config: Config, starts: ReadonlyMap<number, readonly
         const check = judged.reduce((worst, each) => each!.pairs.length > worst!.pairs.length ? each : worst)!;
         if (check.hands.length === 0) continue;
         const waits = check.pairs.length > 0 ? waitsOf(check.hands, speedOf(config, line.belt_id), line.tiles_per_tick, window_cycle_ticks) : [];
+        const fits = judged.every(each => each!.pairs.length === 0);
         const started = [...new Set(line.inserters.filter(inserter => (starts.get(inserter.id) ?? []).length > 0).map(inserter => inserter.id))];
         results.push({
             line, step, sense: check.sense,
@@ -541,7 +558,8 @@ export function dropSpacing(config: Config, starts: ReadonlyMap<number, readonly
                 inserter_ids: started,
                 facing: line.facing, hands: check.hands.length,
                 starts: started.map(id => ({ inserter_id: id, ticks: [...starts.get(id)!].sort(pair) })),
-                fits: judged.every(each => each!.pairs.length === 0), pairs: check.pairs.length, longest_wait: waits.length === 0 ? 0 : Math.max(...waits),
+                fits, tile_move_collides: fits && !line.stated && tileMoveCollides(config, line, starts, window_cycle_ticks, step, senses, parts),
+                pairs: check.pairs.length, longest_wait: waits.length === 0 ? 0 : Math.max(...waits),
                 ...(line.stated && { copies: [...new Set(check.hands.map(hand => hand.copy + 1))].sort(pair) }),
                 ...(check.part !== null && { part: started.filter(id => check.part!.has(id)) }),
                 run_counts: runCountsOf(line, check.hands),
@@ -849,16 +867,18 @@ export function describeDropSpacing(spacing: DropSpacing, names: DropNames = NO_
         const first = spacing.lines[0];
         if (line.fits) {
             if (index === 0) {
-                sentences.push(`${window_cycle}, ${whoOf(line, spacing.copies, names)} drop ${handsWord(line.hands)} onto ${belt}, and each hand lands on a stretch of belt of its own, so none waits${line.copies !== undefined ? " for another of these hands" : ""}.`);
+                sentences.push(`${window_cycle}, ${whoOf(line, spacing.copies, names)} drop ${handsWord(line.hands)} onto ${beltWords([line.belt_id], names)}, and each hand lands on a stretch of belt of its own, so none waits${line.copies !== undefined ? " for another of these hands" : ""}.`);
             } else if (first.fits && line.hands === first.hands && line.copies === undefined && first.copies === undefined) {
-                sentences.push(`${capital(inserterWords(line.inserter_ids, names))} do the same${line.facing === (first.facing + 8) % 16 ? " on the other side of the belt" : ""}.`);
+                // the same belt from the other side, or a belt of its own
+                const where = line.belt_id !== first.belt_id ? ` onto ${beltWords([line.belt_id], names)}` : line.facing === (first.facing + 8) % 16 ? " on the other side of the belt" : "";
+                sentences.push(`${capital(inserterWords(line.inserter_ids, names))} do the same${where}.`);
             } else {
-                sentences.push(`${capital(whoOf(line, spacing.copies, names))} drop ${handsWord(line.hands)} onto ${belt}, and each hand lands on a stretch of belt of its own.`);
+                sentences.push(`${capital(whoOf(line, spacing.copies, names))} drop ${handsWord(line.hands)} onto ${beltWords([line.belt_id], names)}, and each hand lands on a stretch of belt of its own.`);
             }
         } else {
             const lead = index === 0 || spacing.lines[index - 1].fits ? `${window_cycle}, ` : "";
             const who = lead === "" ? capital(whoOf(line, spacing.copies, names)) : whoOf(line, spacing.copies, names);
-            sentences.push(`${lead}${who} drop ${handsWord(line.hands)} onto ${belt}. ${line.pairs} ${line.pairs === 1 ? "pair" : "pairs"} of them land on each other, `
+            sentences.push(`${lead}${who} drop ${handsWord(line.hands)} onto ${beltWords([line.belt_id], names)}. ${line.pairs} ${line.pairs === 1 ? "pair" : "pairs"} of them land on each other, `
                 + `and the later hand of each pair waits, the longest ${tiles(line.longest_wait)} ticks. ${startsSentence(line, names)}`);
         }
     });
@@ -868,19 +888,22 @@ export function describeDropSpacing(spacing: DropSpacing, names: DropNames = NO_
     const hand_tiles = spacing.hand / (4 * spacing.lane_stack);
     const tile = hand_tiles === 1 ? `A tile of a belt lane holds one hand of ${spacing.hand} at stack size ${spacing.lane_stack}.`
         : `A tile of a belt lane holds ${4 * spacing.lane_stack} items at stack size ${spacing.lane_stack}, and a hand of ${spacing.hand} takes ${tiles(hand_tiles)} of a tile.`;
-    const why = `${tile} A hand dropped where items already lie waits until they have moved on, so the hands of all the copies have to land in the gaps the others leave.`;
+    const why = `${tile} A hand dropped where items already lie waits until they have moved on, so the hands ${spacing.copies > 1 ? "of all the copies " : ""}have to land in the gaps the others leave.`;
     const uncheckedText = `${spacing.gap !== null ? ` ${DROP_SPACING_COPIES_ALIKE}` : ""}${spacing.unchecked.length > 0 ? ` ${DROP_SPACING_UNCHECKED}` : ""}`
         + `${spacing.unchecked_part.length > 0 ? ` ${partUncheckedText(spacing.unchecked_part, names)}` : ""}`;
     // lines of stated drops are judged stretch by stretch along their lane, not on a belt taken to run straight past the inserters
     const some_stated = spacing.lines.some(line => line.copies !== undefined);
     const all_stated = some_stated && spacing.lines.every(line => line.copies !== undefined);
     const belt_text = `${all_stated ? "" : ` ${DROP_SPACING_STRAIGHT_BELT}`}${some_stated ? ` ${DROP_SPACING_STATED_LANES}` : ""}`;
+    // "Moving one inserter by a tile puts hands on top of each other" is said where the check found it so for every line it repeats
+    const moves_collide = spacing.lines.filter(line => line.copies === undefined).every(line => line.tile_move_collides);
     const roomText = spacing.room === undefined ? "" : ` ${describeDropRoom(spacing.room, names)}`;
     if (fits) {
         return {
             fits, title: `Drops onto ${belt} fit between each other`, what: `${sentences.join(" ")} ${closing}`, why,
             explanation: (all_stated ? "This holds for these start ticks. Starting one group of inserters at another tick can put hands on top of each other."
-                : "This holds for this spacing and these start ticks. Moving one inserter by a tile, or starting one group of inserters at another tick, puts hands on top of each other.")
+                : moves_collide ? "This holds for this spacing and these start ticks. Moving one inserter by a tile, or starting one group of inserters at another tick, puts hands on top of each other."
+                    : "This holds for this spacing and these start ticks. Starting one group of inserters at another tick can put hands on top of each other.")
                 + `${roomText}${belt_text}${uncheckedText}`,
         };
     }

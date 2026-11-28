@@ -7,6 +7,7 @@ import { LaneTraffic } from "../state/lane-traffic";
 import { partCopiesOf } from "../harness/factorio-harness";
 import { dropRoomNote } from "../crafting/drop-room-note";
 import { dropSpacingInsights } from "../crafting/insights";
+import { buildToNameOf } from "../crafting/build-names";
 
 /**
  * The grenade build (GRENADE_240_FILLS_BELT_EXACTLY): seven copies 12 tiles apart drop onto a turbo belt of two lanes. Inserters 1 and 2
@@ -318,6 +319,60 @@ describe("a build whose copies all side-load", () => {
         expect(dropSpacing(config, starts({ 1: 0, 2: 0 }), 120)).toBeNull();
         const result = { serializable_state_transition_history: { total_duration_ticks: 120, entities: [] } } as unknown as Parameters<typeof dropSpacingInsights>[0];
         expect(dropSpacingInsights(result, config)).toEqual([]);
+    });
+});
+
+describe("the note of a build of one copy whose output inserters drop onto two belts (chemical science)", () => {
+    // inserters 1 and 2 drop onto belt 5 and inserters 3 and 4 onto belt 6, 8 hands on each in a window cycle of 352 ticks
+    const every_88 = (first: number, second: number) => new Map([1, 2, 3, 4].map(id => [id, [0, 88, 176, 264].map(tick => tick + (id % 2 === 1 ? first : second))]));
+    const chemical = async () => {
+        const config = await sample(ConfigPaths.CHEMICAL_SCIENCE_240_SHARED_FOUNDRY);
+        const spacing = dropSpacing(config, every_88(0, 40), 352)!;
+        return { config, spacing, text: describeDropSpacing(spacing, { build: buildToNameOf(config), numbered: false }), plain: describeDropSpacing(spacing) };
+    };
+
+    it("is a note of lines that all fit, on 2 belts, of one copy", async () => {
+        const { config, spacing } = await chemical();
+        expect(config.setpoint.copies).toBe(1);
+        expect(spacing.lines.map(line => [line.belt_id, line.inserter_ids, line.hands, line.fits])).toEqual([[5, [1, 2], 8, true], [6, [3, 4], 8, true]]);
+    });
+
+    it("names the belt of each line, and the title names both", async () => {
+        const { text, plain } = await chemical();
+        expect(plain.title).toBe("Drops onto belts 5 and 6 fit between each other");
+        expect(plain.what).toContain("drop 8 hands onto belt 5, and each hand lands on a stretch of belt of its own, so none waits.");
+        expect(plain.what).not.toMatch(/belts? 5 and (belt )?6/);
+        expect(text.what).toMatch(/drop 8 hands onto the chemical science pack belt \(belt 5\), and each hand lands/);
+        expect(text.what).not.toContain("(belt 5) and the chemical science pack belt (belt 6)");
+    });
+
+    it("says a second line does the same onto its own belt, and not on the other side of the belt, which is the same belt", async () => {
+        const { text, plain } = await chemical();
+        expect(plain.what).toContain("Inserters 3 and 4 do the same onto belt 6.");
+        expect(text.what).toMatch(/do the same onto the chemical science pack belt \(belt 6\)\./);
+        expect(text.what).not.toContain("other side of the belt");
+        expect(plain.what).not.toContain("other side of the belt");
+    });
+
+    it("says the hands, not the hands of all the copies, where there is one copy", async () => {
+        const { plain } = await chemical();
+        expect(plain.why).toBe("A tile of a belt lane holds one hand of 16 at stack size 4. A hand dropped where items already lie waits until they have moved on, so the hands have to land in the gaps the others leave.");
+        // the 7 copies of the grenade build keep the hands of all the copies
+        expect(describeDropSpacing(dropSpacing(await grenade(), BY_LINE, 112)!).why).toContain("so the hands of all the copies have to land in the gaps the others leave.");
+    });
+
+    it("says no more of a move of an inserter by a tile than the check finds: here none puts hands on top of each other", async () => {
+        const { spacing, plain } = await chemical();
+        expect(spacing.lines.map(line => line.tile_move_collides)).toEqual([false, false]);
+        expect(plain.explanation).toMatch(/^This holds for this spacing and these start ticks\. Starting one group of inserters at another tick can put hands on top of each other\. /);
+        expect(plain.explanation).not.toContain("Moving one inserter by a tile");
+        expect(plain.explanation).not.toContain("puts hands on top of each other");
+    });
+
+    it("keeps the sentence about a move by a tile where every move of every inserter of the lines does put hands on top of each other (grenade: 14 hands on 14 tiles)", async () => {
+        const spacing = dropSpacing(await grenade(), BY_LINE, 112)!;
+        expect(spacing.lines.map(line => line.tile_move_collides)).toEqual([true, true]);
+        expect(describeDropSpacing(spacing).explanation).toMatch(/^This holds for this spacing and these start ticks\. Moving one inserter by a tile, or starting one group of inserters at another tick, puts hands on top of each other\. /);
     });
 });
 
