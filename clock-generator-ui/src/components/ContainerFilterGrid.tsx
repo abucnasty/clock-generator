@@ -41,6 +41,8 @@ export function ContainerFilterGrid({ chest, itemNames, onChange }: Props) {
     const pointerType = useRef('');
     const visibleFilters = stroke ? paintSlotFilters(filters, slotRange(stroke.from, stroke.to), stroke.item) : filters;
     const bySlot = new Map(visibleFilters.map(filter => [filter.slot, shownSlotFilter(filter)]));
+    // a slot is blocked where its filter says so, not where its item is a marker: as its counts and the generator read it
+    const blockedSlots = new Set(visibleFilters.filter(filter => filter.blocked).map(filter => filter.slot));
     const outside = filters.filter(filter => filter.slot < 1 || filter.slot > count || !Number.isInteger(filter.slot));
     const filled = Array.from({ length: count }, (_, i) => i + 1).filter(slot => bySlot.get(slot));
     const counts = slotCounts(visibleFilters, count);
@@ -126,7 +128,7 @@ export function ContainerFilterGrid({ chest, itemNames, onChange }: Props) {
             {Array.from({ length: count }, (_, index) => {
                 const slot = index + 1;
                 const item = bySlot.get(slot);
-                const isBlocked = isBlockMarker(item);
+                const isBlocked = blockedSlots.has(slot);
                 const description = isBlocked ? `Blocked (${itemLabel(item!)})` : item ? `${itemLabel(item)} filter` : 'Unfiltered';
                 const base = insetSlotSx({ open: picker?.slot === slot || Boolean(stroke && slot >= Math.min(stroke.from, stroke.to) && slot <= Math.max(stroke.from, stroke.to)) });
                 return <Tooltip key={slot} disableInteractive enterDelay={600} disableHoverListener={Boolean(stroke)}
