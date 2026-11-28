@@ -1,9 +1,9 @@
 /**
  * The throttles of a pasted blueprint. A scaffold limits a belt with an inserter that takes from it into an infinity
- * chest that removes every item. The import reads such an inserter as the belt moving on at that place: it leaves the
- * inserter and the chest out, and gives the lane the inserter takes from an infinite end.
+ * chest that removes every item. The import leaves such an inserter and its chest out, and asks how many items a second
+ * leave the lane the inserter takes from; an answer above 0 makes that lane an export at that rate.
  *
- * This reads the narrowest shape of that reading. An inserter is a throttle when it takes from the lane next to it
+ * This reads the narrowest shape of a throttle. An inserter is a throttle when it takes from the lane next to it
  * (a near lane is read), has no filter, and drops into an infinity chest with no filter that removes every item; no
  * inserter takes from the chest and no loader reaches it; every inserter that drops into the chest is a throttle too;
  * and no inserter other than a throttle takes from that lane downstream of it, on the same line. Where the line
