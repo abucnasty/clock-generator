@@ -61,15 +61,15 @@ export const NOTE_CODES = [
     "speeds-problem:not-placed", "speeds-problem:no-data", "speeds-problem:beacon-not-square", "speeds-problem:unknown-quality",
     // the ids: where the import differs from the Sidecar's export, what is left out, and its problems
     "ids:crusher", "ids:splitter-drop", "ids:splitter-or-loader-lane",
-    "inserter-left-out:pickup", "inserter-left-out:drop", "drill-left-out:no-ore", "drill-left-out:target-has-no-id",
+    "inserter-left-out:pickup", "inserter-left-out:drop", "inserter-left-out:throttle", "drill-left-out:no-ore", "drill-left-out:target-has-no-id",
     "ids-problem:bad-input", "ids-problem:bad-entry", "ids-problem:no-machine-data",
     // the belt pickups the generator refuses, and the drops whose items side-load onto another belt
     "pickup:bend", "pickup:splitter", "pickup:unsupported", "pickup:inline", "pickup:side-loaded",
     "drop:side-loaded",
     // a filter row the blueprint holds with no item: an inserter's or a loader's filters, a wagon's or car's slots, a splitter's filter
     "filter-no-item:filters", "filter-no-item:inventory", "filter-no-item:splitter",
-    // a chest whose limit leaves it no slot: it is left out, with the inserters at it
-    "chest:no-slots",
+    // a chest whose limit leaves it no slot: it is left out, with the inserters at it; a voiding chest that only throttles drop into: left out with them
+    "chest:no-slots", "chest:throttle",
 ] as const;
 export type NoteCode = (typeof NOTE_CODES)[number];
 

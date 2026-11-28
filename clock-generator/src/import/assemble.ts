@@ -21,6 +21,7 @@ import { idsOf, type BuildIds, type IdsData } from "./ids";
 import type { DropLane, DropPosition, GeometryNoteField, ImportBuild, ImportEntity, ImportList, ImportSpeed, ImportInputs, ImportNote, ImportOutcome, ImportQuestion, NoteCode, OutputLine, QuestionKind, ReadKind } from "./outcome";
 import { isPleaseCheck, READ_KINDS, SHARING_ANSWERS } from "./outcome";
 import { speedsOf, type SpeedData, type SpeedResult } from "./speeds";
+import { throttlesOf } from "./throttles";
 import { worldOf, type BuildWorld, type PrototypeRow, type WorldData, type WorldProblemCode } from "./world";
 
 // ---------------------------------------------------------------- the data each step takes, from the game data
@@ -258,6 +259,8 @@ function assemble(entities: readonly BlueprintEntityRead[], inputs: ImportInputs
     const flows: BuildFlows = flowsOf(world, geometry, entities, flowsInputs, flowsData);
     const speeds: SpeedResult = speedsOf(entities, world, speedData);
     const ids: BuildIds = idsOf(world, entities, geometry, flows, idsData);
+    // the inserters that empty a lane into a voiding chest: the belt moving on, written below as the lane's end
+    const throttles = throttlesOf(world, geometry, entities, (first) => ids.belts.find((b) => b.id === ids.lines.find((l) => l.line === first)?.belt)?.lane_lines ?? []);
 
     const notes = new Notes();
     const entityOf = new Map(entities.map((e) => [e.entity_number, e]));
@@ -377,12 +380,27 @@ function assemble(entities: readonly BlueprintEntityRead[], inputs: ImportInputs
     const noSlots = new Set(ids.chests.filter((c) => c.chest_type === "buffer-chest" && storageOf(entityOf.get(c.entity_number)!) <= 0).map((c) => c.id));
     for (const c of ids.chests) if (noSlots.has(c.id)) notes.add("chest:no-slots", c.entity_number);
     const atNoSlots = (end: { type: string; id: number }) => end.type === "chest" && noSlots.has(end.id);
+    // a throttle and its chest are left out too, and the lane the throttle empties ends in an infinite end
+    const throttleInserters = new Set(throttles.map((t) => t.inserter));
+    const throttleChests = new Set(throttles.map((t) => t.chest));
+    for (const t of throttles) {
+        notes.add("inserter-left-out:throttle", t.inserter);
+        notes.add("chest:throttle", t.chest);
+    }
+    const infiniteLanes = new Set<string>();
+    for (const t of throttles) {
+        const id = ids.belts.find((b) => b.lines.includes(t.line));
+        const lane = belts.find((b) => b.id === id?.id)?.lanes[id?.lane_lines?.indexOf(t.lane) ?? -1] as { lane_end?: { kind: string } } | undefined;
+        if (lane === undefined) continue;
+        lane.lane_end = { kind: "infinite" };
+        infiniteLanes.add(`${t.line}:${t.lane}`);
+    }
     const keptInserters = ids.inserters.filter((i) => {
         if (atNoSlots(i.source)) notes.add(LEFT_OUT_INSERTER_NOTES.pickup, i.entity_number);
         if (atNoSlots(i.sink)) notes.add(LEFT_OUT_INSERTER_NOTES.drop, i.entity_number);
-        return !atNoSlots(i.source) && !atNoSlots(i.sink);
+        return !atNoSlots(i.source) && !atNoSlots(i.sink) && !throttleInserters.has(i.entity_number);
     });
-    const keptChests = ids.chests.filter((c) => !noSlots.has(c.id));
+    const keptChests = ids.chests.filter((c) => !noSlots.has(c.id) && !throttleChests.has(c.entity_number));
 
     // ------------------------------------------------ inserters (b, e)
     const inserters: InserterConfig[] = keptInserters.map((i) => {
@@ -488,10 +506,12 @@ function assemble(entities: readonly BlueprintEntityRead[], inputs: ImportInputs
             notes.based(line.belt_type.basis, "belt-type", n);
             if (line.flow_direction) notes.based(line.flow_direction.basis, "flow-direction", n);
             for (const p of line.pickups) {
-                notes.based(p.lane_ends[0].basis, "lane-end", n, 1);
-                notes.based(p.lane_ends[1].basis, "lane-end", n, 2);
+                // a lane with an infinite end written by a throttle has no default end
+                if (!infiniteLanes.has(`${n}:1`)) notes.based(p.lane_ends[0].basis, "lane-end", n, 1);
+                if (!infiniteLanes.has(`${n}:2`)) notes.based(p.lane_ends[1].basis, "lane-end", n, 2);
             }
             ([1, 2] as const).forEach((lane) => {
+                if (infiniteLanes.has(`${n}:${lane}`)) notes.based("unread", "lane-end", n, lane);
                 if (line.sharing[lane - 1].basis === "unread" && !sharingAnswer.has(n)) notes.based("unread", "sharing", n, lane);
             });
         }

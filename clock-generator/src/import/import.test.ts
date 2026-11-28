@@ -761,10 +761,10 @@ describe("a throttle: an inserter from a belt into an infinity chest that remove
         expect(build.chests).toEqual([]);
         expect(build.belts.map((b) => b.lanes.map((l) => l.lane_end))).toEqual([[{ kind: "infinite" }, { kind: "dead_end" }]]);
         expect(build.notes.map((n) => [n.code, n.entity_number, n.lane ?? 0, n.please_check])).toEqual([
-            ["inserter-left-out:throttle", 10, 0, false],
-            ["chest:throttle", 11, 0, false],
             ["default:lane-end", 1, 2, true],
             ["unread:lane-end", 1, 1, true],
+            ["inserter-left-out:throttle", 10, 0, false],
+            ["chest:throttle", 11, 0, false],
         ]);
         expect(noRows(build, [10, 11])).toBe(true);
     });
@@ -775,8 +775,8 @@ describe("a throttle: an inserter from a belt into an infinity chest that remove
         expect(build.chests).toEqual([]);
         expect(build.belts.map((b) => b.lanes.map((l) => l.lane_end))).toEqual([[{ kind: "infinite" }, { kind: "infinite" }]]);
         expect(build.notes.map((n) => [n.code, n.entity_number, n.lane ?? 0])).toEqual([
-            ["inserter-left-out:throttle", 10, 0], ["chest:throttle", 11, 0], ["inserter-left-out:throttle", 12, 0], ["chest:throttle", 13, 0],
             ["unread:lane-end", 1, 1], ["unread:lane-end", 1, 2],
+            ["inserter-left-out:throttle", 10, 0], ["chest:throttle", 11, 0], ["inserter-left-out:throttle", 12, 0], ["chest:throttle", 13, 0],
         ]);
     });
 
@@ -806,10 +806,10 @@ describe("a throttle: an inserter from a belt into an infinity chest that remove
             "inserter 2: belt 1 lane 1 to chest 2",
             "chest 2: buffer-chest at 1.5,-1.5",
             "belt 1: iron-plate infinite, iron-plate dead_end",
-            "note inserter-left-out:throttle 10",
-            "note chest:throttle 11",
             "note default:lane-end 1 lane 2",
             "note unread:lane-end 1 lane 1",
+            "note inserter-left-out:throttle 10",
+            "note chest:throttle 11",
             "rows 1=b1 2=b1 3=b1 4=b1 5=b1 6=b1 30=i2 31=c2",
         ]);
     });

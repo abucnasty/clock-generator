@@ -207,6 +207,7 @@ const NOTE_WORDS: Record<Exclude<NoteCode, `unread:${string}` | `default:${strin
     'ids:splitter-or-loader-lane': 'a lane through a splitter or a loader: the site reads it as one belt lane.',
     'inserter-left-out:pickup': 'left out: it takes from nothing the site reads.',
     'inserter-left-out:drop': 'left out: it drops into nothing the site reads.',
+    'inserter-left-out:throttle': 'left out: it takes from a belt into an infinity chest that removes every item, so the site reads the belt as moving on there: that lane gets an infinite end.',
     'drill-left-out:no-ore': 'left out: its ore is not known.',
     'drill-left-out:target-has-no-id': 'left out: what it drops into is left out.',
     'ids-problem:bad-input': 'the site could not give it a number.',
@@ -221,6 +222,7 @@ const NOTE_WORDS: Record<Exclude<NoteCode, `unread:${string}` | `default:${strin
     'filter-no-item:inventory': 'a slot filter with no item is left out.',
     'filter-no-item:splitter': 'a filter with no item is left out.',
     'chest:no-slots': 'left out, with the inserters at it: its limit leaves it no slot.',
+    'chest:throttle': 'left out: it removes every item, and only inserters the site leaves out drop into it.',
 };
 
 /** The words of a note, after the name of its entity */
