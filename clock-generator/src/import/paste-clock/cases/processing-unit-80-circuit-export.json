@@ -1,0 +1,752 @@
+{
+ "scaffold": "resources/config-samples/intermediates/processing-unit/processing-unit-80-circuit-export.scaffold",
+ "sample": "resources/config-samples/intermediates/processing-unit/processing-unit-80-circuit-export.json",
+ "record": "config-PROCESSING_UNIT_80_CIRCUIT_EXPORT",
+ "translation": {
+  "x": 834,
+  "y": 677
+ },
+ "research": {
+  "profile": "save force",
+  "template": null,
+  "bonuses": {
+   "mining_drill_productivity_bonus": 79990.00000001134,
+   "inserter_stack_size_bonus": 3,
+   "bulk_inserter_capacity_bonus": 11,
+   "belt_stack_size_bonus": 3,
+   "recipes": {
+    "processing-unit": {
+     "productivity_bonus": 250
+    }
+   }
+  }
+ },
+ "id_map": {
+  "machine": {
+   "1": 8,
+   "2": 9,
+   "3": 4,
+   "4": 5,
+   "5": 6,
+   "6": 7,
+   "7": 2,
+   "8": 3,
+   "9": 1
+  },
+  "drill": {},
+  "inserter": {
+   "5": 11,
+   "6": 13,
+   "7": 14,
+   "8": 15,
+   "9": 16,
+   "10": 17,
+   "11": 18,
+   "12": 19,
+   "13": 20,
+   "14": 22,
+   "15": 12,
+   "16": 21,
+   "17": 1,
+   "18": 2,
+   "19": 3,
+   "20": 4,
+   "21": 5,
+   "22": 6,
+   "23": 7,
+   "24": 8,
+   "25": 9,
+   "26": 10,
+   "27": 23,
+   "28": 24
+  },
+  "chest": {}
+ },
+ "left_out": {
+  "inserter": [
+   1,
+   2,
+   3,
+   4
+  ],
+  "chest": [
+   1,
+   2,
+   3,
+   4,
+   5,
+   6
+  ]
+ },
+ "answers": {
+  "lane-export:30:1": "40",
+  "lane-export:30:2": "40"
+ },
+ "read": {
+  "machines": [
+   {
+    "id": 1,
+    "recipe": "casting-iron",
+    "productivity": 150,
+    "crafting_speed": 143.75,
+    "prototype": "foundry",
+    "quality": "legendary",
+    "recipe_quality": "normal",
+    "position": {
+     "x": -431.5,
+     "y": -678.5
+    }
+   },
+   {
+    "id": 2,
+    "recipe": "processing-unit",
+    "productivity": 300,
+    "crafting_speed": 112.78750000000001,
+    "prototype": "electromagnetic-plant",
+    "quality": "legendary",
+    "recipe_quality": "normal",
+    "position": {
+     "x": -436,
+     "y": -678
+    }
+   },
+   {
+    "id": 3,
+    "recipe": "processing-unit",
+    "productivity": 300,
+    "crafting_speed": 112.78750000000001,
+    "prototype": "electromagnetic-plant",
+    "quality": "legendary",
+    "recipe_quality": "normal",
+    "position": {
+     "x": -427,
+     "y": -678
+    }
+   },
+   {
+    "id": 4,
+    "recipe": "advanced-circuit",
+    "productivity": 175,
+    "crafting_speed": 55.372,
+    "prototype": "electromagnetic-plant",
+    "quality": "legendary",
+    "recipe_quality": "normal",
+    "position": {
+     "x": -439,
+     "y": -673
+    }
+   },
+   {
+    "id": 5,
+    "recipe": "electronic-circuit",
+    "productivity": 150,
+    "crafting_speed": 52.443999999999996,
+    "prototype": "electromagnetic-plant",
+    "quality": "legendary",
+    "recipe_quality": "normal",
+    "position": {
+     "x": -434,
+     "y": -673
+    }
+   },
+   {
+    "id": 6,
+    "recipe": "electronic-circuit",
+    "productivity": 150,
+    "crafting_speed": 52.443999999999996,
+    "prototype": "electromagnetic-plant",
+    "quality": "legendary",
+    "recipe_quality": "normal",
+    "position": {
+     "x": -429,
+     "y": -673
+    }
+   },
+   {
+    "id": 7,
+    "recipe": "advanced-circuit",
+    "productivity": 175,
+    "crafting_speed": 55.372,
+    "prototype": "electromagnetic-plant",
+    "quality": "legendary",
+    "recipe_quality": "normal",
+    "position": {
+     "x": -424,
+     "y": -673
+    }
+   },
+   {
+    "id": 8,
+    "recipe": "casting-copper-cable",
+    "productivity": 150,
+    "crafting_speed": 129,
+    "prototype": "foundry",
+    "quality": "legendary",
+    "recipe_quality": "normal",
+    "position": {
+     "x": -435.5,
+     "y": -667.5
+    }
+   },
+   {
+    "id": 9,
+    "recipe": "casting-copper-cable",
+    "productivity": 150,
+    "crafting_speed": 129,
+    "prototype": "foundry",
+    "quality": "legendary",
+    "recipe_quality": "normal",
+    "position": {
+     "x": -427.5,
+     "y": -667.5
+    }
+   }
+  ],
+  "inserters": [
+   {
+    "source": {
+     "type": "belt",
+     "id": 1,
+     "near_lane": 1,
+     "pickup_length": 0.5,
+     "pickup_layout": "over-hood-exit",
+     "pickup_capture": {
+      "status": "supported",
+      "model": "belt",
+      "model_version": 2,
+      "entity_type": "underground-belt",
+      "entity_name": "turbo-underground-belt"
+     }
+    },
+    "sink": {
+     "type": "machine",
+     "id": 4
+    },
+    "prototype": "stack-inserter",
+    "quality": "legendary",
+    "stack_size": 16,
+    "position": {
+     "x": -438.5,
+     "y": -675.5
+    },
+    "direction": 0,
+    "id": 1
+   },
+   {
+    "source": {
+     "type": "machine",
+     "id": 4
+    },
+    "sink": {
+     "type": "machine",
+     "id": 2
+    },
+    "prototype": "stack-inserter",
+    "quality": "legendary",
+    "stack_size": 16,
+    "position": {
+     "x": -437.5,
+     "y": -675.5
+    },
+    "direction": 8,
+    "id": 2
+   },
+   {
+    "source": {
+     "type": "machine",
+     "id": 5
+    },
+    "sink": {
+     "type": "machine",
+     "id": 2
+    },
+    "prototype": "stack-inserter",
+    "quality": "legendary",
+    "stack_size": 16,
+    "position": {
+     "x": -435.5,
+     "y": -675.5
+    },
+    "direction": 8,
+    "id": 3
+   },
+   {
+    "source": {
+     "type": "machine",
+     "id": 5
+    },
+    "sink": {
+     "type": "machine",
+     "id": 2
+    },
+    "prototype": "stack-inserter",
+    "quality": "legendary",
+    "stack_size": 16,
+    "position": {
+     "x": -434.5,
+     "y": -675.5
+    },
+    "direction": 8,
+    "id": 4
+   },
+   {
+    "source": {
+     "type": "machine",
+     "id": 1
+    },
+    "sink": {
+     "type": "machine",
+     "id": 5
+    },
+    "prototype": "stack-inserter",
+    "quality": "legendary",
+    "stack_size": 16,
+    "position": {
+     "x": -433.5,
+     "y": -675.5
+    },
+    "direction": 0,
+    "id": 5
+   },
+   {
+    "source": {
+     "type": "machine",
+     "id": 1
+    },
+    "sink": {
+     "type": "machine",
+     "id": 6
+    },
+    "prototype": "stack-inserter",
+    "quality": "legendary",
+    "stack_size": 16,
+    "position": {
+     "x": -429.5,
+     "y": -675.5
+    },
+    "direction": 0,
+    "id": 6
+   },
+   {
+    "source": {
+     "type": "machine",
+     "id": 6
+    },
+    "sink": {
+     "type": "machine",
+     "id": 3
+    },
+    "prototype": "stack-inserter",
+    "quality": "legendary",
+    "stack_size": 16,
+    "position": {
+     "x": -428.5,
+     "y": -675.5
+    },
+    "direction": 8,
+    "id": 7
+   },
+   {
+    "source": {
+     "type": "machine",
+     "id": 6
+    },
+    "sink": {
+     "type": "machine",
+     "id": 3
+    },
+    "prototype": "stack-inserter",
+    "quality": "legendary",
+    "stack_size": 16,
+    "position": {
+     "x": -427.5,
+     "y": -675.5
+    },
+    "direction": 8,
+    "id": 8
+   },
+   {
+    "source": {
+     "type": "machine",
+     "id": 7
+    },
+    "sink": {
+     "type": "machine",
+     "id": 3
+    },
+    "prototype": "stack-inserter",
+    "quality": "legendary",
+    "stack_size": 16,
+    "position": {
+     "x": -425.5,
+     "y": -675.5
+    },
+    "direction": 8,
+    "id": 9
+   },
+   {
+    "source": {
+     "type": "belt",
+     "id": 5,
+     "near_lane": 1,
+     "pickup_length": 0.5,
+     "pickup_layout": "over-hood-exit",
+     "pickup_capture": {
+      "status": "supported",
+      "model": "belt",
+      "model_version": 2,
+      "entity_type": "underground-belt",
+      "entity_name": "turbo-underground-belt"
+     }
+    },
+    "sink": {
+     "type": "machine",
+     "id": 7
+    },
+    "prototype": "stack-inserter",
+    "quality": "legendary",
+    "stack_size": 16,
+    "position": {
+     "x": -424.5,
+     "y": -675.5
+    },
+    "direction": 0,
+    "id": 10
+   },
+   {
+    "source": {
+     "type": "machine",
+     "id": 8
+    },
+    "sink": {
+     "type": "machine",
+     "id": 4
+    },
+    "prototype": "stack-inserter",
+    "quality": "legendary",
+    "stack_size": 16,
+    "position": {
+     "x": -437.5,
+     "y": -670.5
+    },
+    "direction": 8,
+    "id": 11
+   },
+   {
+    "source": {
+     "type": "machine",
+     "id": 5
+    },
+    "sink": {
+     "type": "machine",
+     "id": 4
+    },
+    "prototype": "stack-inserter",
+    "quality": "legendary",
+    "stack_size": 16,
+    "position": {
+     "x": -436.5,
+     "y": -671.5
+    },
+    "direction": 4,
+    "id": 12
+   },
+   {
+    "source": {
+     "type": "machine",
+     "id": 8
+    },
+    "sink": {
+     "type": "machine",
+     "id": 5
+    },
+    "prototype": "stack-inserter",
+    "quality": "legendary",
+    "stack_size": 16,
+    "position": {
+     "x": -435.5,
+     "y": -670.5
+    },
+    "direction": 8,
+    "id": 13
+   },
+   {
+    "source": {
+     "type": "machine",
+     "id": 8
+    },
+    "sink": {
+     "type": "machine",
+     "id": 5
+    },
+    "prototype": "stack-inserter",
+    "quality": "legendary",
+    "stack_size": 16,
+    "position": {
+     "x": -434.5,
+     "y": -670.5
+    },
+    "direction": 8,
+    "id": 14
+   },
+   {
+    "source": {
+     "type": "machine",
+     "id": 8
+    },
+    "sink": {
+     "type": "machine",
+     "id": 5
+    },
+    "prototype": "stack-inserter",
+    "quality": "legendary",
+    "stack_size": 16,
+    "position": {
+     "x": -433.5,
+     "y": -670.5
+    },
+    "direction": 8,
+    "id": 15
+   },
+   {
+    "source": {
+     "type": "machine",
+     "id": 5
+    },
+    "sink": {
+     "type": "belt",
+     "id": 2
+    },
+    "prototype": "stack-inserter",
+    "quality": "legendary",
+    "stack_size": 16,
+    "position": {
+     "x": -432.5,
+     "y": -670.5
+    },
+    "direction": 0,
+    "id": 16
+   },
+   {
+    "source": {
+     "type": "machine",
+     "id": 6
+    },
+    "sink": {
+     "type": "belt",
+     "id": 2
+    },
+    "prototype": "stack-inserter",
+    "quality": "legendary",
+    "stack_size": 16,
+    "position": {
+     "x": -430.5,
+     "y": -670.5
+    },
+    "direction": 0,
+    "id": 17
+   },
+   {
+    "source": {
+     "type": "machine",
+     "id": 9
+    },
+    "sink": {
+     "type": "machine",
+     "id": 6
+    },
+    "prototype": "stack-inserter",
+    "quality": "legendary",
+    "stack_size": 16,
+    "position": {
+     "x": -429.5,
+     "y": -670.5
+    },
+    "direction": 8,
+    "id": 18
+   },
+   {
+    "source": {
+     "type": "machine",
+     "id": 9
+    },
+    "sink": {
+     "type": "machine",
+     "id": 6
+    },
+    "prototype": "stack-inserter",
+    "quality": "legendary",
+    "stack_size": 16,
+    "position": {
+     "x": -428.5,
+     "y": -670.5
+    },
+    "direction": 8,
+    "id": 19
+   },
+   {
+    "source": {
+     "type": "machine",
+     "id": 9
+    },
+    "sink": {
+     "type": "machine",
+     "id": 6
+    },
+    "prototype": "stack-inserter",
+    "quality": "legendary",
+    "stack_size": 16,
+    "position": {
+     "x": -427.5,
+     "y": -670.5
+    },
+    "direction": 8,
+    "id": 20
+   },
+   {
+    "source": {
+     "type": "machine",
+     "id": 6
+    },
+    "sink": {
+     "type": "machine",
+     "id": 7
+    },
+    "prototype": "stack-inserter",
+    "quality": "legendary",
+    "stack_size": 16,
+    "position": {
+     "x": -426.5,
+     "y": -671.5
+    },
+    "direction": 12,
+    "id": 21
+   },
+   {
+    "source": {
+     "type": "machine",
+     "id": 9
+    },
+    "sink": {
+     "type": "machine",
+     "id": 7
+    },
+    "prototype": "stack-inserter",
+    "quality": "legendary",
+    "stack_size": 16,
+    "position": {
+     "x": -425.5,
+     "y": -670.5
+    },
+    "direction": 8,
+    "id": 22
+   },
+   {
+    "id": 23,
+    "source": {
+     "type": "machine",
+     "id": 2
+    },
+    "sink": {
+     "type": "belt",
+     "id": 3
+    },
+    "stack_size": 16
+   },
+   {
+    "id": 24,
+    "source": {
+     "type": "machine",
+     "id": 3
+    },
+    "sink": {
+     "type": "belt",
+     "id": 4
+    },
+    "stack_size": 16
+   }
+  ],
+  "belts": [
+   {
+    "id": 1,
+    "type": "turbo-transport-belt",
+    "flow_direction": 4,
+    "lanes": [
+     {
+      "ingredient": "plastic-bar",
+      "stack_size": 4,
+      "lane_end": {
+       "kind": "dead_end"
+      }
+     },
+     {
+      "ingredient": "plastic-bar",
+      "stack_size": 4,
+      "lane_end": {
+       "kind": "dead_end"
+      }
+     }
+    ]
+   },
+   {
+    "id": 5,
+    "type": "turbo-transport-belt",
+    "flow_direction": 4,
+    "lanes": [
+     {
+      "ingredient": "plastic-bar",
+      "stack_size": 4,
+      "lane_end": {
+       "kind": "dead_end"
+      }
+     },
+     {
+      "ingredient": "plastic-bar",
+      "stack_size": 4,
+      "lane_end": {
+       "kind": "dead_end"
+      }
+     }
+    ]
+   },
+   {
+    "id": 2,
+    "type": "turbo-transport-belt",
+    "lanes": [
+     {
+      "ingredient": "electronic-circuit",
+      "stack_size": 4,
+      "consumption_per_second": 40
+     },
+     {
+      "ingredient": "electronic-circuit",
+      "stack_size": 4,
+      "consumption_per_second": 40
+     }
+    ],
+    "strategy": "export"
+   },
+   {
+    "id": 3,
+    "type": "turbo-transport-belt",
+    "lanes": [
+     {
+      "ingredient": "processing-unit",
+      "stack_size": 4
+     }
+    ]
+   },
+   {
+    "id": 4,
+    "type": "turbo-transport-belt",
+    "lanes": [
+     {
+      "ingredient": "processing-unit",
+      "stack_size": 4
+     }
+    ]
+   }
+  ],
+  "chests": []
+ }
+}

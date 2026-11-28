@@ -22,7 +22,7 @@ export type Raw = Record<string, unknown>;
 // ---------------------------------------------------------------- the shapes of an answering file
 
 export type End = { type: string; id: number } & Raw;
-export type ReadLane = { ingredient?: string; stack_size?: number; lane_end?: { kind: string }; sharing?: string };
+export type ReadLane = { ingredient?: string; stack_size?: number; lane_end?: { kind: string }; sharing?: string; consumption_per_second?: number };
 export type ReadBelt = { id: number; type?: string; flow_direction?: number; lanes?: ReadLane[] };
 /** A file that holds a build as the game wrote it (an export, a capture, a description) or as a person did (a configuration) */
 export type ReadFile = {
@@ -65,6 +65,8 @@ export type SettleInput = {
     research: ImportInputs["research"];
     /** The setpoint the import is called with: a drill's ore can settle through the item, and copies above 1 ask for a sharing */
     setpoint: { item?: string; copies?: number };
+    /** Answers the caller gives, by question key; they win over the file's, which cannot answer a question for a build laid on it by a turn */
+    answers?: Readonly<Record<string, string>>;
 };
 
 function buildOf(outcome: ImportOutcome, what: string): ImportBuild {
@@ -101,12 +103,19 @@ export function settleAnswers(input: SettleInput): Settled {
         return undefined;
     };
     const answerOf = (q: ImportBuild["questions"][number]): string | undefined => {
+        const given = input.answers?.[q.key];
+        if (given !== undefined) return given;
         if (q.kind === "drill-ore") return drillsOf(source).find((d) => samePoint(d.position, at(q.subject.entity_number), t))?.mined_item_name;
         const belt = beltAtLine(q.subject.entity_number);
         if (q.kind === "lane-item") {
             const lanes = belt?.lanes ?? [];
             if (lanes.length === 2) return lanes[(q.subject.lane as number) - 1].ingredient;
             return lanes.length === 1 && q.subject.lane === 2 ? lanes[0].ingredient : undefined;
+        }
+        // a rate is the file's rate of that lane, else none: it is never a sharing
+        if (q.kind === "lane-export") {
+            const rate = belt?.lanes?.[(q.subject.lane as number) - 1]?.consumption_per_second;
+            return rate === undefined ? undefined : String(rate);
         }
         // a lane that states no sharing is shared, as is a line the file holds no belt for
         return (belt?.lanes ?? []).find((l) => l.sharing !== undefined)?.sharing ?? "shared";
@@ -482,6 +491,8 @@ export type PasteClockInput = {
     /** How many units of the sample the blueprint holds */
     units: number;
     leftOut?: LeftOut;
+    /** Answers to the import's questions that the file cannot give, by question key; they win over the file's */
+    answers?: Readonly<Record<string, string>>;
     /** Where the sample's ids are not the file's: the id map that pairs the import with the sample, instead of the pairing by position */
     idMap?: IdMap;
     /** The record job of the sample */
@@ -515,6 +526,7 @@ export async function pasteClock(input: PasteClockInput): Promise<PasteClockRun>
     const settled = settleAnswers({
         name: input.name, text: input.text, data: input.data, source: input.source, translation: input.translation, research: input.research,
         setpoint: { item: sample.setpoint.item, copies: units === 1 ? sample.setpoint.copies : 1 },
+        ...(input.answers !== undefined && { answers: input.answers }),
     });
     const pairing = input.idMap === undefined
         ? pairWithSample(settled.outcome, input.translation, input.positioned, sample, input.leftOut)
