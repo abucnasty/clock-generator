@@ -1,0 +1,14 @@
+{
+  "grenade-240": {
+    "direction": "selected takt_batches_observed_region to coordinated_sources; wake-ups a minute 128.571 to 137.812 (+7.2 %); windows differ",
+    "cause": "The sample config sets what the build does not hold. Fields: drills[].productivity (the sample sets 80,010 %; the build takes 79,990 % from its research block) and setpoint.copy_offset (the sample sets x 12, y 0; the paste holds one unit and writes none). Chest 1, an infinity chest with no inserter, is left out of the pairing by id."
+  },
+  "metallurgic-45": {
+    "direction": "selected time_study_windows_subtick to coordinated_sources; window cycle 640 to 64 ticks; wake-ups a minute 472.5 to 701.719 (+48.5 %); windows differ",
+    "cause": "The sample config sets what the build does not hold. Fields: inserters[].filters (the sample sets coal and coal by hand on 8 inserters; the build writes none), overrides (the sample sets lcm 5; the build writes none) and chests[].item_filter (the sample sets an empty list; the build writes none). The build also keeps 8 infinity-chest feeders and their 8 inserters that the sample leaves out; they are left out of the pairing by id."
+  },
+  "production-science-120": {
+    "direction": "wake-ups a minute 53.571 to 64.286 (+20.0 %); windows differ",
+    "cause": "The sample config sets what the build does not hold. Fields: inserters[].filters (the sample sets steel-plate by hand on 4 inserters; the build writes none), setpoint.copy_offset (the sample sets x 10, y 0; the paste holds one unit and writes none), drills[].direction (the build writes one; the sample sets none) and drills[].productivity (the sample sets 79,990 %; the build takes 79,990.00000001134 % from its research block). 3 infinity chests and 2 feeder inserters are left out of the pairing by id."
+  }
+}

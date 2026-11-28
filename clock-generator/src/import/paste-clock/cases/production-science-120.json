@@ -1,0 +1,358 @@
+{
+ "scaffold": "resources/config-samples/science/production/production-120-two-belts.scaffold",
+ "sample": "resources/config-samples/science/production/production-120-two-belts.json",
+ "record": "config-PRODUCTION_SCIENCE_120_TWO_BELTS",
+ "translation": {
+  "x": -662,
+  "y": -231
+ },
+ "research": {
+  "profile": "save force",
+  "template": null,
+  "bonuses": {
+   "mining_drill_productivity_bonus": 79990.00000001134,
+   "inserter_stack_size_bonus": 3,
+   "bulk_inserter_capacity_bonus": 11,
+   "belt_stack_size_bonus": 3,
+   "recipes": {
+    "casting-steel": {
+     "productivity_bonus": 250
+    }
+   }
+  }
+ },
+ "id_map": {
+  "machine": {
+   "1": 3,
+   "2": 1,
+   "3": 2,
+   "4": 4
+  },
+  "drill": {
+   "1": 1
+  },
+  "inserter": {
+   "3": 4,
+   "4": 3,
+   "5": 2,
+   "6": 5,
+   "7": 1
+  },
+  "chest": {}
+ },
+ "left_out": {
+  "inserter": [
+   1,
+   2
+  ],
+  "chest": [
+   1,
+   2,
+   3
+  ]
+ },
+ "read": {
+  "belts": [
+   {
+    "flow_direction": 4,
+    "id": 1,
+    "lanes": [
+     {
+      "ingredient": "productivity-module",
+      "lane_end": {
+       "kind": "dead_end"
+      },
+      "stack_size": 4
+     },
+     {
+      "ingredient": "electric-furnace",
+      "lane_end": {
+       "kind": "dead_end"
+      },
+      "stack_size": 4
+     }
+    ],
+    "type": "turbo-transport-belt"
+   },
+   {
+    "id": 2,
+    "lanes": [
+     {
+      "ingredient": "production-science-pack",
+      "stack_size": 4
+     },
+     {
+      "ingredient": "",
+      "stack_size": 4
+     }
+    ],
+    "type": "turbo-transport-belt"
+   }
+  ],
+  "chests": [
+   {
+    "id": 1,
+    "item_filter": [
+     {
+      "item_name": "electric-furnace",
+      "request_count": 50
+     }
+    ],
+    "position": {
+     "x": 387.5,
+     "y": 4.5
+    },
+    "remove_unfiltered_items": false,
+    "type": "infinity-chest"
+   },
+   {
+    "id": 2,
+    "item_filter": [
+     {
+      "item_name": "productivity-module",
+      "request_count": 50
+     }
+    ],
+    "position": {
+     "x": 387.5,
+     "y": 8.5
+    },
+    "remove_unfiltered_items": false,
+    "type": "infinity-chest"
+   },
+   {
+    "id": 3,
+    "position": {
+     "x": 408.5,
+     "y": 5.5
+    },
+    "remove_unfiltered_items": true,
+    "type": "infinity-chest"
+   }
+  ],
+  "drills": {
+   "configs": [
+    {
+     "direction": 4,
+     "id": 1,
+     "mined_item_name": "stone",
+     "position": {
+      "x": 395.5,
+      "y": -0.5
+     },
+     "productivity": 79990.00000001134,
+     "speed_bonus": 8.8388,
+     "target": {
+      "id": 3,
+      "type": "machine"
+     },
+     "type": "electric-mining-drill"
+    }
+   ]
+  },
+  "inserters": [
+   {
+    "direction": 0,
+    "position": {
+     "x": 387.5,
+     "y": 5.5
+    },
+    "prototype": "stack-inserter",
+    "quality": "legendary",
+    "sink": {
+     "belt_direction": 4,
+     "id": 1,
+     "type": "belt"
+    },
+    "source": {
+     "id": 1,
+     "type": "chest"
+    },
+    "stack_size": 16
+   },
+   {
+    "direction": 8,
+    "position": {
+     "x": 387.5,
+     "y": 7.5
+    },
+    "prototype": "stack-inserter",
+    "quality": "legendary",
+    "sink": {
+     "belt_direction": 4,
+     "id": 1,
+     "type": "belt"
+    },
+    "source": {
+     "id": 2,
+     "type": "chest"
+    },
+    "stack_size": 16
+   },
+   {
+    "direction": 0,
+    "position": {
+     "x": 397.5,
+     "y": -2.5
+    },
+    "prototype": "stack-inserter",
+    "quality": "legendary",
+    "sink": {
+     "id": 3,
+     "type": "machine"
+    },
+    "source": {
+     "id": 1,
+     "type": "machine"
+    },
+    "stack_size": 16
+   },
+   {
+    "direction": 0,
+    "position": {
+     "x": 397.5,
+     "y": 1.5
+    },
+    "prototype": "stack-inserter",
+    "quality": "legendary",
+    "sink": {
+     "id": 2,
+     "type": "machine"
+    },
+    "source": {
+     "id": 3,
+     "type": "machine"
+    },
+    "stack_size": 16
+   },
+   {
+    "direction": 0,
+    "position": {
+     "x": 398.5,
+     "y": -2.5
+    },
+    "prototype": "stack-inserter",
+    "quality": "legendary",
+    "sink": {
+     "id": 3,
+     "type": "machine"
+    },
+    "source": {
+     "id": 4,
+     "type": "machine"
+    },
+    "stack_size": 16
+   },
+   {
+    "direction": 8,
+    "filters": [
+     "productivity-module",
+     "electric-furnace"
+    ],
+    "position": {
+     "x": 398.5,
+     "y": 5.5
+    },
+    "prototype": "stack-inserter",
+    "quality": "legendary",
+    "sink": {
+     "id": 2,
+     "type": "machine"
+    },
+    "source": {
+     "id": 1,
+     "near_lane": 1,
+     "pickup_capture": {
+      "entity_name": "turbo-transport-belt",
+      "entity_type": "transport-belt",
+      "model": "belt",
+      "model_version": 2,
+      "status": "supported"
+     },
+     "pickup_layout": "side-straight",
+     "pickup_length": 1,
+     "type": "belt"
+    },
+    "stack_size": 16
+   },
+   {
+    "direction": 12,
+    "position": {
+     "x": 399.5,
+     "y": 3.5
+    },
+    "prototype": "stack-inserter",
+    "quality": "legendary",
+    "sink": {
+     "belt_direction": 8,
+     "id": 2,
+     "type": "belt"
+    },
+    "source": {
+     "id": 2,
+     "type": "machine"
+    },
+    "stack_size": 16
+   }
+  ],
+  "machines": [
+   {
+    "crafting_speed": 122.5,
+    "id": 1,
+    "position": {
+     "x": 395.5,
+     "y": -5.5
+    },
+    "productivity": 300,
+    "prototype": "foundry",
+    "quality": "legendary",
+    "recipe": "casting-steel",
+    "recipe_quality": "normal"
+   },
+   {
+    "crafting_speed": 63.00781250000001,
+    "id": 2,
+    "position": {
+     "x": 397.5,
+     "y": 3.5
+    },
+    "productivity": 100,
+    "prototype": "assembling-machine-3",
+    "quality": "legendary",
+    "recipe": "production-science-pack",
+    "recipe_quality": "normal"
+   },
+   {
+    "crafting_speed": 46.37125,
+    "id": 3,
+    "position": {
+     "x": 398.5,
+     "y": -0.5
+    },
+    "productivity": 0,
+    "prototype": "assembling-machine-3",
+    "quality": "legendary",
+    "recipe": "rail",
+    "recipe_quality": "normal"
+   },
+   {
+    "crafting_speed": 66.5,
+    "id": 4,
+    "position": {
+     "x": 400.5,
+     "y": -5.5
+    },
+    "productivity": 150,
+    "prototype": "foundry",
+    "quality": "legendary",
+    "recipe": "casting-iron-stick",
+    "recipe_quality": "normal"
+   }
+  ],
+  "suggested_target": {
+   "copies": 1,
+   "items_per_second": 18.002232142857146,
+   "recipe": "production-science-pack"
+  }
+ }
+}
