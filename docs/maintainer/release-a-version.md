@@ -25,8 +25,8 @@ Release the work on `master`: the clock generator, the site and, if its version 
 3. Set the next version in `clock-generator/package.json` and `clock-generator-ui/package.json`, and in their
    `package-lock.json` files. The two packages must show the same version.
 
-4. If the sidecar has a new version, set it in `clock-generator-sidecar/info.json`, in the newest entry of
-   `clock-generator-sidecar/changelog.txt` and in `LATEST_SIDECAR_VERSION`.
+4. If the sidecar has a new version, set it in `clock-generator-sidecar/info.json` and in the newest entry of
+   `clock-generator-sidecar/changelog.txt`.
 
 5. In `CHANGELOG.md`, change the section `[Unreleased]` to the new version, with the date. Add an empty section
    `[Unreleased]` above it.

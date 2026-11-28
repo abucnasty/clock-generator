@@ -23,6 +23,10 @@ const withSource = (fields: object) => {
 };
 const merge = { lane: 1, outer: { ingredient: "iron-plate", stack_size: 4 }, inner: { ingredient: "iron-plate", stack_size: 4 }, downstream_tiles: 3, outlet: "open" };
 
+/** `config` with its first inserter's belt pickup captured as unsupported for `reason`, as a capture states it */
+const captured = <C extends { inserters: { source: object }[] }>(config: C, reason: string) => ({ ...config, inserters: [
+    { ...config.inserters[0], source: { ...config.inserters[0].source, pickup_capture: { status: "unsupported", reason } } }, ...config.inserters.slice(1)] });
+
 describe("a pickup from a side-loaded belt tile", () => {
     it.each([
         { field: "pickup_supply", value: ["side-inner"] },
@@ -78,7 +82,7 @@ describe("an out-of-scope pickup whose side stream brings an ingredient", () => 
     });
 
     it("is refused as out of scope, not as a missing inserter, when it was captured as side-loaded", () => {
-        const config = ConfigSchema.parse({ ...circuits(), sidecar_version: "0.11.0", pickup_warnings: [{ inserter_id: 1, reason: "side-loaded" }] });
+        const config = ConfigSchema.parse(captured(circuits(), "side-loaded"));
         expect(() => validateConfig(config)).toThrow(/Inserter 1: Pickup captured as unsupported \(side-loaded\): picking up from a belt tile/);
     });
 });
@@ -88,7 +92,7 @@ describe("a Sidecar capture of an out-of-scope pickup", () => {
         { reason: "side-loaded", says: /Inserter 1: Pickup captured as unsupported \(side-loaded\): picking up from a belt tile that another belt side-loads onto/ },
         { reason: "splitter", says: /Inserter 1: Pickup captured as unsupported \(splitter\): picking up from a splitter is out of scope\.$/ },
     ])("stays refused across save and reload as out of scope ($reason)", ({ reason, says }) => {
-        let config = ConfigSchema.parse({ ...base(), sidecar_version: "0.11.0", pickup_warnings: [{ inserter_id: 1, reason }] });
+        let config = ConfigSchema.parse(captured(base(), reason));
         for (let reload = 0; reload < 3; reload++) {
             config = ConfigSchema.parse(JSON.parse(JSON.stringify(config)));
             expect(config.inserters[0].source).toMatchObject({ pickup_capture: { status: "unsupported", reason } });
@@ -97,7 +101,7 @@ describe("a Sidecar capture of an out-of-scope pickup", () => {
     });
 
     it("does not promise support after an update of the mod for what is out of scope", () => {
-        const config = ConfigSchema.parse({ ...base(), sidecar_version: "0.11.0", pickup_warnings: [{ inserter_id: 1, reason: "side-loaded" }] });
+        const config = ConfigSchema.parse(captured(base(), "side-loaded"));
         expect(() => SimulationContext.fromConfig(config)).not.toThrow(/new Sidecar capture/);
         expect(() => SimulationContext.fromConfig(config)).toThrow(/out of scope/);
     });

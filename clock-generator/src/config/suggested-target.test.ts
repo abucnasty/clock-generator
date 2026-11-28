@@ -4,8 +4,7 @@ import { describe, expect, it } from "vitest";
 import * as O from "fp-ts/Option";
 import { computeMachineFacts } from "../entities/traits/machine-facts-of";
 import { targetRateMaxOf } from "../crafting/feasibility/max-rate";
-import { BeltConfig, Config, ConfigSchema, InserterConfig, MachineConfiguration, MachineConfigurationSchema } from "./schema";
-import { checkSidecarImport, LATEST_SIDECAR_VERSION } from "./sidecar-version";
+import { BeltConfig, Config, ConfigSchema, InserterConfig, MachineConfiguration } from "./schema";
 import { inferSuggestedTarget, parseSuggestedTarget, suggestedTargetOf } from "./suggested-target";
 
 type MachineInput = Omit<MachineConfiguration, "id"> & { id?: number };
@@ -325,47 +324,6 @@ describe("suggestedTargetOf, held to the belt the product is put on", () => {
             ? { ...inserter, sink: { ...inserter.sink, id: 3 } } : inserter);
         const suggested = O.toNullable(suggestedTargetOf(from_mod(machines), machines, { inserters: split, belts: [...outputs.belts, third] }));
         expect(suggested).toEqual({ target: from_mod(machines), source: "mod" });
-    });
-});
-
-describe("exports of every sidecar version", () => {
-    const gear_and_belt = [
-        { id: 1, recipe: "iron-gear-wheel", crafting_speed: 0.75, productivity: 0, type: "machine" },
-        { id: 2, recipe: "transport-belt", crafting_speed: 0.75, productivity: 0, type: "machine" },
-    ];
-    const inserters = [{ source: { type: "machine", id: 1 }, sink: { type: "machine", id: 2 }, stack_size: 1 }];
-    const exports = {
-        "before 0.6.0": { machines: gear_and_belt, drills: [], inserters, belts: [], chests: [] },
-        "0.6.0": {
-            sidecar_version: "0.6.0", machines: gear_and_belt,
-            drills: { mining_productivity_level: 0, configs: [] }, inserters, belts: [], chests: [],
-        },
-        "0.7.0": {
-            sidecar_version: "0.7.0", machines: gear_and_belt,
-            drills: { mining_productivity_level: 0, configs: [] }, inserters, belts: [], chests: [],
-        },
-        "0.8.0": {
-            sidecar_version: "0.8.0",
-            suggested_target: { recipe: "transport-belt", items_per_second: 3, copies: 1 },
-            machines: gear_and_belt,
-            drills: { mining_productivity_level: 0, configs: [] }, inserters, belts: [], chests: [],
-        },
-    };
-
-    it.each(Object.entries(exports))("imports an export of %s as before, with a suggested target", (version, exported) => {
-        const pasted = exported as { sidecar_version?: unknown, suggested_target?: unknown, machines: unknown[] };
-        const parsed = pasted.machines.map(machine => MachineConfigurationSchema.parse(machine));
-        expect(() => checkSidecarImport(pasted.sidecar_version, parsed)).not.toThrow();
-
-        const suggested = O.toNullable(suggestedTargetOf(pasted.suggested_target, parsed));
-        expect(suggested?.source).toBe(version === "0.8.0" ? "mod" : "inferred");
-        expect(suggested?.target.item).toBe("transport-belt");
-        expect(suggested?.target.items_per_second).toBeCloseTo(3);
-    });
-
-    it("says nothing about the latest version", () => {
-        const parsed = gear_and_belt.map(machine => MachineConfigurationSchema.parse(machine));
-        expect(checkSidecarImport(LATEST_SIDECAR_VERSION, parsed)).toEqual(O.none);
     });
 });
 

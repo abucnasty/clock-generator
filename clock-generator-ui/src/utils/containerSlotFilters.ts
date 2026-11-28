@@ -25,11 +25,6 @@ export function shownSlotFilter(filter: SlotFilterFormData): string {
     return filter.blocked ? filter._marker ?? BLOCK_MARKERS[0] : filter.item;
 }
 
-/** Slot filters as the form keeps them, from a config or a saved build that may name a marker as a slot's item */
-export function formSlotFilters<T extends { slot: number; item?: string; blocked?: true }>(filters: readonly T[]): (T | SlotFilterFormData)[] {
-    return filters.map(filter => filter.item !== undefined && isBlockMarker(filter.item) ? slotFilterOf(filter.slot, filter.item) : filter);
-}
-
 /** A brush stroke changes only the chosen slots, keeping contents and other filters untouched. */
 export function paintSlotFilters(filters: readonly SlotFilterFormData[], slots: readonly number[], item: string | null): SlotFilterFormData[] {
     const chosen = new Set(slots);

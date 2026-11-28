@@ -80,9 +80,8 @@ UAT of a release runs there. The deployments need the secrets `CLOUDFLARE_API_TO
 (a recovery) deploys the latest released tag again; it never makes a release. The old address on Vercel only redirects
 to the new one (`vercel.json`, deployed by hand: [Move the site to Cloudflare](docs/maintainer/move-the-site-to-cloudflare.md)).
 
-The `clock-generator-sidecar` mod has a version of its own. Bump its `info.json`, add the version to its
-`changelog.txt`, and set `LATEST_SIDECAR_VERSION` in `clock-generator/src/config/sidecar-version.ts` to match; a test
-fails if those three drift apart. A release or hotfix merge publishes a version the Factorio mod portal does not have yet
+The `clock-generator-sidecar` mod has a version of its own. Bump its `info.json` and add the version to its
+`changelog.txt`; a test fails if those two drift apart. A release or hotfix merge publishes a version the Factorio mod portal does not have yet
 (`.github/workflows/publish-sidecar.yml`, which release.yml calls and which needs the `FACTORIO_MOD_API_KEY` secret). A
 merge to the mod's folder that is not a release or a hotfix publishes nothing. A failed upload can be tried again with
 "Run workflow" on the branch of the merge. The upload sends only the zip: the long description on

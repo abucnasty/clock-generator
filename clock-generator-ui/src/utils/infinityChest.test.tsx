@@ -32,7 +32,7 @@ it('retains empty disposal filters and the removal switch through import, saved 
     if (link.kind === 'link') {
         const result = await decodeShareLink(link);
         expect(result.kind).toBe('build');
-        if (result.kind === 'build') expect(result.config).toEqual(config);
+        if (result.kind === 'build') expect(result.config).toEqual({ format: 1, ...config });
     }
 });
 

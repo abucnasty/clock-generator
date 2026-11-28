@@ -276,7 +276,7 @@ describe('formDataToConfig', () => {
 
 describe('what goes through the form and back as the config gave it', () => {
     const at = { position: { x: 2.5, y: -1.5 } };
-    const mark = { status: 'side-loaded', tiles: 3, sidecar_version: '0.13.0' };
+    const mark = { status: 'side-loaded', tiles: 3 };
     // `inForm`: the form holds it as the config gave it, too
     it.each<[what: string, fields: Record<string, unknown>, kept: (config: Config | ConfigFormData) => unknown, inForm: boolean]>([
         ['a machine\'s prototype and qualities and a buffer chest\'s prototype', {

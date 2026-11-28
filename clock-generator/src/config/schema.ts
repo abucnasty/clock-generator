@@ -14,18 +14,9 @@ import {
 } from "../common/enable-control-types";
 import { MachineStatus } from "../state/entity-status";
 import { COPIES_DECIMAL_ERROR, isShortDecimalCopies } from "./copies-value";
-import { migrateBeltSupplyOverrides } from "./migrate-belt-supply";
-import { dropFractionalSwingsOverride } from "./migrate-fractional-swings";
-import { renameLoopSeedItemsToKickStart } from "./migrate-kick-start";
-import { renameTargetOutputToSetpoint } from "./migrate-setpoint";
-import { readRecipeSetpointAsItem } from "./migrate-recipe-setpoint";
+import { readRecipeSetpointAsItem } from "./setpoint-item";
 import { reasonString } from "./setpoint-refusal";
 import { refusalOfSetpoint } from "./setpoint-check";
-import { readNeverOverrideAsAuto } from "./migrate-never-override";
-import { renameClockedPeriodToWindowCycle } from "./migrate-window-cycle";
-import { migrateBlockedSlotFilter } from "./migrate-blocked-slots";
-import { migrateMiningProductivityLevelStep } from "./migrate-mining-productivity";
-import { migrateMachineTypeStep } from "./migrate-machine-type";
 import { FactorioDataService } from "../data/factorio-data-service";
 import { machinePlacesResults } from "./machine-prototype";
 import { OutputBeltSchema, outputBeltProblems } from "./output-belt";
@@ -73,11 +64,9 @@ const MachineQualitySchema = z.enum(["normal", "uncommon", "rare", "epic", "lege
 /**
  * A machine of the build. What it is is its `prototype`, whose game data gives the rule it is simulated under (a furnace
  * holds a stack of its product, a biochamber burns nutrients, any other crafting machine stops at its overload
- * multiplier; `entities/machine/machine-rule.ts`). That rule is internal: no config field names or sets it. The former
- * `type` field ("machine", "furnace", "biochamber") is read once, before the machine is checked, as the prototype of a
- * machine of that rule (`migrate-machine-type.ts`), and dropped when the machine names its prototype.
+ * multiplier; `entities/machine/machine-rule.ts`). That rule is internal: no config field names or sets it.
  */
-export const MachineConfigurationSchema = z.preprocess(migrateMachineTypeStep, z.object({
+export const MachineConfigurationSchema = z.object({
     id: z.number().int().positive().describe("The number that identifies the machine in the configuration."),
     recipe: z.string().describe("The name of the recipe that the machine makes."),
     productivity: z.number().min(0).describe("The productivity bonus of the machine, in percent."),
@@ -114,7 +103,7 @@ export const MachineConfigurationSchema = z.preprocess(migrateMachineTypeStep, z
         type: z.literal(TargetType.MACHINE).describe("The entity that receives the results is a machine."),
         id: z.number().int().positive().describe("The id of the machine that receives the results."),
     })]).optional().describe("The machine or chest into which a machine that puts its own results, such as a recycler, puts them."),
-}));
+});
 
 export type MachineConfiguration = z.infer<typeof MachineConfigurationSchema>;
 
@@ -348,12 +337,12 @@ const EnableControlOverrideConditionalSchema = z.object({
 
 export type EnableControlOverrideConditional = z.infer<typeof EnableControlOverrideConditionalSchema>;
 
-export const EnableControlOverrideConfigSchema = z.preprocess(readNeverOverrideAsAuto, z.preprocess(renameClockedPeriodToWindowCycle, z.discriminatedUnion("mode", [
+export const EnableControlOverrideConfigSchema = z.discriminatedUnion("mode", [
     EnableControlOverrideAutoSchema,
     EnableControlOverrideAlwaysSchema,
     EnableControlOverrideClockedSchema,
     EnableControlOverrideConditionalSchema
-])));
+]);
 
 export type EnableControlOverrideConfig = z.infer<typeof EnableControlOverrideConfigSchema>;
 
@@ -417,10 +406,10 @@ export const MiningDrillConfigSchema = z.object({
 
 export type MiningDrillConfig = z.infer<typeof MiningDrillConfigSchema>;
 
-/** The mining drills. A config with the former `mining_productivity_level` is read as each drill's productivity once. */
-export const DrillsConfigSchema = z.preprocess(migrateMiningProductivityLevelStep, z.object({
+/** The mining drills */
+export const DrillsConfigSchema = z.object({
     configs: z.array(MiningDrillConfigSchema).describe("The mining drills of the build.")
-}));
+});
 
 // ============================================================================
 // Inserter Configuration
@@ -481,7 +470,6 @@ const SideLoadedDropCaptureSchema = z.object({
     status: z.literal("side-loaded").describe("The items that the inserter drops side-load onto another belt."),
     /** The belt tiles from the drop tile to the belt its stream side-loads onto */
     tiles: z.number().int().positive().describe("The number of belt tiles from the drop tile to the belt that the items side-load onto."),
-    sidecar_version: z.string().optional().describe("The version of the sidecar that recorded this."),
 });
 
 const InserterBeltSinkConfigSchema = z.object({
@@ -743,8 +731,8 @@ const storageSizeRefused = z.custom<never>(() => false, {
 
 const BOTH_IN_SLOT_FILTER = "a slot filter names an item or is `blocked: true`, not both";
 
-/** A slot that takes one item only, or none at all; a filter named as no-item or deconstruction-planner is read as blocked */
-const SlotFilterConfigSchema = z.preprocess(migrateBlockedSlotFilter, z.union([
+/** A slot that takes one item only, or none at all */
+const SlotFilterConfigSchema = z.union([
     z.object({
         /** The slot, from 1 */
         slot: z.number().int().positive().describe("The slot number, from 1."),
@@ -759,7 +747,7 @@ const SlotFilterConfigSchema = z.preprocess(migrateBlockedSlotFilter, z.union([
         blocked: z.literal(true).describe("The slot takes no item."),
         item: z.never({ error: BOTH_IN_SLOT_FILTER }).optional().describe("Not used with blocked."),
     }),
-]));
+]);
 
 export const SlotContentConfigSchema = z.object({
     /** The slot, from 1 */
@@ -844,7 +832,7 @@ export type ChestConfig = z.infer<typeof ChestConfigSchema>;
 // Config Overrides
 // ============================================================================
 
-export const ConfigOverridesSchema = z.preprocess(renameLoopSeedItemsToKickStart, z.preprocess(dropFractionalSwingsOverride, z.preprocess(migrateBeltSupplyOverrides, z.object({
+export const ConfigOverridesSchema = z.object({
     lcm: z.number().int().positive().optional().describe("The number of output cycles in one window cycle; without it, the generator calculates the number."),
     /**
      * Forces the number of output swings per crafting cycle. Without it the generator picks the count and lowers it
@@ -911,11 +899,6 @@ export const ConfigOverridesSchema = z.preprocess(renameLoopSeedItemsToKickStart
      */
     kick_start_items: z.number().int().nonnegative().optional().describe("The kick start: the number of its own product that a machine gets before its clock starts, when its recipe uses that product."),
     /**
-     * @deprecated Ignored. Set terminal_swing_count to force an output swing count instead; other counts are
-     * offered as potential clocks.
-     */
-    disable_swing_backoff: z.boolean().optional().describe("Not used: set terminal_swing_count to give the number of output swings."),
-    /**
      * Derive every non-output inserter's clock window from how it behaves when only the output
      * inserters are clocked, then verify the result with a clock-only (as-built) simulation.
      * Replaces the heuristic window trimming; the result is marked unstable when no padding passes.
@@ -932,7 +915,7 @@ export const ConfigOverridesSchema = z.preprocess(renameLoopSeedItemsToKickStart
      * regardless of the window cycle.
      */
     ignored_lcm_ingredients: z.array(z.string()).optional().describe("The items that do not change the window cycle time; set each inserter that moves only these items to ALWAYS.")
-}))));
+});
 
 export type ConfigOverrides = z.infer<typeof ConfigOverridesSchema>;
 
@@ -950,7 +933,7 @@ export function judgedStartOf(overrides: ConfigOverrides | undefined): JudgedSta
 // Root Config
 // ============================================================================
 
-export const ConfigSchema = z.preprocess(renameTargetOutputToSetpoint, z.preprocess(readRecipeSetpointAsItem, z.preprocess(normalizePickupCaptureConfig, z.object({
+export const ConfigSchema = z.preprocess(readRecipeSetpointAsItem, z.preprocess(normalizePickupCaptureConfig, z.object({
     setpoint: TargetProductionRateConfigSchema.describe("The setpoint: the product that the build must make, and the rate it must hold. The clock never changes it."),
     machines: z.array(MachineConfigurationSchema).describe("The machines of the build."),
     drills: DrillsConfigSchema.optional().describe("The mining drills of the build."),
@@ -1120,7 +1103,7 @@ export const ConfigSchema = z.preprocess(renameTargetOutputToSetpoint, z.preproc
                 "give every inserter that drops on a belt a `drop` (lane and position), or none"
         });
     }
-}))));
+})));
 
 /** Parsed configs have explicit pickup geometry on every belt source. */
 export type ParsedConfig = z.infer<typeof ConfigSchema>;

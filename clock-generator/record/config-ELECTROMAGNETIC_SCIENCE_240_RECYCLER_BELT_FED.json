@@ -3,7 +3,7 @@
   "job": "config-ELECTROMAGNETIC_SCIENCE_240_RECYCLER_BELT_FED",
   "group": "config",
   "name": "ELECTROMAGNETIC_SCIENCE_240_RECYCLER_BELT_FED",
-  "config_sha256": "8ccdf9b55fdf7fb221a9d54a4726472d3f664ded5bc2d087883554866f6c5410",
+  "config_sha256": "ad25f68af69f7e8b3466fc5dc8e477be8298e0d4c2fa395d31e8d475550d8290",
   "job_results_sha256": "f151a3aa69de1f34e54642ac7c9514c476a564fd60d91d7f6f33178385336cc8",
   "selected": "coordinated_sources",
   "selected_windows": {

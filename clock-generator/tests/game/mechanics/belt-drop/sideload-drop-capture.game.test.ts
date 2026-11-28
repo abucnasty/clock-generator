@@ -246,10 +246,9 @@ helpers.write_file("sideload-drop-cases.txt", table.concat(report, "\\n") .. "\\
             expect(read[name], name).toBeDefined();
             expect(read[name]).toBe(expected);
         }
-        // the lithium build's export in the repository is this one, as the game writes it
-        const sample = path.join(path.dirname(ConfigPaths.LITHIUM_PLATE_80_SILO_CHEST), "lithium-plate-80-silo-chest.sidecar-export.json");
+        // the lithium build's export kept in the repository is this one, as the game writes it
+        const sample = path.join(__dirname, "../../../../src/import/fixtures/assemble/reads/lithium.json");
         const exported = JSON.parse(fs.readFileSync(path.join(scratch, "script-output", "lithium-plate-80-silo-chest.sidecar-export.json"), "utf8"));
-        if (process.env.SIDELOAD_DROP_WRITE_SAMPLE) fs.writeFileSync(sample, JSON.stringify(exported, null, 2) + "\n");
         // the sample is the export of the Sidecar, which stamps its version where the recorder's copy of the Lua does not
         expect(withoutVersions(exported)).toEqual(withoutVersions(JSON.parse(fs.readFileSync(sample, "utf8"))));
         expect(Object.keys(read).sort()).toEqual(Object.keys(EXPECTED_CASES).sort());

@@ -18,7 +18,7 @@ const stack = (source: object, sink: object) => ({ source, sink, prototype: 'sta
 function build(chests: object[], inserters: object[] = []): Config {
     return ConfigSchema.parse({
         setpoint: { item: 'iron-plate', items_per_second: 1, copies: 1 },
-        machines: [{ id: 1, recipe: 'iron-plate', crafting_speed: 5, productivity: 0, type: 'furnace' }],
+        machines: [{ id: 1, recipe: 'iron-plate', crafting_speed: 5, productivity: 0, prototype: 'electric-furnace' }],
         drills: { configs: [drill({ type: 'chest', id: 1 })] },
         inserters, belts: [], chests,
     });
@@ -89,7 +89,7 @@ describe('a drill that drops into a chest', () => {
 describe('the config of a drill into a chest', () => {
     const base = {
         setpoint: { item: 'iron-plate', items_per_second: 1, copies: 1 },
-        machines: [{ id: 1, recipe: 'iron-plate', crafting_speed: 5, productivity: 0, type: 'furnace' }],
+        machines: [{ id: 1, recipe: 'iron-plate', crafting_speed: 5, productivity: 0, prototype: 'electric-furnace' }],
         inserters: [], belts: [], chests: [{ id: 1, type: 'car' }],
     };
     const parse = (target: { type: 'chest' | 'machine'; id: number }, overrides?: object) =>
@@ -120,17 +120,13 @@ describe('the config of a drill into a chest', () => {
         expect(parsed.error!.issues.map(issue => issue.message)).toContain(
             'Drill 1 drops into a chest; its override can be AUTO, CLOCKED or ALWAYS, not CONDITIONAL');
     });
-
-    it('reads the former NEVER as AUTO', () => {
-        expect(parse({ type: 'chest', id: 1 }, { enable_control: { mode: 'NEVER' } }).success).toBe(true);
-    });
 });
 
 describe('a clock for a drill into a car between two furnaces', () => {
     it('enables the drill a tick a period on the clocks that meet goal 1, and leaves it always enabled on the others', () => {
         const config = ConfigSchema.parse({
             setpoint: { item: 'iron-plate', items_per_second: 80, copies: 1 },
-            machines: [1, 2].map(id => ({ id, recipe: 'iron-plate', crafting_speed: 86.18, productivity: 50, type: 'furnace' })),
+            machines: [1, 2].map(id => ({ id, recipe: 'iron-plate', crafting_speed: 86.18, productivity: 50, prototype: 'electric-furnace' })),
             drills: { configs: [drill({ type: 'chest', id: 1 })] },
             inserters: [stack({ type: 'chest', id: 1 }, { type: 'machine', id: 1 }), stack({ type: 'chest', id: 1 }, { type: 'machine', id: 2 }),
                 stack({ type: 'machine', id: 1 }, { type: 'belt', id: 1 }), stack({ type: 'machine', id: 2 }, { type: 'belt', id: 1 })],

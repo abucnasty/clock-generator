@@ -132,11 +132,9 @@ after the engine reads the file: a field with a default is required, but a confi
 | `inserters[].source{type=belt}.pickup_capture{1}.model_version` | `1` or `2` or `3` | yes | The version of the pickup model. |
 | `inserters[].source{type=belt}.pickup_capture{1}.entity_type` | one of `transport-belt`, `underground-belt` | yes | The type of the belt at the pickup. |
 | `inserters[].source{type=belt}.pickup_capture{1}.entity_name` | string | no | The prototype name of the belt at the pickup. |
-| `inserters[].source{type=belt}.pickup_capture{1}.sidecar_version` | string | no | The version of the sidecar that recorded the pickup. |
 | `inserters[].source{type=belt}.pickup_capture{2}.status` | one of `unsupported`, `unclassified` | yes | The sidecar does not support this pickup, or did not classify it. |
 | `inserters[].source{type=belt}.pickup_capture{2}.entity_type` | string | no | The type of the entity at the pickup. |
 | `inserters[].source{type=belt}.pickup_capture{2}.entity_name` | string | no | The prototype name of the entity at the pickup. |
-| `inserters[].source{type=belt}.pickup_capture{2}.sidecar_version` | string | no | The version of the sidecar that recorded the pickup. |
 | `inserters[].source{type=belt}.pickup_capture{2}.reason` | string | yes | Why the sidecar does not support the pickup. |
 | `inserters[].source{type=belt}.drop` | object | no | Not used on a source: the generator refuses it, because a drop belongs on the sink. |
 | `inserters[].source{type=belt}.drop.lane` | `1` or `2` | yes | The lane on which the inserter drops items: 1 or 2, by its place in the belt's lanes. |
@@ -151,7 +149,6 @@ after the engine reads the file: a field with a default is required, but a confi
 | `inserters[].sink{type=belt}.drop_capture` | object | no | A note from the sidecar that the drop side-loads onto another belt; it does not change the clock. |
 | `inserters[].sink{type=belt}.drop_capture.status` | `side-loaded` | yes | The items that the inserter drops side-load onto another belt. |
 | `inserters[].sink{type=belt}.drop_capture.tiles` | integer > 0 | yes | The number of belt tiles from the drop tile to the belt that the items side-load onto. |
-| `inserters[].sink{type=belt}.drop_capture.sidecar_version` | string | no | The version of the sidecar that recorded this. |
 | `inserters[].sink{type=belt}.belt_direction` | integer 0 to 15 | no | The direction in which the belt moves at the drop tile. |
 | `inserters[].sink{type=machine}.id` | integer > 0 | yes | The id of the machine. |
 | `inserters[].sink{type=chest}.id` | integer > 0 | yes | The id of the chest. |
@@ -320,7 +317,6 @@ after the engine reads the file: a field with a default is required, but a confi
 | `overrides.judged_start` | one of `cold`, `backpressure` | no | The start every clock is judged from: the backpressure start (the default: the unclocked part of the build filled until it settles, then the clock), or the cold start. |
 | `overrides.disturbance_trials_on_copies` | boolean | no | Whether the generator makes the disturbance trials again on the copies that share a lane. |
 | `overrides.kick_start_items` | integer ≥ 0 | no | The kick start: the number of its own product that a machine gets before its clock starts, when its recipe uses that product. |
-| `overrides.disable_swing_backoff` | boolean | no | Not used: set terminal_swing_count to give the number of output swings. |
 | `overrides.derive_clock_windows` | boolean | no | Whether the generator finds the enable windows of other inserters from a run in which only the output inserters have a clock. |
 | `overrides.ignored_lcm_ingredients` | array of string | no | The items that do not change the window cycle time; set each inserter that moves only these items to ALWAYS. |
 

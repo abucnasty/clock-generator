@@ -3,7 +3,6 @@ import "../../data/factorio-data-file";
 import { SlotContainer } from "./slot-container";
 import { SlotStorage } from "../../simulation/components/slot-storage";
 import { chestAcceptsItem } from "../../config/inserter-coverage-validator";
-import { CargoWagonConfigSchema } from "../../config/schema";
 import { BLOCKED_SLOT } from "../../common/slot-filter";
 
 describe("a car, a tank or a cargo wagon from its config", () => {
@@ -38,15 +37,6 @@ describe("a car, a tank or a cargo wagon from its config", () => {
             .toThrow('slot 1 is blocked and cannot hold iron-plate');
         expect(() => SlotContainer.fromConfig({ type: 'car', id: 1, slot_filters: [{ slot: 1, blocked: true }, { slot: 1, item: 'iron-plate' }] }))
             .toThrow('slot 1 is filtered twice');
-    });
-
-    it.each(['no-item', 'deconstruction-planner'])('reads a slot filtered to %s, as a config of the 0.20.0 drafts names it, as blocked', marker => {
-        const config = CargoWagonConfigSchema.parse({ type: 'cargo-wagon', id: 1,
-            slot_filters: Array.from({ length: 39 }, (_, i) => ({ slot: i + 2, item: marker })) });
-        expect(config.slot_filters?.every(filter => filter.blocked === true && filter.item === undefined)).toBe(true);
-        const chest = SlotContainer.fromConfig(config, ['iron-plate']);
-        expect(chest.getCapacity('iron-plate')).toBe(100);
-        expect(chest.getItemFilters()).toEqual(['iron-plate']);
     });
 
     it('still refuses unknown item names in slot filters', () => {

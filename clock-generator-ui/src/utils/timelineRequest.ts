@@ -1,6 +1,6 @@
 import type { Config, RecordTimelineRequest, TimelineRecording } from 'clock-generator/browser';
 import type { ClockAlternativeView } from '../worker/types';
-import { migrateBeltSupplyOverrides, withEveryLaneEnd } from 'clock-generator/light';
+import { withEveryLaneEnd } from 'clock-generator/light';
 import { formatNumberText } from './numberText';
 
 /**
@@ -12,7 +12,7 @@ import { formatNumberText } from './numberText';
 export function timelineRequestFor(config: Config | null | undefined, clock: ClockAlternativeView | null, mode: 'clock' | 'plan'): RecordTimelineRequest | null {
     if (!config || !clock || (mode === 'clock' && clock.inserterClocks === undefined && clock.fuelView)) return null;
     // Read former saved-result spellings only at this compatibility boundary.
-    const overrides = migrateBeltSupplyOverrides(config.overrides) as Config['overrides'];
+    const overrides = config.overrides;
     const legacy = clock as ClockAlternativeView & { nonMovingBelts?: boolean };
     const backedUp = clock.backedUpBelts ?? legacy.nonMovingBelts ?? (['backed-up', 'non-moving'].includes(clock.beltLabel) ? true
         : clock.beltLabel.startsWith('moving') ? false : overrides?.backed_up_belts === true);

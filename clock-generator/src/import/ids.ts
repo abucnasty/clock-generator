@@ -1,6 +1,7 @@
 /**
  * The ids of a pasted blueprint: the numbers that the build's configuration gives its machines, belts, chests, drills
- * and inserters, by the rule that the Sidecar's export numbers a selection by.
+ * and inserters, by the rule that the Sidecar's export numbers a selection by, but for the belts: a pasted build keeps
+ * every copy, so each physical line is a belt of its own, where the export gives one id to the lines of the same items.
  *
  * `idsOf` reads the world (`worldOf`), the blueprint's own entities (for an assembling machine's recipe), the geometry
  * (`geometryOf`: the two ends of each inserter and the belt lines), the flows (`flowsOf`: the items of each lane, the
@@ -8,8 +9,8 @@
  * game data. It is pure and total: the same input gives the same ids, every list is sorted by a stated key, and a
  * malformed input is a listed problem, never a throw.
  *
- * The base order is the entity number: the blueprint keeps no other. A belt id belongs to one or more lines, in the
- * order of the line's smallest piece number. The ids are final only when no question of the flows is open.
+ * The base order is the entity number: the blueprint keeps no other. A belt id belongs to one line, in the order of
+ * the line's smallest piece number. The ids are final only when no question of the flows is open.
  */
 import type { BlueprintEntityRead } from "./blueprint-entities";
 import type { BuildFlows, LaneFlow } from "./flows";
@@ -41,12 +42,12 @@ export type MachineId = {
 
 export type BeltLane = { ingredient: string };
 
-/** A belt id: the lines that carry the same items on the same lanes */
+/** A belt id: one physical line with items */
 export type BeltId = {
     id: number;
     /** The sorted item set, joined by `|`, then `#`, then the item of lane 1, `|`, the item of lane 2 */
     signature: string;
-    /** The first line's smallest piece number, then the others', sorted */
+    /** The line's smallest piece number: the one line of the belt */
     lines: number[];
     first_line: number;
     /** The sorted item set */
@@ -117,7 +118,6 @@ export type BuildIds = {
 // ---------------------------------------------------------------- small helpers
 
 const compareText = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
-const byNumber = (a: number, b: number) => a - b;
 const listOf = <T>(value: readonly T[] | undefined | null): readonly T[] => (Array.isArray(value) ? value : []);
 const own = <T>(record: Readonly<Record<string, T>> | undefined | null, key: string): T | undefined =>
     record !== undefined && record !== null && Object.prototype.hasOwnProperty.call(record, key) ? record[key] : undefined;
@@ -325,7 +325,6 @@ function numbered(world: BuildWorld, entities: readonly BlueprintEntityRead[], g
     const pieceType = (n: number): string | null => world.entity(n)?.prototype ?? null;
 
     const lines: BeltLine[] = [...geometry.lines].sort((a, b) => a.first - b.first);
-    const signatureToBelt = new Map<string, BeltId>();
     const belts: BeltId[] = [];
     const lineIds: LineId[] = [];
     for (const line of lines) {
@@ -374,28 +373,23 @@ function numbered(world: BuildWorld, entities: readonly BlueprintEntityRead[], g
         const items = [...set].sort(compareText);
         const [lane1, lane2] = laneItem;
         const signature = `${items.join("|")}#${lane1 ?? ""}|${lane2 ?? ""}`;
-        let belt = signatureToBelt.get(signature);
-        if (belt === undefined) {
-            let lanes: BeltLane[];
-            let laneLines: (1 | 2)[] | null;
-            if (lane1 === null && lane2 === null) {
-                lanes = items.map((ingredient) => ({ ingredient }));
-                laneLines = null;
-            } else if (lane1 === null) {
-                lanes = [{ ingredient: lane2 as string }];
-                laneLines = [2];
-            } else {
-                lanes = [{ ingredient: lane1 }, { ingredient: lane2 ?? "" }];
-                laneLines = [1, 2];
-            }
-            belt = { id: belts.length + 1, signature, lines: [], first_line: line.first, items, lanes, lane_lines: laneLines };
-            signatureToBelt.set(signature, belt);
-            belts.push(belt);
+        // each line its own id, also where another line carries the same items on the same lanes
+        let lanes: BeltLane[];
+        let laneLines: (1 | 2)[] | null;
+        if (lane1 === null && lane2 === null) {
+            lanes = items.map((ingredient) => ({ ingredient }));
+            laneLines = null;
+        } else if (lane1 === null) {
+            lanes = [{ ingredient: lane2 as string }];
+            laneLines = [2];
+        } else {
+            lanes = [{ ingredient: lane1 }, { ingredient: lane2 ?? "" }];
+            laneLines = [1, 2];
         }
-        belt.lines.push(line.first);
+        const belt: BeltId = { id: belts.length + 1, signature, lines: [line.first], first_line: line.first, items, lanes, lane_lines: laneLines };
+        belts.push(belt);
         lineIds.push({ line: line.first, belt: belt.id, why: null });
     }
-    for (const belt of belts) belt.lines.sort(byNumber);
     const beltOfPiece = new Map<number, number>();
     for (const line of lines) {
         const id = lineIds.find((l) => l.line === line.first)?.belt;

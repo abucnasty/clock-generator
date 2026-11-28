@@ -3,7 +3,7 @@
   "job": "config-LITHIUM_PLATE_80_SILO_CHEST",
   "group": "config",
   "name": "LITHIUM_PLATE_80_SILO_CHEST",
-  "config_sha256": "e33be3f981fedf99369dd209e05c0a8a04e37dfc73b33fc641d16b0d3ca83f45",
+  "config_sha256": "f6df4a0c4d5de747831f4acf3c20766584963f82525dd62095d3e6ac6e1ed377",
   "job_results_sha256": "4a447f129f3054018664dec19fe9a0abed22917b14699c31155278262080706b",
   "selected": "coordinated_sources",
   "selected_windows": {

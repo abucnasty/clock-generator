@@ -35,7 +35,7 @@ function build(it: Build = {}): Config {
     const ids = Array.from({ length: furnaces }, (_, index) => index + 1);
     return ConfigSchema.parse({
         setpoint: { item: 'iron-plate', items_per_second: it.items_per_second ?? 80, copies: 1 },
-        machines: ids.map(id => ({ id, recipe: 'iron-plate', crafting_speed: 86.18, productivity: 50, type: 'furnace' })),
+        machines: ids.map(id => ({ id, recipe: 'iron-plate', crafting_speed: 86.18, productivity: 50, prototype: 'electric-furnace' })),
         drills: { configs: [drill(1), ...(it.second_drill ? [drill(2)] : [])] },
         inserters: [
             ...ids.map(id => stack({ type: 'chest', id: 1 }, { type: 'machine', id })),

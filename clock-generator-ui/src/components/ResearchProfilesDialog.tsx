@@ -63,14 +63,18 @@ const RULES: Record<BonusProblem['field'], string> = {
     recipes: 'must be a number, 0 or more',
 };
 
-function sameBonuses(a: Bonuses, b: Bonuses): boolean {
+function sameRecipes(a: Bonuses, b: Bonuses): boolean {
     const recipes = Object.keys(a.recipes);
+    return recipes.length === Object.keys(b.recipes).length
+        && recipes.every(recipe => b.recipes[recipe]?.productivity_bonus === a.recipes[recipe].productivity_bonus);
+}
+
+function sameBonuses(a: Bonuses, b: Bonuses): boolean {
     return a.mining_drill_productivity_bonus === b.mining_drill_productivity_bonus
         && a.inserter_stack_size_bonus === b.inserter_stack_size_bonus
         && a.bulk_inserter_capacity_bonus === b.bulk_inserter_capacity_bonus
         && a.belt_stack_size_bonus === b.belt_stack_size_bonus
-        && recipes.length === Object.keys(b.recipes).length
-        && recipes.every(recipe => b.recipes[recipe]?.productivity_bonus === a.recipes[recipe].productivity_bonus);
+        && sameRecipes(a, b);
 }
 
 interface ResearchProfilesDialogProps {
@@ -194,7 +198,7 @@ function ProfilesPanel({ recipeOptions, storage, newId }: { recipeOptions: strin
     const atTemplate = template !== undefined && sameBonuses(bonuses, template.bonuses);
     const markYours = {
         mining: shown?.setYours.mining === true && bonuses.mining_drill_productivity_bonus === shown.bonuses.mining_drill_productivity_bonus,
-        recipes: shown?.setYours.recipes === true && recipes.length === 0,
+        recipes: shown?.setYours.recipes === true && sameRecipes(bonuses, shown.bonuses),
     };
     const yours = (<Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 1 }}>Set yours</Typography>);
 

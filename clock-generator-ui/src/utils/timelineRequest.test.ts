@@ -20,13 +20,12 @@ it('requires measured independent fuel clocks for an exact exported replay of ol
     expect(timelineRequestFor(config, { ...fuelClock, inserterClocks: {} }, 'clock')).not.toBeNull();
     expect(timelineRequestFor(config, fuelClock, 'plan')).not.toBeNull();
 });
-it('migrates old config and result names without changing their belt supply assumption', () => {
-    const oldConfig = { belts, overrides: { non_moving_belts: true } } as unknown as Config;
+it('reads old result names without changing their belt supply assumption', () => {
+    const oldConfig = { belts, overrides: { backed_up_belts: true } } as unknown as Config;
     const oldClock = { ...clock, beltLabel: '', nonMovingBelts: false };
-    expect(timelineRequestFor(oldConfig, oldClock, 'clock')?.config.overrides).toEqual({ backed_up_belts: true });
     expect(endsOf(timelineRequestFor(oldConfig, oldClock, 'clock')?.config)).toEqual(['infinite', 'infinite']);
     expect(endsOf(timelineRequestFor(oldConfig, { ...clock, beltLabel: 'non-moving' }, 'clock')?.config)).toEqual(['dead_end', 'dead_end']);
-    expect(oldConfig.overrides).toEqual({ non_moving_belts: true });
+    expect(oldConfig.overrides).toEqual({ backed_up_belts: true });
 });
 it('asks the clock replay for the period the long run first judges, and no other replay', () => {
     const settled = { ...clock, simulationDurationTicks: 24, asBuilt: { first_judged_tick: 960 } } as ClockAlternativeView;

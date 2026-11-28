@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { parseConfig, parseConfigSafe } from "./loader";
+import * as fs from "fs";
+import * as os from "os";
+import * as path from "path";
+import { loadConfigFromFile, parseConfig, parseConfigSafe } from "./loader";
+import { ConfigFormatError, configFormatMessage } from "./format";
 import { ConfigValidationError } from "./errors";
 import { BeltType } from "../common/entity-types";
 import { MiningDrillType } from "../entities";
@@ -48,7 +52,7 @@ describe("parseConfig", () => {
                         "id": 1,
                         "productivity": 0.5,
                         "recipe": "iron-gear-wheel",
-                        "type": "machine"
+                        "prototype": "assembling-machine-3"
                     }
                 ],
                 "setpoint": {
@@ -66,7 +70,6 @@ describe("parseConfig", () => {
                 recipe: "iron-gear-wheel",
                 productivity: 0.5,
                 crafting_speed: 1.25,
-                // the former type, read as a machine of that rule that makes the recipe
                 prototype: "assembling-machine-3"
             });
         });
@@ -339,40 +342,6 @@ describe("parseConfig", () => {
             const config = await parseConfig(json);
 
             expect(config.inserters[0].overrides?.enable_control?.mode).toBe("ALWAYS");
-        });
-
-        it("should load the former NEVER mode of an inserter enable_control override as AUTO", async () => {
-            const json = `{
-                "belts": [],
-                "inserters": [
-                    {
-                        "overrides": {
-                            "enable_control": {
-                                "mode": "NEVER"
-                            }
-                        },
-                        "sink": {
-                            "id": 1,
-                            "type": "machine"
-                        },
-                        "source": {
-                            "id": 1,
-                            "type": "belt"
-                        },
-                        "stack_size": 4
-                    }
-                ],
-                "machines": [],
-                "setpoint": {
-                    "copies": 1,
-                    "items_per_second": 1,
-                    "item": "test"
-                }
-            }`;
-
-            const config = await parseConfig(json);
-
-            expect(config.inserters[0].overrides?.enable_control).toEqual({ mode: "AUTO" });
         });
 
         it("should parse inserter enable_control override with CLOCKED mode", async () => {
@@ -1045,5 +1014,44 @@ describe("a drop spot on a belt", () => {
         if (!result.success) {
             expect(result.error.getFormattedIssues()).toContain("belongs on the sink, not on the source");
         }
+    });
+});
+
+describe("loadConfigFromFile and the format key", () => {
+    const build = { setpoint: { item: "iron-gear-wheel", items_per_second: 1, copies: 1 }, machines: [], inserters: [], belts: [] };
+    const withFile = async (text: string, run: (file: string) => Promise<void>) => {
+        const dir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "config-format-"));
+        const file = path.join(dir, "build.json");
+        try {
+            await fs.promises.writeFile(file, text);
+            await run(file);
+        } finally {
+            await fs.promises.rm(dir, { recursive: true, force: true });
+        }
+    };
+
+    it("loads a file of this format, and the parsed configuration has no key", () => withFile(JSON.stringify({ format: 1, ...build }), async file => {
+        const config = await loadConfigFromFile(file);
+        expect(config.setpoint.item).toBe("iron-gear-wheel");
+        expect("format" in config).toBe(false);
+    }));
+
+    it("refuses a file without the key in one line, as no longer supported", () => withFile(JSON.stringify(build), async file => {
+        const refused = await loadConfigFromFile(file).then(() => null, (error: unknown) => error);
+        expect(refused).toBeInstanceOf(ConfigFormatError);
+        expect((refused as ConfigFormatError).problem).toBe("old");
+        expect((refused as ConfigFormatError).message).toBe(`${file}: ${configFormatMessage("old")}`);
+    }));
+
+    it("refuses a file of a newer format", () => withFile(JSON.stringify({ format: 2, ...build }), async file => {
+        await expect(loadConfigFromFile(file)).rejects.toMatchObject({ name: "ConfigFormatError", problem: "newer" });
+    }));
+
+    it("gives a file that is not JSON the JSON message, never the format's", () => withFile("{ not json", async file => {
+        await expect(loadConfigFromFile(file)).rejects.toThrow(/not valid JSON/);
+    }));
+
+    it("leaves parseConfig without the test: a configuration built in code needs no key", async () => {
+        expect((await parseConfig(JSON.stringify(build))).setpoint.item).toBe("iron-gear-wheel");
     });
 });

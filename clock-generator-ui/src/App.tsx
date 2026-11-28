@@ -51,6 +51,7 @@ import { IntroCard } from './components/IntroCard';
 import { BuildSwitcher } from './components/BuildSwitcher';
 import { RenameBuildDialog } from './components/RenameBuildDialog';
 import { OpenSharedBuildDialog } from './components/OpenSharedBuildDialog';
+import { RefusedConfigDialog } from './components/RefusedConfigDialog';
 import { BuildValidationPanel } from './components/BuildValidationPanel';
 import { outputChestIssues } from './utils/outputChestIssues';
 import { buildValidationIssues, isRefused, navigateToOutputRouteRepair, refusedInserterIdsOf } from './utils/buildValidation';
@@ -117,6 +118,7 @@ import {
     renamedAnnouncement,
     renameBuild,
     UNTITLED_BUILD,
+    buildFileName,
     type BuildMeta,
 } from './utils/buildLibrary';
 import { sharedBuildSummary, sharedOpenedMessage, sharedPlaceNote, type SharedBuild } from './utils/shareLink';
@@ -991,7 +993,22 @@ function App() {
             id: build.id,
             title: titles.get(build.id) ?? UNTITLED_BUILD,
             secondary: build.name !== null && build.recipe !== '' ? recipeTitle(build.recipe, recipeLabel) : null,
-        })), [library.builds, titles, recipeLabel]);
+            // a saved build that is not read for its format: listed with Download and Remove, never opened
+            refused: library.refused.get(build.id) ?? null,
+        })), [library.builds, library.refused, titles, recipeLabel]);
+    // Download of a refused build: its saved text as it is, as a file named after it
+    const handleDownloadRefused = useCallback((id: string) => {
+        const refused = library.refused.get(id);
+        if (!refused) return;
+        const url = URL.createObjectURL(new Blob([refused.text], { type: 'application/json' }));
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = buildFileName(titles.get(id) ?? UNTITLED_BUILD);
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }, [library.refused, titles]);
     const switcherRef = useRef<HTMLButtonElement>(null);
     const focusSwitcher = useCallback(() => switcherRef.current?.focus(), []);
 
@@ -1109,7 +1126,7 @@ function App() {
             ?? (build.config.setpoint.item === '' ? UNTITLED_BUILD : recipeTitle(build.config.setpoint.item, recipeLabel));
         // the build the link added, which its Undo takes out again (none when it took the empty build's place)
         const added: { id?: string } = {};
-        const complete = offerUndoOfBuild(sharedOpenedMessage(title, build.never_note), {
+        const complete = offerUndoOfBuild(sharedOpenedMessage(title), {
             deferAnnouncement: true,
             revert: (form) => library.restore({ meta: previous, form, removeId: replaceId === undefined ? added.id : undefined }),
         });
@@ -1179,6 +1196,8 @@ function App() {
                                                 onDuplicate={handleDuplicateBuild}
                                                 onRename={handleRenameBuild}
                                                 onDelete={handleDeleteBuild}
+                                                onDownloadRefused={handleDownloadRefused}
+                                                onRemoveRefused={library.removeRefused}
                                                 readOnly={!library.writable}
                                             />
                                         </Box>
@@ -1560,6 +1579,7 @@ function App() {
                 onCancel={shared.cancel}
                 onExited={focusSwitcher}
             />
+            <RefusedConfigDialog kind={shared.refused} onPaste={() => buildEntryRef.current?.pasteFromFactorio()} onClose={shared.closeRefused} />
             <TermsPopover anchorEl={termsAnchor} onClose={() => setTermsAnchor(null)} />
 
             {/* Fullscreen diagram dialog */}

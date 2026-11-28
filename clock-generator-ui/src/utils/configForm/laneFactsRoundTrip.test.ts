@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BeltConfigSchema, ConfigSchema, migrateMachineTypes, type Config } from 'clock-generator/browser';
+import { BeltConfigSchema, ConfigSchema, type Config } from 'clock-generator/browser';
 import { Option } from 'clock-generator/light';
 import { ConfigPaths } from '../../../../clock-generator/dist/config/config-paths.js';
 import { readConfigFile, readSavedConfig, serializeConfig } from '../../hooks/usePersistedConfigForm';
@@ -20,13 +20,15 @@ function sampleText(file: string): string {
     return SAMPLE_FILES[key];
 }
 
-/** A configuration file as the page reads it: the former names, then the worker's 'config-file' */
+/** A configuration file as the page reads it, then the worker's 'config-file' */
 function configFile(text: string): Config {
-    const result = parseFormConfig(ConfigSchema, migrateMachineTypes(readConfigFile(text)));
+    const result = parseFormConfig(ConfigSchema, readConfigFile(text));
     if (!result.success) throw new Error(result.error.message);
     return result.data as Config;
 }
 const plain = (value: unknown) => JSON.parse(JSON.stringify(value)) as unknown;
+/** The build a configuration holds: without the format, which is of the file or link */
+const unmarked = (value: unknown) => { const { format: _format, ...build } = plain(value) as Record<string, unknown>; void _format; return build; };
 /** Every path at which two JSON values differ */
 function differences(a: unknown, b: unknown, path = ''): string[] {
     if (JSON.stringify(a) === JSON.stringify(b)) return [];
@@ -51,7 +53,7 @@ async function throughShareLink(config: Config): Promise<Config> {
     if (decoded.kind !== 'build') throw new Error(decoded.problem);
     return configFile(JSON.stringify(decoded.config));
 }
-const throughSave = (form: ConfigFormData) => formDataToConfig(migrateMachineTypes(readSavedConfig(serializeConfig(form))) as ConfigFormData);
+const throughSave = (form: ConfigFormData) => formDataToConfig(readSavedConfig(serializeConfig(form)) as ConfigFormData);
 
 describe('nothing is written that the user did not state', () => {
     const samples = Object.entries(ConfigPaths) as [string, string][];
@@ -62,10 +64,10 @@ describe('nothing is written that the user did not state', () => {
 
     it.each(samples)('%s: through the form, a share link and a saved build, only what the form wrote before, and nothing under belts', async (_name, file) => {
         const text = sampleText(file);
-        const stated = plain(JSON.parse(text));
+        const stated = unmarked(JSON.parse(text));
         const form = configToFormData(configFile(text), 'sample');
         for (const after of [formDataToConfig(form), await throughShareLink(formDataToConfig(form)), throughSave(form)]) {
-            const found = differences(stated, plain(after));
+            const found = differences(stated, unmarked(after));
             expect(found.filter(path => !WRITTEN_BEFORE.some(pattern => pattern.test(path)))).toEqual([]);
             expect(plain(after.belts)).toEqual((stated as Config).belts);
         }

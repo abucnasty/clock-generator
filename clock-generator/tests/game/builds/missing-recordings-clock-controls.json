@@ -847,10 +847,10 @@
   },
   "electric-furnace-20": {
    "recorded": {
-    "pr": 833,
-    "commit": "a05422d7",
-    "frozen_head": "a05422d7",
-    "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start, settle_ticks and steady.after_finals), in Factorio 2.1.24; pr is set when the PR is opened",
+    "pr": 917,
+    "commit": "b27a5340",
+    "frozen_head": "b27a5340",
+    "note": "recorded again after the backpressure start began to hold the mining drill until the opening, in Factorio 2.1.24; pr is set when the PR is opened",
     "clock_sha256": "c7c3a86fea49e2449d37932d8606cdac127cc4285da870f60c6de56dc7fcbb66",
     "clock_basis": "capture"
    },
@@ -861,7 +861,7 @@
     "period": 864,
     "window": 3600,
     "expected": 600,
-    "steady": 7078,
+    "steady": 7074,
     "baseline": {
      "ticks": 3600,
      "total": 600,
@@ -874,41 +874,41 @@
       "ticks": 3456,
       "items": 576,
       "expected": 576,
-      "stock_start": 8,
-      "stock_end": 8,
+      "stock_start": 9,
+      "stock_end": 9,
       "net": 576
      }
     },
     "disturbances": [
      {
       "kind": "cut advanced-circuit",
-      "start": 10678,
-      "drop": 10694,
-      "release": 10694,
-      "recovered": 14374
+      "start": 10674,
+      "drop": 10744,
+      "release": 10744,
+      "recovered": 14946
      },
      {
       "kind": "block output",
-      "start": 14374,
-      "drop": 15782,
-      "release": 15782,
-      "recovered": 19462
+      "start": 14946,
+      "drop": 16354,
+      "release": 16354,
+      "recovered": 20034
      },
      {
       "kind": "cut advanced-circuit",
-      "start": 19462,
-      "drop": 19526,
-      "release": 19526,
-      "recovered": 23494
+      "start": 20034,
+      "drop": 20108,
+      "release": 20108,
+      "recovered": 23798
      }
     ],
     "stock": {
      "lowest": 0,
-     "end": 8,
+     "end": 11,
      "holds": true
     },
     "result": "holds",
-    "ended": 23494
+    "ended": 23798
    },
    "generation": {
     "period": 864,

@@ -19,6 +19,10 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 ### Changed
 - simulation: game data now comes from Factorio 2.1.24
 - generation: builds whose copies share lanes take less time to generate
+- ui: a configuration made before 0.33.0 no longer opens: paste a blueprint of the build instead
+
+### Removed
+- ui: the site no longer reads exports of the Clock Generator Sidecar mod
 
 ### Fixed
 - ui: the note on drops landing on each other follows output belts and partial copies, and says only what it checked

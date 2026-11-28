@@ -18,9 +18,6 @@ function sampleConfigs(dir: string): string[] {
     });
 }
 
-/** A legacy fixture the simulator refuses to build, as pickup-capture.test.ts expects: its pickups were not captured */
-const REFUSED = path.join(ENGINE, "src", "config", "fixtures", "legacy", "pickup-without-capture.json");
-
 /**
  * The config samples, the game tests' configs, tests/configs and the fixtures of the source, each a config with a target
  * the simulator builds: what the tests that hold the traits to the entities' figures walk
@@ -31,4 +28,4 @@ export const SAMPLE_CONFIG_FILES: readonly string[] = [
     ...sampleConfigs(path.join(ENGINE, "tests", "configs")),
     ...sampleConfigs(path.join(ENGINE, "src", "config", "fixtures")),
     ...sampleConfigs(path.join(ENGINE, "src", "crafting", "fixtures")),
-].filter(file => file !== REFUSED);
+];
