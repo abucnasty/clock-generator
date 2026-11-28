@@ -12,10 +12,11 @@ const read = (file: string) => fs.readFileSync(file, "utf8");
 const BUILD = "productivity-module-80";
 const RECORD = "config-PRODUCTIVITY_MODULE_80_CHEST_CHAIN";
 const UNITS = 1;
-const LEFT_OUT: LeftOut = {};
+const LEFT_OUT: LeftOut = {"inserter": [1], "chest": [1, 5]};
 
 type Tier1Build = { name: string; blueprint: string; read: string; read_kind: string; frame: { translation: Point }; research: ImportInputs["research"] };
 const build = (JSON.parse(read(path.join(FIXTURES, "tier1.json"))) as { builds: Tier1Build[] }).builds.find((b) => b.name === BUILD)!;
+const MOVES = JSON.parse(read(path.join(__dirname, "moves.json"))) as Record<string, { direction: string; cause: string }>;
 
 describe("a pasted blueprint of the productivity module 80 sample", () => {
     let run: PasteClockRun;
@@ -43,12 +44,19 @@ describe("a pasted blueprint of the productivity module 80 sample", () => {
         expect(run.settled.unanswered).toEqual([]);
     });
 
+    it("pairs every entity with the sample's, one to one, but those it leaves out", () => {
+        expect(run.pairing.failures).toEqual([]);
+        expect(run.pairing.leftOut).toEqual({ machine: [], drill: [], inserter: [], chest: [], ...LEFT_OUT });
+    });
+
     it("generates a clock", () => {
         expect(run.error).toBeNull();
         expect(run.summary).not.toBeNull();
     });
 
-    it("selects a clock for the whole build", () => {
-        expect(run.summary?.verdict).toBeDefined();
+    it(MOVES[BUILD] === undefined ? "selects the clock of the record, or the same clock under the sample's ids" : "still selects a clock that is not the record's", () => {
+        const why = run.comparison?.differences.join("; ");
+        if (MOVES[BUILD] === undefined) expect(run.comparison?.state, why).toMatch(/^equal/);
+        else expect(run.comparison?.state, why).toBe("moved");
     });
 });

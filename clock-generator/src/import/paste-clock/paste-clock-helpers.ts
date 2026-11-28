@@ -5,6 +5,7 @@
  */
 import type { FactorioData } from "../../data/factorio-data-types";
 import type { SetpointRate } from "../../config/setpoint-rate";
+import { withConfigFormat } from "../../config/format";
 import { parseConfig } from "../../config/loader";
 import { clockIdentity } from "../../crafting/clock-identity";
 import { generateClockAlternatives } from "../../crafting/generate-blueprint";
@@ -177,7 +178,7 @@ export function pasteSetpointOf(sample: SampleSetpoint, units: number): PasteSet
 
 /** The configuration of a paste: the setpoint, the import's five lists and its research block, as the paste writes them */
 export function pasteConfigOf(build: ImportBuild, setpoint: PasteSetpoint): Raw {
-    return {
+    return withConfigFormat({
         setpoint: { ...setpoint, ...(build.copy_offset !== null && { copy_offset: { ...build.copy_offset } }) },
         machines: build.machines,
         drills: { configs: build.drills },
@@ -185,7 +186,7 @@ export function pasteConfigOf(build: ImportBuild, setpoint: PasteSetpoint): Raw 
         belts: build.belts,
         chests: build.chests,
         research: build.research,
-    };
+    });
 }
 
 // ---------------------------------------------------------------- the pairing with the sample

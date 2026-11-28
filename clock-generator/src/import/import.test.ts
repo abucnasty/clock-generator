@@ -18,9 +18,12 @@ import { pickupCaptureProblem } from "../config/pickup-capture";
 import type { FactorioData } from "../data/factorio-data-types";
 import { applyResearch } from "./apply-research";
 import * as assemble from "./assemble";
+import { geometryDataOf, worldDataOf } from "./assemble";
 import { decodeBlueprint } from "./decode";
+import { geometryOf } from "./geometry";
 import { importBlueprint, NOTE_CODES, type ImportBuild, type ImportInputs, type ImportOutcome, type NoteCode } from "./index";
 import { drillsOf, samePoint, settleAnswers, type Asked, type End, type Point, type Raw, type ReadFile, type ReadLane } from "./paste-clock/paste-clock-helpers";
+import { worldOf } from "./world";
 
 const ENGINE = path.resolve(__dirname, "../..");
 const FIXTURES = path.join(__dirname, "fixtures", "assemble");
