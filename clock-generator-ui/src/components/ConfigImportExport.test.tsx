@@ -406,6 +406,33 @@ describe('a pasted blueprint', () => {
         expect(lastBlueprintQuery().inputs.setpoint).toEqual({ item: 'iron-plate', copies: 3 });
     });
 
+    it('fills the lane that holds the other ingredient when one lane is answered, asks no second question, and saves both lanes', async () => {
+        // a belt of two ingredients that nothing puts on it: a taker into a machine of logistic science packs and a taker into a chest
+        const belt = (entity_number: number, y: number) => ({ entity_number, name: 'transport-belt', position: { x: 0.5, y }, direction: 8 });
+        const entities = [
+            belt(1, 0.5), belt(2, 1.5), belt(3, 2.5), belt(4, 3.5),
+            { entity_number: 5, name: 'stack-inserter', position: { x: 1.5, y: 0.5 }, direction: 12 },
+            { entity_number: 6, name: 'assembling-machine-3', position: { x: 3.5, y: 0.5 }, recipe: 'logistic-science-pack' },
+            { entity_number: 7, name: 'stack-inserter', position: { x: 1.5, y: 3.5 }, direction: 12 },
+            { entity_number: 8, name: 'steel-chest', position: { x: 2.5, y: 3.5 } },
+        ];
+        const { user } = Render();
+        await pasteText(encodeBlueprintFileBrowser({ blueprint: { item: 'blueprint', version: 562949954076673, entities } } as never));
+        const dialog = await dialogOpen();
+        const question = (lane: number) => dialog.querySelector<HTMLElement>(`[data-question="lane-item:1:${lane}"]`);
+        expect(question(1)).not.toBeNull();
+        expect(question(2)).not.toBeNull();
+        expect(apply().disabled).toBe(true);
+
+        await user.click(within(question(1)!).getByRole('button', { name: /^inserter$/i }));
+        await vi.waitFor(() => expect(question(2)).toBeNull());
+        expect(lastBlueprintQuery().inputs.answers).toEqual({ 'lane-item:1:1': 'inserter' });
+        await vi.waitFor(() => expect(apply().disabled).toBe(false));
+        await user.click(apply());
+        const next = vi.mocked(props.onApplyPaste).mock.calls[0][0];
+        expect(next.belts.map(belt => belt.lanes.map(lane => lane.ingredient))).toEqual([['inserter', 'transport-belt']]);
+    });
+
     it('opens a blueprint saved as a text file, and a build file as before', async () => {
         const { container } = render(<ConfigImportExport {...props} />);
         const input = container.querySelector<HTMLInputElement>('input[type="file"]')!;

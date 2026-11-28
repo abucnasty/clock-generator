@@ -533,7 +533,8 @@ describe("answers and filters", () => {
     });
 
     it("feeds the takers after an answered lane", () => {
-        // a belt of two pieces with an inserter that takes from it into a chest: nothing puts an item on it
+        // a belt of two pieces with an inserter that takes from it into a chest: nothing puts an item on it, and the takers
+        // give no item that is left for the other lane, so it stays empty and is not asked
         const belt = [ent(10, "turbo-transport-belt", 20.5, 5.5, { direction: 8 }), ent(11, "turbo-transport-belt", 20.5, 6.5, { direction: 8 })];
         const taker = ent(12, "stack-inserter", 21.5, 5.5, { direction: 12 });
         const chest = ent(13, "steel-chest", 22.5, 5.5);
@@ -817,6 +818,62 @@ describe("keys, order and purity", () => {
         const all = flowsOfBuild("logistic-240", {}, entities);
         const one = flowsOfBuild("logistic-240", { "lane-item:25:1": "transport-belt" }, entities);
         expect(questionKeys(one)).toEqual(questionKeys(all).filter((k) => !k.startsWith("lane-item:25:")));
-        expect(one.lanes.filter((l) => l.line === 25).map((l) => [l.lane, l.items, l.source])).toEqual([[1, ["transport-belt"], "answered"], [2, [], "other-lane"]]);
+        expect(one.lanes.filter((l) => l.line === 25).map((l) => [l.lane, l.items, l.source])).toEqual([[1, ["transport-belt"], "answered"], [2, ["inserter"], "takers"]]);
+    });
+});
+
+describe("the other lane of a line that no drop or loader feeds, once one lane is answered", () => {
+    /** A belt column of four pieces (entity 10 is the line's first) with a taker into a machine making `recipe` and a taker into a chest */
+    const line = (recipe: string) => [
+        ...[5.5, 6.5, 7.5, 8.5].map((y, i) => ent(10 + i, "turbo-transport-belt", 20.5, y, { direction: 8 })),
+        ent(20, "stack-inserter", 21.5, 5.5, { direction: 12 }),
+        ent(21, "assembling-machine-3", 23.5, 5.5, { recipe }),
+        ent(22, "stack-inserter", 21.5, 8.5, { direction: 12 }),
+        ent(23, "steel-chest", 22.5, 8.5),
+    ];
+    const lanesOf = (flows: BuildFlows) => flows.lanes.map((l) => [l.line, l.lane, l.items, l.source]);
+    /** The flows with the source of lane 2 left out: the one thing that tells a fill from an answer */
+    const withoutSource = (flows: BuildFlows) => ({ ...flows, lanes: flows.lanes.map((l) => ({ ...l, source: "-" })) });
+
+    describe("with one item left for it", () => {
+        const entities = line("logistic-science-pack");
+
+        it("asks both lanes of the line, each with the two ingredients", () => {
+            expect(flowsFor(entities).questions.map((q) => [q.key, q.candidates])).toEqual([
+                ["lane-item:10:1", ["inserter", "transport-belt"]],
+                ["lane-item:10:2", ["inserter", "transport-belt"]],
+            ]);
+        });
+
+        it("fills lane 2 with the other ingredient, asks nothing, and gives the flows of both answers", () => {
+            const one = flowsFor(entities, { answers: { "lane-item:10:1": "inserter" } });
+            expect(one.questions).toEqual([]);
+            expect(lanesOf(one)).toEqual([[10, 1, ["inserter"], "answered"], [10, 2, ["transport-belt"], "takers"]]);
+            const both = flowsFor(entities, { answers: { "lane-item:10:1": "inserter", "lane-item:10:2": "transport-belt" } });
+            expect(lanesOf(both)).toEqual([[10, 1, ["inserter"], "answered"], [10, 2, ["transport-belt"], "answered"]]);
+            expect(withoutSource(one)).toEqual(withoutSource(both));
+            // the chest's taker takes both items, as with both answers
+            expect(one.chests).toEqual([{ entity_number: 23, items: ["inserter", "transport-belt"] }]);
+        });
+
+        it("fills lane 1 the same way where lane 2 is answered alone", () => {
+            const one = flowsFor(entities, { answers: { "lane-item:10:2": "transport-belt" } });
+            expect(one.questions).toEqual([]);
+            expect(lanesOf(one)).toEqual([[10, 1, ["inserter"], "takers"], [10, 2, ["transport-belt"], "answered"]]);
+            const both = flowsFor(entities, { answers: { "lane-item:10:1": "inserter", "lane-item:10:2": "transport-belt" } });
+            expect(withoutSource(one)).toEqual(withoutSource(both));
+        });
+
+        it("keeps two answers given together as they are, the same item on both lanes included", () => {
+            const same = flowsFor(entities, { answers: { "lane-item:10:1": "inserter", "lane-item:10:2": "inserter" } });
+            expect(same.questions).toEqual([]);
+            expect(lanesOf(same)).toEqual([[10, 1, ["inserter"], "answered"], [10, 2, ["inserter"], "answered"]]);
+        });
+    });
+
+    it("asks the other lane with the items left where two or more are left", () => {
+        const flows = flowsFor(line("electric-mining-drill"), { answers: { "lane-item:10:1": "iron-plate" } });
+        expect(flows.questions.map((q) => [q.key, q.candidates])).toEqual([["lane-item:10:2", ["electronic-circuit", "iron-gear-wheel"]]]);
+        expect(lanesOf(flows)).toEqual([[10, 1, ["iron-plate"], "answered"], [10, 2, ["electronic-circuit", "iron-gear-wheel"], "takers"]]);
     });
 });
