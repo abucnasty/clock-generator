@@ -433,6 +433,35 @@ describe('a pasted blueprint', () => {
         expect(next.belts.map(belt => belt.lanes.map(lane => lane.ingredient))).toEqual([['inserter', 'transport-belt']]);
     });
 
+    it('asks the rate of a lane that a throttle empties, keeps Import Selected off until it is answered, and saves the lane as an export at that rate', async () => {
+        // a belt of iron plate going south: a taker into a machine of gears, and below it an inserter that takes into an infinity chest that removes every item
+        const belt = (entity_number: number, y: number) => ({ entity_number, name: 'transport-belt', position: { x: 0.5, y }, direction: 8 });
+        const entities = [
+            belt(1, 0.5), belt(2, 1.5), belt(3, 2.5), belt(4, 3.5), belt(5, 4.5), belt(6, 5.5),
+            { entity_number: 10, name: 'stack-inserter', position: { x: 1.5, y: 0.5 }, direction: 12 },
+            { entity_number: 11, name: 'assembling-machine-1', position: { x: 3.5, y: 0.5 }, recipe: 'iron-gear-wheel' },
+            { entity_number: 12, name: 'stack-inserter', position: { x: -0.5, y: 5.5 }, direction: 4 },
+            { entity_number: 13, name: 'infinity-chest', position: { x: -1.5, y: 5.5 }, infinity_settings: { remove_unfiltered_items: true } },
+        ];
+        const { user } = Render();
+        await pasteText(encodeBlueprintFileBrowser({ blueprint: { item: 'blueprint', version: 562949954076673, entities } } as never));
+        const dialog = await dialogOpen();
+        const row = () => dialog.querySelector<HTMLElement>('[data-question="lane-export:1:2"]');
+        expect(row()).not.toBeNull();
+        expect(apply().disabled).toBe(true);
+
+        const field = within(row()!).getByRole('textbox', { name: /a second leave Belt 1, lane 2\?$/ });
+        await user.type(field, '40');
+        await user.tab();
+        await vi.waitFor(() => expect(lastBlueprintQuery().inputs.answers).toEqual({ 'lane-export:1:2': '40' }));
+        await vi.waitFor(() => expect(apply().disabled).toBe(false));
+        // the answered row stays, marked
+        expect(row()!.getAttribute('data-answered')).toBe('');
+        await user.click(apply());
+        const next = vi.mocked(props.onApplyPaste).mock.calls[0][0];
+        expect(next.belts.map(belt => [belt.strategy, belt.lanes.map(lane => lane.consumption_per_second)])).toEqual([['export', [undefined, 40]]]);
+    });
+
     it('opens a blueprint saved as a text file, and a build file as before', async () => {
         const { container } = render(<ConfigImportExport {...props} />);
         const input = container.querySelector<HTMLInputElement>('input[type="file"]')!;

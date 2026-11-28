@@ -40,6 +40,13 @@ describe('the blueprint paste\'s words', () => {
         expect(Object.keys(SHARING_ANSWER_TEXT)).toEqual(['shared', 'per_copy']);
     });
 
+    it('asks how many items a second leave a lane, with the item\'s name, and "items" while the lane\'s item is asked', () => {
+        const rate = (item: string | undefined): ImportQuestion => ({ key: 'lane-export:9:1', kind: 'lane-export', subject: { label: 'Belt 3', entity_number: 9, lane: 1, ...(item !== undefined && { item }) }, candidates: [] });
+        expect(questionText(rate('electronic-circuit'), id => id.toUpperCase())).toBe('How many ELECTRONIC-CIRCUIT a second leave Belt 3, lane 1?');
+        expect(questionText(rate(''), id => id.toUpperCase())).toBe('How many items a second leave Belt 3, lane 1?');
+        expect(questionText(rate(undefined))).toBe('How many items a second leave Belt 3, lane 1?');
+    });
+
     it('counts what was read and what was not, and names an entity by its row', () => {
         expect(readText([{ name: 'machine', count: 9 }, { name: 'inserter', count: 1 }, { name: 'beacon', count: 50 }])).toBe('Read: 9 machines, 1 inserter, 50 beacons.');
         expect(notReadText([{ name: 'constant-combinator', count: 14 }], name)).toBe('Not read: 14 × Constant combinator.');

@@ -22,6 +22,7 @@ import type { DropLane, DropPosition, GeometryNoteField, ImportBuild, ImportEnti
 import { isPleaseCheck, READ_KINDS, SHARING_ANSWERS } from "./outcome";
 import { placesOf, questionLayoutOf } from "./question-layout";
 import { speedsOf, type SpeedData, type SpeedResult } from "./speeds";
+import { throttlesOf } from "./throttles";
 import { worldOf, type BuildWorld, type PrototypeRow, type WorldData, type WorldProblemCode } from "./world";
 
 // ---------------------------------------------------------------- the data each step takes, from the game data
@@ -165,7 +166,7 @@ const byNumber = (a: number, b: number) => a - b;
 const compareText = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
 /** The game's filters that block a slot: no item may go into it */
 const BLOCKING_FILTERS: readonly string[] = ["no-item", "deconstruction-planner"];
-const QUESTION_ORDER: readonly QuestionKind[] = ["drill-ore", "lane-item", "lane-sharing"];
+const QUESTION_ORDER: readonly QuestionKind[] = ["drill-ore", "lane-item", "lane-export", "lane-sharing"];
 const SPEED_LISTS: readonly ImportSpeed["list"][] = ["machines", "drills", "chests"];
 const MACHINE_TYPES: readonly string[] = ["assembling-machine", "furnace"];
 const CHEST_TYPES: readonly string[] = ["container", "logistic-container", "linked-container", "infinity-container"];
@@ -259,6 +260,11 @@ function assemble(entities: readonly BlueprintEntityRead[], inputs: ImportInputs
     const flows: BuildFlows = flowsOf(world, geometry, entities, flowsInputs, flowsData);
     const speeds: SpeedResult = speedsOf(entities, world, speedData);
     const ids: BuildIds = idsOf(world, entities, geometry, flows, idsData);
+    // the inserters that empty a lane into a voiding chest: left out, and the lane they empty is asked the rate it exports at (a line whose item is still asked may give either lane)
+    const throttles = throttlesOf(world, geometry, entities, (first) => {
+        const line = ids.lines.find((l) => l.line === first);
+        return line?.why === "open" ? [1, 2] : (ids.belts.find((b) => b.id === line?.belt)?.lane_lines ?? []);
+    });
 
     const notes = new Notes();
     const entityOf = new Map(entities.map((e) => [e.entity_number, e]));
@@ -297,6 +303,22 @@ function assemble(entities: readonly BlueprintEntityRead[], inputs: ImportInputs
         }
         questions.push({ key, kind: "lane-sharing", subject: { label: `Belt ${beltPlaces.get(first)}`, entity_number: first }, candidates: [...SHARING_ANSWERS] });
     }
+    // the lanes that a throttle empties: each asks how many items a second leave it; an answer above 0 makes the lane an export at that rate
+    const throttleLanes = [...new Set(throttles.map((t) => `${t.line}:${t.lane}`))].map((key) => key.split(":").map(Number) as [number, 1 | 2]);
+    const rateOf = new Map<string, number>();
+    for (const [first, lane] of throttleLanes) {
+        const key = `lane-export:${first}:${lane}`;
+        const text = own(answers, key);
+        const answer = text === undefined ? NaN : Number(text);
+        if (Number.isFinite(answer) && answer > 0) {
+            rateOf.set(`${first}:${lane}`, answer);
+            continue;
+        }
+        const flow = flows.lanes.find((l) => l.line === first && l.lane === lane);
+        const item = flow !== undefined && !flow.waiting && flow.items.length === 1 ? flow.items[0] : "";
+        questions.push({ key, kind: "lane-export", subject: { label: `Belt ${beltPlaces.get(first)}`, entity_number: first, lane, item }, candidates: [] });
+    }
+    const asksRate = (first: number, lane: number) => throttleLanes.some(([f, l]) => f === first && l === lane);
     questions.sort((a, b) => QUESTION_ORDER.indexOf(a.kind) - QUESTION_ORDER.indexOf(b.kind) || a.subject.entity_number - b.subject.entity_number || (a.subject.lane ?? 0) - (b.subject.lane ?? 0));
 
     // ------------------------------------------------ machines
@@ -353,7 +375,10 @@ function assemble(entities: readonly BlueprintEntityRead[], inputs: ImportInputs
         const lanes = b.lanes.map((lane, index) => {
             const line = b.lane_lines?.[index] ?? null;
             const out: Record<string, unknown> = { ingredient: lane.ingredient, stack_size: 1 };
-            if (pickups.length > 0) {
+            const rate = line === null ? undefined : lines.map((l) => rateOf.get(`${l.first}:${line}`)).find((r) => r !== undefined);
+            const asked = line !== null && lines.some((l) => asksRate(l.first, line));
+            if (rate !== undefined) out.consumption_per_second = rate;
+            if (pickups.length > 0 && !asked) {
                 out.lane_end = { kind: line === null ? "unknown" : mergedOf(pickups.map((p) => p.lane_ends[line - 1].value), "unknown") };
             }
             if (line !== null) {
@@ -367,6 +392,7 @@ function assemble(entities: readonly BlueprintEntityRead[], inputs: ImportInputs
             type: first.belt_type.value,
             ...(flow !== null && { flow_direction: flow }),
             lanes,
+            ...(lanes.some((l) => l.consumption_per_second !== undefined) && { strategy: "export" }),
         } as unknown as BeltConfig;
     };
     const belts: BeltConfig[] = ids.belts.map(beltRow);
@@ -376,12 +402,19 @@ function assemble(entities: readonly BlueprintEntityRead[], inputs: ImportInputs
     const noSlots = new Set(ids.chests.filter((c) => c.chest_type === "buffer-chest" && storageOf(entityOf.get(c.entity_number)!) <= 0).map((c) => c.id));
     for (const c of ids.chests) if (noSlots.has(c.id)) notes.add("chest:no-slots", c.entity_number);
     const atNoSlots = (end: { type: string; id: number }) => end.type === "chest" && noSlots.has(end.id);
+    // a throttle and its chest are left out too
+    const throttleInserters = new Set(throttles.map((t) => t.inserter));
+    const throttleChests = new Set(throttles.map((t) => t.chest));
+    for (const t of throttles) {
+        notes.add("inserter-left-out:throttle", t.inserter);
+        notes.add("chest:throttle", t.chest);
+    }
     const keptInserters = ids.inserters.filter((i) => {
         if (atNoSlots(i.source)) notes.add(LEFT_OUT_INSERTER_NOTES.pickup, i.entity_number);
         if (atNoSlots(i.sink)) notes.add(LEFT_OUT_INSERTER_NOTES.drop, i.entity_number);
-        return !atNoSlots(i.source) && !atNoSlots(i.sink);
+        return !atNoSlots(i.source) && !atNoSlots(i.sink) && !throttleInserters.has(i.entity_number);
     });
-    const keptChests = ids.chests.filter((c) => !noSlots.has(c.id));
+    const keptChests = ids.chests.filter((c) => !noSlots.has(c.id) && !throttleChests.has(c.entity_number));
 
     // ------------------------------------------------ inserters (b, e)
     const inserterRow = (i: InserterId, notes: Notes): InserterConfig => {
@@ -488,8 +521,9 @@ function assemble(entities: readonly BlueprintEntityRead[], inputs: ImportInputs
             notes.based(line.belt_type.basis, "belt-type", n);
             if (line.flow_direction) notes.based(line.flow_direction.basis, "flow-direction", n);
             for (const p of line.pickups) {
-                notes.based(p.lane_ends[0].basis, "lane-end", n, 1);
-                notes.based(p.lane_ends[1].basis, "lane-end", n, 2);
+                // a lane that a throttle empties is asked its rate, and has no end to note
+                if (!asksRate(n, 1)) notes.based(p.lane_ends[0].basis, "lane-end", n, 1);
+                if (!asksRate(n, 2)) notes.based(p.lane_ends[1].basis, "lane-end", n, 2);
             }
             ([1, 2] as const).forEach((lane) => {
                 if (line.sharing[lane - 1].basis === "unread" && !sharingAnswer.has(n)) notes.based("unread", "sharing", n, lane);

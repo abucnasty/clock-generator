@@ -10,5 +10,9 @@
   "production-science-120": {
     "direction": "wake-ups a minute 53.571 to 64.286 (+20.0 %); windows differ",
     "cause": "The sample config sets what the build does not hold. Fields: inserters[].filters (the sample sets steel-plate by hand on 4 inserters; the build writes none), setpoint.copy_offset (the sample sets x 10, y 0; the paste holds one unit and writes none), drills[].direction (the build writes one; the sample sets none) and drills[].productivity (the sample sets 79,990 %; the build takes 79,990.00000001134 % from its research block). 3 infinity chests and 2 feeder inserters are left out of the pairing by id."
+  },
+  "processing-unit-80-circuit-export": {
+    "direction": "wake-ups a minute 3311.25 to 3296.25 (-0.5 %)",
+    "cause": "The sample config sets what the build does not hold. Fields: inserters[].direction (the sample is the scaffold turned by 270 degrees and sets the turned directions; the build keeps the scaffold's), inserters[].prototype and quality on 2 inserters (the sample sets none on its 2 inserters with no position; the build writes stack-inserter and legendary), inserters[].sink.belt_direction on 4 inserters (the sample sets none; the build writes one) and machines[].crafting_speed (the sample sets 52.443999999999996 and 112.78750000000001, the build 52.444 and 112.7875). The build asks the export rate of belt 3's two lanes; the answer 40 gives the sample's export belt, and the config is the one of the same paste with belt 3 as the sample's export. 4 infinity-chest feeders with their 4 inserters, and 2 unused infinity chests, are left out of the pairing by id; the 4 throttles and their 4 chests are left out by the import."
   }
 }

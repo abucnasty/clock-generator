@@ -19,6 +19,8 @@ const laneQuestion = (first: number, place: number, lane: 1 | 2): ImportQuestion
     ({ key: `lane-item:${first}:${lane}`, kind: 'lane-item', subject: { label: `Belt ${place}`, entity_number: first, lane }, candidates: ['inserter', 'transport-belt'] });
 const sharingQuestion = (first: number, place: number): ImportQuestion =>
     ({ key: `lane-sharing:${first}`, kind: 'lane-sharing', subject: { label: `Belt ${place}`, entity_number: first }, candidates: ['shared', 'per_copy'] });
+const exportQuestion = (first: number, place: number, lane: 1 | 2): ImportQuestion =>
+    ({ key: `lane-export:${first}:${lane}`, kind: 'lane-export', subject: { label: `Belt ${place}`, entity_number: first, lane, item: 'iron-plate' }, candidates: [] });
 const drillQuestion = (): ImportQuestion =>
     ({ key: 'drill-ore:300', kind: 'drill-ore', subject: { label: 'Drill 2', entity_number: 300 }, candidates: ['iron-ore', 'copper-ore'] });
 
@@ -194,3 +196,53 @@ describe('the layout view of the import dialog', () => {
         expect(container.querySelector('[role="group"][aria-label="Questions"]')).toBeNull();
     });
 });
+
+describe('the rate of a lane', () => {
+    const RATE = /a second leave Belt 1, lane 1\?$/;
+    const field = (container: HTMLElement, key: string) => within(row(container, key)!).getByRole('textbox', { name: RATE }) as HTMLInputElement;
+
+    it('asks how many items a second leave the lane, in a number field, and sends the typed value as the answer when it is left', async () => {
+        const onAnswer = vi.fn();
+        const { container, user } = draw(pastedOf({ questions: [exportQuestion(14, 1, 1)] }), { onAnswer });
+        const input = field(container, 'lane-export:14:1');
+        expect(row(container, 'lane-export:14:1')!.textContent).toContain('How many');
+        await user.type(input, '40');
+        await user.tab();
+        expect(onAnswer).toHaveBeenLastCalledWith('lane-export:14:1', '40');
+    });
+
+    it('selects its belt and marks its lane on focus, and no other lane\'s row', () => {
+        const { container } = draw(pastedOf({ questions: [...LANES(), exportQuestion(14, 1, 1), exportQuestion(14, 1, 2)] }));
+        fireEvent.focus(field(container, 'lane-export:14:1'));
+        expect(container.textContent).toContain('Selected: Belt 1.');
+        expect([...container.querySelectorAll('[data-question][data-marked]')].map(it => it.getAttribute('data-question'))).toEqual(['lane-item:14:1', 'lane-export:14:1']);
+    });
+
+    it('lists the rate rows after the lane rows and before the sharing rows', () => {
+        const { container } = draw(pastedOf({ questions: [sharingQuestion(14, 1), exportQuestion(14, 1, 2), laneQuestion(14, 1, 1), exportQuestion(14, 1, 1)] }));
+        expect([...container.querySelectorAll('[data-question]')].map(it => it.getAttribute('data-question')))
+            .toEqual(['lane-item:14:1', 'lane-export:14:1', 'lane-export:14:2', 'lane-sharing:14']);
+    });
+
+    it('keeps an answered row, marked answered with its value, after the import is asked again and has dropped its question', () => {
+        const { container, again } = draw(pastedOf({ questions: [exportQuestion(14, 1, 1)] }));
+        again(pastedOf({ questions: [] }), { 'lane-export:14:1': '40' });
+        const answered = row(container, 'lane-export:14:1')!;
+        expect(answered.getAttribute('data-answered')).toBe('');
+        expect(answered.textContent).toContain('Answered');
+        expect(field(container, 'lane-export:14:1').value).toContain('40');
+    });
+
+    it('is answered in the lane editor under the key of the rate question, not of the lane\'s item', async () => {
+        const onAnswer = vi.fn();
+        const { container, user } = draw(pastedOf({ questions: [laneQuestion(14, 1, 1), exportQuestion(14, 1, 1)] }), { onAnswer });
+        await user.click(within(container).getByRole('button', { name: 'Belt 1' }));
+        const editor = container.querySelector<HTMLElement>('[data-lane-editor="1"]')!;
+        const input = within(editor).getByRole('textbox', { name: 'Items a second for lane 1' });
+        await user.type(input, '25');
+        await user.tab();
+        expect(onAnswer).toHaveBeenLastCalledWith('lane-export:14:1', '25');
+        expect(onAnswer).not.toHaveBeenCalledWith('lane-item:14:1', expect.anything());
+    });
+});
+

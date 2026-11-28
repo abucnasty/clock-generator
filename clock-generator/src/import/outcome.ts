@@ -18,18 +18,20 @@ export interface ImportInputs {
     setpoint?: { item?: string; copies?: number };
 }
 
-export type QuestionKind = "drill-ore" | "lane-item" | "lane-sharing";
+export type QuestionKind = "drill-ore" | "lane-item" | "lane-export" | "lane-sharing";
 
 export interface ImportQuestion {
-    /** `drill-ore:<drill>`, `lane-item:<line>:<lane>`, `lane-sharing:<line>`: entity numbers of the blueprint, never an id */
+    /** `drill-ore:<drill>`, `lane-item:<line>:<lane>`, `lane-export:<line>:<lane>`, `lane-sharing:<line>`: entity numbers of the blueprint, never an id */
     key: string;
     kind: QuestionKind;
     /**
      * The entity asked about and its lane. `label` names it by its place in a list that only the blueprint fixes, from 1:
-     * "Drill 2" among the drills, "Belt 3" among the belt lines that inserters reach. It is never a config id.
+     * "Drill 2" among the drills, "Belt 3" among the belt lines that inserters reach. It is never a config id. A
+     * `lane-export` question also names the item of the lane (empty while that item is asked), and its answer is the number of items a
+     * second that leave the lane, as the text of a number above 0.
      */
-    subject: { label: string; entity_number: number; lane?: 1 | 2 };
-    /** Sorted; for a sharing question the two ways */
+    subject: { label: string; entity_number: number; lane?: 1 | 2; item?: string };
+    /** Sorted; for a sharing question the two ways; none for a rate question */
     candidates: string[];
 }
 
@@ -61,15 +63,15 @@ export const NOTE_CODES = [
     "speeds-problem:not-placed", "speeds-problem:no-data", "speeds-problem:beacon-not-square", "speeds-problem:unknown-quality",
     // the ids: where the import differs from the Sidecar's export, what is left out, and its problems
     "ids:crusher", "ids:splitter-drop", "ids:splitter-or-loader-lane",
-    "inserter-left-out:pickup", "inserter-left-out:drop", "drill-left-out:no-ore", "drill-left-out:target-has-no-id",
+    "inserter-left-out:pickup", "inserter-left-out:drop", "inserter-left-out:throttle", "drill-left-out:no-ore", "drill-left-out:target-has-no-id",
     "ids-problem:bad-input", "ids-problem:bad-entry", "ids-problem:no-machine-data",
     // the belt pickups the generator refuses, and the drops whose items side-load onto another belt
     "pickup:bend", "pickup:splitter", "pickup:unsupported", "pickup:inline", "pickup:side-loaded",
     "drop:side-loaded",
     // a filter row the blueprint holds with no item: an inserter's or a loader's filters, a wagon's or car's slots, a splitter's filter
     "filter-no-item:filters", "filter-no-item:inventory", "filter-no-item:splitter",
-    // a chest whose limit leaves it no slot: it is left out, with the inserters at it
-    "chest:no-slots",
+    // a chest whose limit leaves it no slot: it is left out, with the inserters at it; a voiding chest that only throttles drop into: left out with them
+    "chest:no-slots", "chest:throttle",
 ] as const;
 export type NoteCode = (typeof NOTE_CODES)[number];
 

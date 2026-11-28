@@ -13,7 +13,9 @@ import fs from "fs";
 import path from "path";
 import pako from "pako";
 import { describe, expect, it } from "vitest";
+import { parseConfig } from "../config/loader";
 import { ConfigSchema } from "../config/schema";
+import { beltPickupSinkRefusal } from "../config/inserter-scope";
 import { pickupCaptureProblem } from "../config/pickup-capture";
 import type { FactorioData } from "../data/factorio-data-types";
 import { applyResearch } from "./apply-research";
@@ -22,7 +24,7 @@ import { geometryDataOf, worldDataOf } from "./assemble";
 import { decodeBlueprint } from "./decode";
 import { geometryOf } from "./geometry";
 import { importBlueprint, NOTE_CODES, type ImportBuild, type ImportInputs, type ImportOutcome, type NoteCode } from "./index";
-import { drillsOf, samePoint, settleAnswers, type Asked, type End, type Point, type Raw, type ReadFile, type ReadLane } from "./paste-clock/paste-clock-helpers";
+import { drillsOf, pasteConfigOf, pasteSetpointOf, samePoint, settleAnswers, type Asked, type End, type Point, type Raw, type ReadFile, type ReadLane } from "./paste-clock/paste-clock-helpers";
 import { worldOf } from "./world";
 
 const ENGINE = path.resolve(__dirname, "../..");
@@ -713,5 +715,286 @@ describe("witnesses", () => {
         }
         fs.writeFileSync(path.join(WITNESS!, "comparison.tsv"), counts.join("\n") + "\n");
         expect(counts.length).toBe(RUNS.length + 1);
+    });
+});
+
+// ---------------------------------------------------------------- a throttle: the belt moving on
+
+describe("a throttle: an inserter from a belt into an infinity chest that removes every item", () => {
+    type Part = Raw;
+    /** Six belts going east on y 0.5, entities 1 to 6 */
+    const beltRow = (): Part[] => [1, 2, 3, 4, 5, 6].map((n) => ({ entity_number: n, name: "transport-belt", position: { x: n - 0.5, y: 0.5 }, direction: 4 }));
+    /** A second line above it, entities 21 to 26 */
+    const upperRow = (): Part[] => [21, 22, 23, 24, 25, 26].map((n) => ({ entity_number: n, name: "transport-belt", position: { x: n - 20.5, y: -3.5 }, direction: 4 }));
+    /** A stack inserter beside the belt at tile `x`: north of it takes from lane 1, south of it from lane 2 */
+    const arm = (n: number, x: number, lane: 1 | 2, extra: Part = {}): Part =>
+        lane === 1
+            ? { entity_number: n, name: "stack-inserter", position: { x: x + 0.5, y: -0.5 }, direction: 8, ...extra }
+            : { entity_number: n, name: "stack-inserter", position: { x: x + 0.5, y: 1.5 }, direction: 0, ...extra };
+    const chestAt = (n: number, x: number, lane: 1 | 2, name = "infinity-chest", settings: Part = { remove_unfiltered_items: true }): Part => ({
+        entity_number: n, name, position: { x: x + 0.5, y: lane === 1 ? -1.5 : 2.5 }, ...(name === "infinity-chest" ? { infinity_settings: settings } : {}),
+    });
+    const throttle = (n: number, x: number, lane: 1 | 2): Part[] => [arm(n, x, lane), chestAt(n + 1, x, lane)];
+    const taker = (n: number, x: number, lane: 1 | 2): Part[] => [arm(n, x, lane), chestAt(n + 1, x, lane, "steel-chest")];
+    const FILTER = [{ index: 1, name: "iron-plate", quality: "normal", comparator: "=" }];
+    const ANSWERS = { "lane-item:1:1": "iron-plate", "lane-item:1:2": "iron-plate", "lane-item:21:1": "iron-plate", "lane-item:21:2": "iron-plate" };
+
+    const importOf = (entities: Part[]): ImportBuild =>
+        buildOf(importBlueprint(pack({ blueprint: { item: "blueprint", version: VERSION_2, entities } }), { ...NO_RESEARCH, answers: ANSWERS }, DATA), "throttles");
+
+    /** What an outcome holds of the lists, the lanes' ends, the notes and the entities' rows, one line each */
+    function sketch(build: ImportBuild): string[] {
+        const sourceLane = (end: object) => ("near_lane" in end ? ` lane ${end.near_lane}` : "");
+        return [
+            ...build.inserters.map((i) => `inserter ${i.id}: ${i.source.type} ${i.source.id}${sourceLane(i.source)} to ${i.sink.type} ${i.sink.id}${i.filters ? ` filters ${i.filters.join(" ")}` : ""}`),
+            ...build.chests.map((c) => `chest ${c.id}: ${c.type}${c.type === "infinity-chest" ? ` removes ${c.remove_unfiltered_items}${c.item_filter ? ` filter ${JSON.stringify(c.item_filter)}` : ""}` : ""} at ${c.position?.x},${c.position?.y}`),
+            ...build.belts.map((b) => `belt ${b.id}: ${b.lanes.map((l) => `${l.ingredient} ${l.lane_end?.kind ?? "none"}`).join(", ")}`),
+            ...build.notes.map((n) => `note ${n.code} ${n.entity_number}${n.lane ? ` lane ${n.lane}` : ""}`),
+            `rows ${build.entities.filter((e) => e.row).map((e) => `${e.entity_number}=${e.row!.list[0]}${e.row!.id}`).join(" ")}`,
+        ];
+    }
+    const noRows = (build: ImportBuild, numbers: number[]) => numbers.every((n) => build.entities.find((e) => e.entity_number === n)!.row === undefined);
+
+    const EXPORT = (n: number, lane: 1 | 2) => `lane-export:${n}:${lane}`;
+    const keyed = (build: ImportBuild) => build.questions.map((q) => [q.key, q.kind, q.subject, q.candidates]);
+
+    it("leaves out a throttle on lane 1 and its chest, and asks the rate of lane 1 with no end written for it", () => {
+        const build = importOf([...beltRow(), ...throttle(10, 5, 1)]);
+        expect(keyed(build)).toEqual([[EXPORT(1, 1), "lane-export", { label: "Belt 1", entity_number: 1, lane: 1, item: "iron-plate" }, []]]);
+        expect(build.inserters).toEqual([]);
+        expect(build.chests).toEqual([]);
+        expect(build.belts.map((b) => [b.strategy, b.lanes.map((l) => l.lane_end)])).toEqual([[undefined, [undefined, { kind: "dead_end" }]]]);
+        expect(build.notes.map((n) => [n.code, n.entity_number, n.lane ?? 0, n.please_check])).toEqual([
+            ["default:lane-end", 1, 2, true],
+            ["inserter-left-out:throttle", 10, 0, false],
+            ["chest:throttle", 11, 0, false],
+        ]);
+        expect(noRows(build, [10, 11])).toBe(true);
+    });
+
+    it("leaves out a throttle on each lane, as the scaffold has them, and asks the rate of both lanes", () => {
+        const build = importOf([...beltRow(), ...throttle(10, 5, 1), ...throttle(12, 5, 2)]);
+        expect(build.questions.map((q) => q.key)).toEqual([EXPORT(1, 1), EXPORT(1, 2)]);
+        expect(build.inserters).toEqual([]);
+        expect(build.chests).toEqual([]);
+        expect(build.belts.map((b) => b.lanes.map((l) => l.lane_end))).toEqual([[undefined, undefined]]);
+        expect(build.notes.map((n) => [n.code, n.entity_number, n.lane ?? 0])).toEqual([
+            ["inserter-left-out:throttle", 10, 0], ["chest:throttle", 11, 0], ["inserter-left-out:throttle", 12, 0], ["chest:throttle", 13, 0],
+        ]);
+    });
+
+    it("leaves out two throttles that drop into one chest, each on the lane of its own line, and asks a lane of each line", () => {
+        const build = importOf([...beltRow(), ...upperRow(), ...throttle(10, 5, 1), arm(20, 5, 1, { position: { x: 5.5, y: -2.5 }, direction: 0 })]);
+        expect(keyed(build).map(([key, , subject]) => [key, (subject as { label: string }).label])).toEqual([[EXPORT(1, 1), "Belt 1"], [EXPORT(21, 2), "Belt 2"]]);
+        expect(build.inserters).toEqual([]);
+        expect(build.chests).toEqual([]);
+        expect(build.belts.map((b) => b.lanes.map((l) => l.lane_end?.kind))).toEqual([[undefined, "dead_end"], ["dead_end", undefined]]);
+        expect(build.notes.filter((n) => n.code.endsWith(":throttle")).map((n) => [n.code, n.entity_number])).toEqual([
+            ["inserter-left-out:throttle", 10], ["chest:throttle", 11], ["inserter-left-out:throttle", 20],
+        ]);
+    });
+
+    it("leaves out two throttles one after the other on one lane, and asks that lane once", () => {
+        const build = importOf([...beltRow(), ...throttle(10, 3, 1), ...throttle(12, 5, 1)]);
+        expect(build.questions.map((q) => q.key)).toEqual([EXPORT(1, 1)]);
+        expect(build.inserters).toEqual([]);
+        expect(build.chests).toEqual([]);
+        expect(build.notes.filter((n) => n.code.endsWith(":throttle")).map((n) => [n.code, n.entity_number])).toEqual([
+            ["inserter-left-out:throttle", 10], ["chest:throttle", 11], ["inserter-left-out:throttle", 12], ["chest:throttle", 13],
+        ]);
+    });
+
+    it("keeps a real taker upstream of a throttle, with its id after the gap, and asks the lane's rate", () => {
+        const build = importOf([...beltRow(), ...throttle(10, 5, 1), ...taker(30, 1, 1)]);
+        expect(build.questions.map((q) => q.key)).toEqual([EXPORT(1, 1)]);
+        expect(sketch(build)).toEqual([
+            "inserter 2: belt 1 lane 1 to chest 2",
+            "chest 2: buffer-chest at 1.5,-1.5",
+            "belt 1: iron-plate none, iron-plate dead_end",
+            "note default:lane-end 1 lane 2",
+            "note inserter-left-out:throttle 10",
+            "note chest:throttle 11",
+            "rows 1=b1 2=b1 3=b1 4=b1 5=b1 6=b1 30=i2 31=c2",
+        ]);
+    });
+
+    describe("the rate", () => {
+        const withRate = (answers: Record<string, string>, entities: Part[] = [...beltRow(), ...throttle(10, 5, 1)]) =>
+            buildOf(importBlueprint(pack({ blueprint: { item: "blueprint", version: VERSION_2, entities } }), { ...NO_RESEARCH, answers: { ...ANSWERS, ...answers } }, DATA), "throttles");
+
+        it("writes the answered lane as an export at that rate with no end, the belt as an export belt, and leaves the other lane as it was", () => {
+            const build = withRate({ [EXPORT(1, 1)]: "40" });
+            expect(build.questions).toEqual([]);
+            expect(build.belts).toEqual([expect.objectContaining({ strategy: "export", lanes: [{ ingredient: "iron-plate", stack_size: 1, consumption_per_second: 40 }, { ingredient: "iron-plate", stack_size: 1, lane_end: { kind: "dead_end" } }] })]);
+            // the answered lane has no note; the other lane keeps its own
+            expect(build.notes.filter((n) => n.code.endsWith("lane-end")).map((n) => [n.code, n.lane])).toEqual([["default:lane-end", 2]]);
+        });
+
+        it("takes a decimal and an exponent, as the number the text spells", () => {
+            expect(withRate({ [EXPORT(1, 1)]: "2.5" }).belts[0].lanes[0]).toMatchObject({ consumption_per_second: 2.5 });
+            expect(withRate({ [EXPORT(1, 1)]: "1e1" }).belts[0].lanes[0]).toMatchObject({ consumption_per_second: 10 });
+        });
+
+        it.each(["0", "-5", "abc", "", "Infinity", "40abc", " "])("leaves the question asked and writes nothing for the answer %j", (text) => {
+            const build = withRate({ [EXPORT(1, 1)]: text });
+            expect(build.questions.map((q) => q.key)).toEqual([EXPORT(1, 1)]);
+            expect(build.belts[0].strategy).toBeUndefined();
+            expect(build.belts[0].lanes[0]).toEqual({ ingredient: "iron-plate", stack_size: 1 });
+        });
+
+        it("asks the lane while its item is asked, with no item", () => {
+            const asked = buildOf(importBlueprint(pack({ blueprint: { item: "blueprint", version: VERSION_2, entities: [...beltRow(), ...throttle(10, 5, 1)] } }), { ...NO_RESEARCH, answers: {} }, DATA), "throttles");
+            expect(asked.questions.map((q) => [q.key, q.subject.item])).toEqual([["lane-item:1:1", undefined], ["lane-item:1:2", undefined], [EXPORT(1, 1), ""]]);
+        });
+
+        it("gives a belt with one answered throttle lane and one dead-end lane that the configuration reads", () => {
+            const build = withRate({ [EXPORT(1, 1)]: "40" }, [...beltRow(), ...throttle(10, 5, 1), ...taker(30, 1, 2)]);
+            const parsed = ConfigSchema.safeParse({ setpoint: { item: "iron-plate", items_per_second: 1, copies: 1 }, machines: build.machines, drills: { configs: build.drills },
+                inserters: build.inserters, belts: build.belts, chests: build.chests, research: build.research });
+            expect(parsed.success ? [] : parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`)).toEqual([]);
+        });
+    });
+
+    describe("the processing unit circuit export scaffold", () => {
+        const text = () => read(path.join(ENGINE, "resources", "config-samples", "intermediates", "processing-unit", "processing-unit-80-circuit-export.scaffold")).trim();
+        const research: ImportInputs["research"] = {
+            profile: "save force", template: null,
+            bonuses: { mining_drill_productivity_bonus: 79990.00000001134, inserter_stack_size_bonus: 3, bulk_inserter_capacity_bonus: 11, belt_stack_size_bonus: 3, recipes: { "processing-unit": { productivity_bonus: 250 } } },
+        };
+        const asked = (answers: Record<string, string>) => buildOf(importBlueprint(text(), { research, answers, setpoint: { item: "processing-unit", copies: 1 } }, DATA), "circuit export");
+        const BOTH = { "lane-export:30:1": "40", "lane-export:30:2": "40" };
+
+        it("asks the rate of each lane of the circuit belt, and leaves out its four throttles and their chests", () => {
+            const build = asked({});
+            expect(keyed(build)).toEqual([
+                ["lane-export:30:1", "lane-export", { label: "Belt 3", entity_number: 30, lane: 1, item: "electronic-circuit" }, []],
+                ["lane-export:30:2", "lane-export", { label: "Belt 3", entity_number: 30, lane: 2, item: "electronic-circuit" }, []],
+            ]);
+            // the four throttles (97, 99, 107 and 109) and their chests (96, 100, 106 and 110) are in no row
+            for (const n of [96, 97, 99, 100, 106, 107, 109, 110]) expect(build.entities.find((e) => e.entity_number === n)!.row, `entity ${n}`).toBeUndefined();
+            expect(build.notes.filter((n) => n.code.endsWith("lane-end") && n.entity_number === 30)).toEqual([]);
+        });
+
+        it("with 40 for each lane, gives the sample's export belt, and a build the generator takes", async () => {
+            const build = asked(BOTH);
+            expect(build.questions).toEqual([]);
+            // belt 3 of the sample's export, with the saved force's belt stack size
+            expect(build.belts.find((b) => b.id === 3)).toEqual({
+                id: 3, type: "turbo-transport-belt", flow_direction: 4, strategy: "export",
+                lanes: [{ ingredient: "electronic-circuit", stack_size: 4, consumption_per_second: 40 }, { ingredient: "electronic-circuit", stack_size: 4, consumption_per_second: 40 }],
+            });
+            expect(beltPickupSinkRefusal({ inserters: build.inserters, chests: build.chests, belts: build.belts })).toBeNull();
+            const config = pasteConfigOf(build, pasteSetpointOf({ item: "processing-unit", items_per_second: 80, copies: 1 }, 1));
+            await expect(parseConfig(JSON.stringify(config))).resolves.toBeDefined();
+        });
+    });
+
+    describe("keeps the inserter and the chest, with today's outcome, where", () => {
+        const unchanged = (entities: Part[]) => {
+            const build = importOf(entities);
+            expect(build.questions).toEqual([]);
+            return sketch(build);
+        };
+        it("the chest has a filter", () => {
+            expect(unchanged([...beltRow(), arm(10, 5, 1), chestAt(11, 5, 1, "infinity-chest", { remove_unfiltered_items: true, filters: [{ index: 1, name: "iron-plate", count: 50 }] })])).toMatchInlineSnapshot(`
+              [
+                "inserter 1: belt 1 lane 1 to chest 1",
+                "chest 1: infinity-chest removes true filter [{"item_name":"iron-plate","request_count":50}] at 5.5,-1.5",
+                "belt 1: iron-plate dead_end, iron-plate dead_end",
+                "note default:lane-end 1 lane 1",
+                "note default:lane-end 1 lane 2",
+                "rows 1=b1 2=b1 3=b1 4=b1 5=b1 6=b1 10=i1 11=c1",
+              ]
+            `);
+        });
+        it("the chest does not remove unfiltered items", () => {
+            expect(unchanged([...beltRow(), arm(10, 5, 1), chestAt(11, 5, 1, "infinity-chest", { remove_unfiltered_items: false })])).toMatchInlineSnapshot(`
+              [
+                "inserter 1: belt 1 lane 1 to chest 1",
+                "chest 1: infinity-chest removes false at 5.5,-1.5",
+                "belt 1: iron-plate dead_end, iron-plate dead_end",
+                "note default:lane-end 1 lane 1",
+                "note default:lane-end 1 lane 2",
+                "rows 1=b1 2=b1 3=b1 4=b1 5=b1 6=b1 10=i1 11=c1",
+              ]
+            `);
+        });
+        it("an inserter takes from the chest", () => {
+            expect(unchanged([...beltRow(), ...throttle(10, 5, 1), { entity_number: 30, name: "stack-inserter", position: { x: 6.5, y: -1.5 }, direction: 12 }, { entity_number: 31, name: "steel-chest", position: { x: 7.5, y: -1.5 } }])).toMatchInlineSnapshot(`
+              [
+                "inserter 1: belt 1 lane 1 to chest 1",
+                "chest 1: infinity-chest removes true at 5.5,-1.5",
+                "belt 1: iron-plate dead_end, iron-plate dead_end",
+                "note default:lane-end 1 lane 1",
+                "note default:lane-end 1 lane 2",
+                "note inserter-left-out:drop 30",
+                "rows 1=b1 2=b1 3=b1 4=b1 5=b1 6=b1 10=i1 11=c1",
+              ]
+            `);
+        });
+        it("a machine's output inserter also drops into the chest", () => {
+            expect(unchanged([...beltRow(), ...throttle(10, 5, 1), { entity_number: 30, name: "assembling-machine-3", position: { x: 5.5, y: -4.5 }, recipe: "iron-gear-wheel" }, { entity_number: 31, name: "stack-inserter", position: { x: 5.5, y: -2.5 }, direction: 0 }])).toMatchInlineSnapshot(`
+              [
+                "inserter 1: belt 1 lane 1 to chest 1",
+                "inserter 2: machine 1 to chest 1",
+                "chest 1: infinity-chest removes true at 5.5,-1.5",
+                "belt 1: iron-plate dead_end, iron-plate dead_end",
+                "note default:lane-end 1 lane 1",
+                "note default:lane-end 1 lane 2",
+                "rows 1=b1 2=b1 3=b1 4=b1 5=b1 6=b1 10=i1 11=c1 30=m1 31=i2",
+              ]
+            `);
+        });
+        it("the inserter has a filter", () => {
+            expect(unchanged([...beltRow(), arm(10, 5, 1, { use_filters: true, filters: FILTER }), chestAt(11, 5, 1)])).toMatchInlineSnapshot(`
+              [
+                "inserter 1: belt 1 lane 1 to chest 1 filters iron-plate",
+                "chest 1: infinity-chest removes true at 5.5,-1.5",
+                "belt 1: iron-plate dead_end, iron-plate dead_end",
+                "note default:lane-end 1 lane 1",
+                "note default:lane-end 1 lane 2",
+                "rows 1=b1 2=b1 3=b1 4=b1 5=b1 6=b1 10=i1 11=c1",
+              ]
+            `);
+        });
+        it("the pickup has no near lane", () => {
+            expect(unchanged([...beltRow(), { entity_number: 10, name: "stack-inserter", position: { x: 6.5, y: 0.5 }, direction: 12 }, { entity_number: 11, name: "infinity-chest", position: { x: 7.5, y: 0.5 }, infinity_settings: { remove_unfiltered_items: true } }])).toMatchInlineSnapshot(`
+              [
+                "inserter 1: belt 1 to chest 1",
+                "chest 1: infinity-chest removes true at 7.5,0.5",
+                "belt 1: iron-plate dead_end, iron-plate dead_end",
+                "note default:lane-end 1 lane 1",
+                "note default:lane-end 1 lane 2",
+                "note pickup:inline 10",
+                "rows 1=b1 2=b1 3=b1 4=b1 5=b1 6=b1 10=i1 11=c1",
+              ]
+            `);
+        });
+        it("a taker of the lane that is not a throttle is downstream", () => {
+            expect(unchanged([...beltRow(), ...throttle(10, 3, 1), ...taker(30, 5, 1)])).toMatchInlineSnapshot(`
+              [
+                "inserter 1: belt 1 lane 1 to chest 1",
+                "inserter 2: belt 1 lane 1 to chest 2",
+                "chest 1: infinity-chest removes true at 3.5,-1.5",
+                "chest 2: buffer-chest at 5.5,-1.5",
+                "belt 1: iron-plate dead_end, iron-plate dead_end",
+                "note default:lane-end 1 lane 1",
+                "note default:lane-end 1 lane 2",
+                "rows 1=b1 2=b1 3=b1 4=b1 5=b1 6=b1 10=i1 11=c1 30=i2 31=c2",
+              ]
+            `);
+        });
+        it("the chest is a steel chest", () => {
+            expect(unchanged([...beltRow(), arm(10, 5, 1), chestAt(11, 5, 1, "steel-chest")])).toMatchInlineSnapshot(`
+              [
+                "inserter 1: belt 1 lane 1 to chest 1",
+                "chest 1: buffer-chest at 5.5,-1.5",
+                "belt 1: iron-plate dead_end, iron-plate dead_end",
+                "note default:lane-end 1 lane 1",
+                "note default:lane-end 1 lane 2",
+                "rows 1=b1 2=b1 3=b1 4=b1 5=b1 6=b1 10=i1 11=c1",
+              ]
+            `);
+        });
     });
 });

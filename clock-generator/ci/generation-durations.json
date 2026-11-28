@@ -49,6 +49,7 @@
  "src/import/paste-clock/lithium.generation.test.ts": 59.3,
  "src/import/paste-clock/logistic-240.generation.test.ts": 35.7,
  "src/import/paste-clock/metallurgic-45.generation.test.ts": 48.7,
+ "src/import/paste-clock/processing-unit-80-circuit-export.generation.test.ts": 29.1,
  "src/import/paste-clock/production-science-120.generation.test.ts": 45.3,
  "src/import/paste-clock/productivity-module-80.generation.test.ts": 157,
  "src/import/paste-clock/steel.generation.test.ts": 184.4,
