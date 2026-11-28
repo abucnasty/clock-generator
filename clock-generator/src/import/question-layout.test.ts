@@ -5,6 +5,7 @@
  * questions come too.
  */
 import fs from "fs";
+import pako from "pako";
 import path from "path";
 import { describe, expect, it } from "vitest";
 import type { FactorioData } from "../data/factorio-data-types";
@@ -57,7 +58,27 @@ const samePoint = (a: Point | undefined, b: Point | undefined, translation: Poin
     a !== undefined && b !== undefined && a.x - translation.x === b.x && a.y - translation.y === b.y;
 
 /** Every outcome of a build as its questions are answered with the values of its read (the rule of the import's own test), and the keys left unanswered */
-type Asked = { build: Tier1Build; text: string; rounds: ImportBuild[]; settled: ImportBuild; unanswered: string[] };
+type Asked = { build: { name: string }; text: string; rounds: ImportBuild[]; settled: ImportBuild; unanswered: string[] };
+
+/** Asks a text again with the answers so far, until no question is left that the rule can answer */
+function settleText(build: { name: string }, text: string, inputsOf: (answers: Record<string, string>) => ImportInputs, answerOf: (q: ImportBuild["questions"][number]) => string | undefined): Asked {
+    const answers: Record<string, string> = {};
+    const unanswered = new Set<string>();
+    let outcome = buildOf(importBlueprint(text, inputsOf({}), DATA), build.name);
+    const rounds = [outcome];
+    for (let round = 0; round < 12; round += 1) {
+        const fresh = outcome.questions.filter((q) => answers[q.key] === undefined && !unanswered.has(q.key));
+        if (fresh.length === 0) return { build, text, rounds, settled: outcome, unanswered: [...unanswered] };
+        for (const q of fresh) {
+            const answer = answerOf(q);
+            if (answer === undefined) unanswered.add(q.key);
+            else answers[q.key] = answer;
+        }
+        outcome = buildOf(importBlueprint(text, inputsOf(answers), DATA), build.name);
+        rounds.push(outcome);
+    }
+    throw new Error(`${build.name}: the answers did not settle`);
+}
 
 function askedOf(build: Tier1Build): Asked {
     const text = read(path.join(ENGINE, build.blueprint)).trim();
@@ -93,25 +114,35 @@ function askedOf(build: Tier1Build): Asked {
         return (belt?.lanes ?? []).find((l) => l.sharing !== undefined)?.sharing ?? "shared";
     };
 
-    const answers: Record<string, string> = {};
-    const unanswered = new Set<string>();
-    let outcome = buildOf(importBlueprint(text, inputsOf(build, {}), DATA), build.name);
-    const rounds = [outcome];
-    for (let round = 0; round < 12; round += 1) {
-        const fresh = outcome.questions.filter((q) => answers[q.key] === undefined && !unanswered.has(q.key));
-        if (fresh.length === 0) return { build, text, rounds, settled: outcome, unanswered: [...unanswered] };
-        for (const q of fresh) {
-            const answer = answerOf(q);
-            if (answer === undefined) unanswered.add(q.key);
-            else answers[q.key] = answer;
-        }
-        outcome = buildOf(importBlueprint(text, inputsOf(build, answers), DATA), build.name);
-        rounds.push(outcome);
-    }
-    throw new Error(`${build.name}: the answers did not settle`);
+    return settleText(build, text, (answers) => inputsOf(build, answers), answerOf);
 }
 
-const ASKED = TIER1.map(askedOf);
+/** A blueprint string for a JSON text, as the game writes them: a zero, then base64 of the deflated text */
+const pack = (json: unknown): string => "0" + Buffer.from(pako.deflate(new TextEncoder().encode(JSON.stringify(json)))).toString("base64");
+const VERSION_2 = 2 * 2 ** 48 + 1 * 2 ** 32 + 25 * 2 ** 16 + 10;
+
+/**
+ * A belt of four pieces that nothing puts items on, with a taker into a machine that makes logistic science packs and a
+ * taker into a chest: both lanes are asked, and an answer to one lane fills the other. No public build asks a lane question.
+ */
+function twoLanesAsked(): string {
+    const belt = (entity_number: number, y: number) => ({ entity_number, name: "transport-belt", position: { x: 0.5, y }, direction: 8 });
+    const entities = [
+        belt(1, 0.5), belt(2, 1.5), belt(3, 2.5), belt(4, 3.5),
+        { entity_number: 5, name: "stack-inserter", position: { x: 1.5, y: 0.5 }, direction: 12 },
+        { entity_number: 6, name: "assembling-machine-3", position: { x: 3.5, y: 0.5 }, recipe: "logistic-science-pack" },
+        { entity_number: 7, name: "stack-inserter", position: { x: 1.5, y: 3.5 }, direction: 12 },
+        { entity_number: 8, name: "steel-chest", position: { x: 2.5, y: 3.5 } },
+    ];
+    return pack({ blueprint: { item: "blueprint", version: VERSION_2, entities } });
+}
+const HAND_LANES: Record<string, string> = { "lane-item:1:1": "inserter", "lane-item:1:2": "transport-belt" };
+const byHand = (answers: Record<string, string>): ImportInputs => ({ research: TIER1[0].research, answers, setpoint: { copies: COPIES } });
+
+const ASKED = [
+    ...TIER1.map(askedOf),
+    settleText({ name: "two lanes asked" }, twoLanesAsked(), byHand, (q) => HAND_LANES[q.key] ?? (q.kind === "lane-sharing" ? "shared" : undefined)),
+];
 const ROUNDS = ASKED.flatMap((a) => a.rounds.map((outcome, round) => ({ name: `${a.build.name} round ${round}`, build: a.build, outcome, asked: a })));
 
 const decodedOf = (asked: Asked) => {
@@ -247,6 +278,20 @@ describe("the pieces of the layout", () => {
 });
 
 describe("the rows the questions hold back", () => {
+    it("a line whose other lane the import fills is a belt of the lists after one answer, with no row held back", () => {
+        const text = twoLanesAsked();
+        const asked = buildOf(importBlueprint(text, byHand({}), DATA), "two lanes asked");
+        expect(asked.questions.map((q) => q.key)).toEqual(["lane-item:1:1", "lane-item:1:2", "lane-sharing:1"]);
+        expect(asked.layout.held_back.belts.map((b) => b.id)).toEqual([1]);
+        // the taker into the steel chest has no chest row to draw, so only the taker into the machine is held back
+        expect(asked.layout.held_back.inserters.map((i) => i.id)).toEqual([1]);
+        const filled = buildOf(importBlueprint(text, byHand({ "lane-item:1:1": "inserter" }), DATA), "two lanes asked");
+        expect(filled.questions.map((q) => q.key)).toEqual(["lane-sharing:1"]);
+        expect(filled.layout.held_back).toEqual({ belts: [], inserters: [], drills: [] });
+        expect(filled.layout.lines.map((l) => [l.place, l.belt, l.lane_lines])).toEqual([[1, 1, [1, 2]]]);
+        expect(filled.belts.map((b) => b.lanes.map((l) => l.ingredient))).toEqual([["inserter", "transport-belt"]]);
+    });
+
     it("a line with an open lane question is a belt row with its place as id, its asked lane without an item", () => {
         let checked = 0;
         for (const { name, outcome } of ROUNDS) {
