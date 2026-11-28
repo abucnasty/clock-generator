@@ -41,7 +41,7 @@ const paste = (): FeedSource => ({
             inserters: [inserter(4, { type: 'belt', id: 1 }, { type: 'machine', id: 1 })],
             drills: [drill(1, '')],
         },
-    } as FeedSource['layout'],
+    } as unknown as FeedSource['layout'],
 });
 
 const ids = (rows: readonly { id: number }[]) => rows.map(row => row.id);
