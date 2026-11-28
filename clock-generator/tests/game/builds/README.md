@@ -70,7 +70,7 @@ are not made for a build of copies.
 entities, the clock it came with in it): both mirrored sides, 22 science and 22 engine machines and 6 pipe foundries on the centre
 line 18 tiles apart, so 5 whole blocks of `CHEMICAL_SCIENCE_240_SHARED_FOUNDRY` and a half block at the east end, and two foundries at
 the west end that cast the gears and the steel of both engine lines. Every input line ends in an underground entrance with nothing
-beyond. The config is the sample as committed, `copies: 5.5`; its partial copy is the half block (machines 1, 3, 5, 7 and 9), held to
+beyond. The sample is one block, one copy at 480/11 a second; the two cases state the whole build's own setpoint (240 a second from 5.5 copies, 18 tiles apart) over it, and its partial copy is the half block (machines 1, 3, 5, 7 and 9), held to
 half a block's packs. The half block's pipe foundry has 5 beacons where the others have 8 (199.75 against 236.78, computed from the
 blueprint), and engine line 3 holds gears on the lane taken first where the config states steel (not confirmed); neither is in
 the config. Two cases in the scaffold recordings, each recorded twice on 2026-11-11 at Factorio 2.1.24:
@@ -1191,7 +1191,7 @@ with equal summaries. They are pinned in [missing-recordings-clock-controls.json
 | `UTILITY_SCIENCE_120` (`utility-science-120`) | Takt Batches Observed (672, `8c6d44c1`) | 1 of 7 | 7,135 | 25,951 (cut low density structure 15,871, output block 20,575, cut processing unit 25,951) | holds and recovers from all three; the record says "no recovery" |
 | `UTILITY_SCIENCE_120_PROCESSING_UNIT_AND_LDS_ON_ONE_BELT` | Coordinated Sources (336, `4d76e238`) | 2 of 7 | 6,960 | 23,312 | holds: both copies 960 of 960 in each of 10 window cycles before and after the losses |
 | `MILITARY_SCIENCE_240` | Coordinated Sources (80, `4c0ccc46`) | 5 of 5 | 7,200 | 23,713 | holds: each copy 2,880 of 2,880 |
-| `CHEMICAL_SCIENCE_240_SHARED_FOUNDRY` and `CHEMICAL_SCIENCE_240_SHARED_FOUNDRY_BACKED_UP` | Coordinated Sources (352, `f1a4c258`) | 1 block of 5.5 | 7,120 | 24,929 | holds: 2,560 of 2,560; the two jobs have the same clock and the same run |
+| `CHEMICAL_SCIENCE_240_SHARED_FOUNDRY` and `CHEMICAL_SCIENCE_240_SHARED_FOUNDRY_BACKED_UP` | Coordinated Sources (352, `f1a4c258`) | 1 block (the job's one copy; 5.5 of them make 240/s) | 7,120 | 24,929 | holds: 2,560 of 2,560; the two jobs have the same clock and the same run |
 | `PRODUCTION_SCIENCE_120_TWO_BELTS` and `..._SHARED_PICKUP` | Euclidean Swings (336, `fdadf120`) | 1 of 7 | 6,960 | 21,697 (cut electric furnace 15,985, output block 16,070, cut productivity module 21,697) | holds: 960 of 960 in each of 10 window cycles before and after the losses; both jobs have the same clock and the same run |
 
 - **Utility science 120.** The record's verdict for the clock is "no recovery", from the loss of low density structures on the copies that share a lane. The scaffold holds one copy, so no lane is shared
