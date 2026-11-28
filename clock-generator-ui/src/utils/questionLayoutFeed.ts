@@ -1,7 +1,9 @@
 import * as O from 'fp-ts/Option';
+import type { ImportQuestion } from 'clock-generator/browser';
 import type { BeltFormData, ChestFormData, DrillFormData, InserterFormData, MachineFormData } from '../hooks/useConfigForm';
 import type { PastedBlueprint } from '../worker/types';
 import { createDefaultConfig } from './configForm/formData';
+import { tileKey, type LaneEditorBelt, type LaneEditorLane } from './layoutLanes';
 import { applyPaste } from './pastePreview';
 
 /** The five lists that the layout view draws */
@@ -54,4 +56,53 @@ export function questionLayoutFeed(pasted: FeedSource): LayoutFeed {
         suggested_target: O.none,
     }, EVERY_LIST);
     return { machines: made.machines, inserters: made.inserters, belts: made.belts, chests: made.chests, drills: made.drills?.configs ?? [] };
+}
+
+/** What the lanes read of a question */
+export type FeedQuestion = Pick<ImportQuestion, 'key' | 'kind' | 'subject' | 'candidates'>;
+
+/** The lanes of the lines of a pasted blueprint, for the layout view's lane editor */
+export interface QuestionLanes {
+    /** By belt id of the lists of `questionLayoutFeed`, which is the place of the line */
+    belts: ReadonlyMap<number, LaneEditorBelt>;
+    /** The line, by its first piece, and the key of the question of a lane of a belt of the view; null for a belt that is none */
+    keyOf(beltId: number, lane: number): { first: number; key: string } | null;
+}
+
+/** The tiles a piece covers: one at a whole tile's centre, and two across a tile's edge (a splitter, a loader) */
+const tilesOf = (x: number, y: number): [number, number][] => {
+    const around = (at: number) => Number.isInteger(at) ? [at - 0.5, at + 0.5] : [Math.floor(at) + 0.5];
+    return around(x).flatMap(column => around(y).map((row): [number, number] => [column, row]));
+};
+
+/**
+ * The lanes of each belt line that an inserter end reaches, as the layout view's lane editor reads them. Lane 1 of a line is
+ * the left side of the way it runs, lane 2 the right. A lane is edited where the panel has shown its question and the
+ * question is asked now or has an answer; the answer is its item then, else the item the import gives it. A lane that
+ * has an item and no such question is fixed (the import filled it), and a lane with neither has no item and no control.
+ */
+export function questionLanes(pasted: FeedSource & Pick<PastedBlueprint, 'questions'>, shown: ReadonlyMap<string, FeedQuestion>, answers: Readonly<Record<string, string>>): QuestionLanes {
+    const { lines, held_back } = pasted.layout;
+    const asked = new Set(pasted.questions.map(question => question.key));
+    const rowOf = (line: (typeof lines)[number]) => line.belt === null ? held_back.belts.find(belt => belt.id === line.place) : pasted.belts.find(belt => belt.id === line.belt);
+    const keys = new Map<string, { first: number; key: string }>();
+    const belts = new Map<number, LaneEditorBelt>();
+    for (const line of lines) {
+        if (line.pieces.length === 0) continue;
+        const row = rowOf(line);
+        const lanes = ([1, 2] as const).map((lane): LaneEditorLane => {
+            const key = `lane-item:${line.first}:${lane}`;
+            keys.set(`${line.place}:${lane}`, { first: line.first, key });
+            const question = shown.get(key);
+            const answer = answers[key];
+            const edited = question !== undefined && (asked.has(key) || answer !== undefined);
+            const at = line.lane_lines?.indexOf(lane) ?? -1;
+            const given = at < 0 ? '' : (row?.lanes[at]?.ingredient ?? '');
+            const item = edited && answer !== undefined ? answer : given;
+            return { id: lane, side: lane === 1 ? 'left' : 'right', item: item === '' ? null : item, candidates: edited ? question.candidates : null };
+        });
+        const directions = new Map(line.pieces.flatMap(piece => tilesOf(piece.x, piece.y).map(([x, y]) => [tileKey(x, y), piece.direction] as const)));
+        belts.set(line.place, { lanes, directions });
+    }
+    return { belts, keyOf: (beltId, lane) => keys.get(`${beltId}:${lane}`) ?? null };
 }
