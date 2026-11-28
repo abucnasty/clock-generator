@@ -7,6 +7,7 @@ import { entityLabel } from '../utils/entityLabel';
 import type { LaneEditor, LaneEditorBelt, LaneEditorLane } from '../utils/layoutLanes';
 import { FactorioIcon } from './FactorioIcon';
 import { ItemSelector } from './ItemSelector';
+import { NumberField } from './NumberField';
 
 interface LayoutLanePopoverProps {
     beltId: number;
@@ -42,6 +43,10 @@ function LaneEditorRow({ beltId, lane, marked, editor }: { beltId: number; lane:
                     <ItemSelector label={ANOTHER_ITEM} inputAriaLabel={`${ANOTHER_ITEM} for lane ${lane.id}`} value={lane.item} size="small" minWidth={170}
                         options={[...new Set([...candidates, ...editor.itemNames])]} onChange={value => { if (value !== null) editor.onEdit(beltId, lane.id, value); }} />
                 </Box>
+            )}
+            {lane.rate !== undefined && (
+                <NumberField label="Items a second" size="small" min={0} sx={{ width: 150 }} value={lane.rate} inputAriaLabel={`Items a second for lane ${lane.id}`}
+                    onValueCommitted={(value: number | null) => { if (value !== null && value > 0) editor.onRate?.(beltId, lane.id, value); }} />
             )}
         </Box>
     );

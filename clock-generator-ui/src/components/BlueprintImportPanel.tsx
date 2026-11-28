@@ -42,7 +42,9 @@ const entitiesOf = (pasted: PastedBlueprint) => new Map(pasted.entities.map(enti
 type Selected = { kind: 'belt' | 'drill'; id: number };
 
 const kindOfSelection = (question: ImportQuestion): Selected['kind'] => question.kind === 'drill-ore' ? 'drill' : 'belt';
-const QUESTION_ORDER: readonly ImportQuestion['kind'][] = ['drill-ore', 'lane-item', 'lane-sharing'];
+const QUESTION_ORDER: readonly ImportQuestion['kind'][] = ['drill-ore', 'lane-item', 'lane-export', 'lane-sharing'];
+/** The kinds of question that ask about one lane of a belt, and keep their row once answered */
+const isLaneQuestion = (question: ImportQuestion) => question.kind === 'lane-item' || question.kind === 'lane-export';
 
 /**
  * The top of the confirm dialog of a pasted blueprint: the research profile and the numbers it gives, what the blueprint
@@ -61,7 +63,7 @@ export function BlueprintImportPanel({ pasted, profiles, profileId, onProfileCha
     const shown = pasted.questions.every(question => seen.get(question.key) === question) ? seen : new Map([...seen, ...pasted.questions.map(question => [question.key, question] as const)]);
     if (shown !== seen) setSeen(shown);
     const asked = new Set(pasted.questions.map(question => question.key));
-    const rows = [...shown.values()].filter(question => asked.has(question.key) || (question.kind === 'lane-item' && answers[question.key] !== undefined))
+    const rows = [...shown.values()].filter(question => asked.has(question.key) || (isLaneQuestion(question) && answers[question.key] !== undefined))
         .sort((a, b) => QUESTION_ORDER.indexOf(a.kind) - QUESTION_ORDER.indexOf(b.kind) || a.subject.entity_number - b.subject.entity_number || (a.subject.lane ?? 0) - (b.subject.lane ?? 0));
 
     // the selection is the layout's; a row marks the belt or drill it is about, and the lane for a lane question
@@ -74,16 +76,17 @@ export function BlueprintImportPanel({ pasted, profiles, profileId, onProfileCha
         const id = placeOf(question);
         if (id === undefined) return;
         setSelection({ kind: kindOfSelection(question), id });
-        setLane(question.kind === 'lane-item' ? question.subject.lane ?? null : null);
+        setLane(isLaneQuestion(question) ? question.subject.lane ?? null : null);
     };
     const marked = (question: ImportQuestion) => selection !== null && selection.kind === kindOfSelection(question) && placeOf(question) === selection.id
-        && (lane === null || question.kind !== 'lane-item' || question.subject.lane === lane);
+        && (lane === null || !isLaneQuestion(question) || question.subject.lane === lane);
 
     const feed = questionLayoutFeed(pasted);
     const lanes = questionLanes(pasted, shown, answers);
     const laneEditor: LaneEditor = {
         belts: lanes.belts, itemNames, markedLane: selection?.kind === 'belt' ? lane : null,
         onEdit: (beltId, laneId, item) => { const target = lanes.keyOf(beltId, laneId); if (target !== null) onAnswer(target.key, item); },
+        onRate: (beltId, laneId, value) => { const target = lanes.rateKeyOf(beltId, laneId); if (target !== null) onAnswer(target.key, String(value)); },
     };
 
     return <Box data-blueprint-import="" sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mb: 1 }}>
@@ -102,7 +105,7 @@ export function BlueprintImportPanel({ pasted, profiles, profileId, onProfileCha
         {rows.length > 0 && <Box role="group" aria-label="Questions" sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
             {rows.map(question => <QuestionRow key={question.key} question={question} entity={entityOf.get(question.subject.entity_number)}
                 answer={answers[question.key]} onAnswer={value => onAnswer(question.key, value)} itemNames={itemNames}
-                marked={marked(question)} answered={question.kind === 'lane-item' && answers[question.key] !== undefined} onSelect={() => select(question)} />)}
+                marked={marked(question)} answered={isLaneQuestion(question) && answers[question.key] !== undefined} onSelect={() => select(question)} />)}
         </Box>}
     </Box>;
 }
@@ -198,7 +201,7 @@ function QuestionRow({ question, entity, answer, onAnswer, itemNames, marked, an
     marked: boolean; answered: boolean; onSelect: () => void;
 }) {
     const { itemLabel } = useGameNames();
-    const text = questionText(question);
+    const text = questionText(question, itemLabel);
     const icon = entity && <FactorioIcon name={entity.name} size={20} />;
     // the row's own element carries what links it to the layout: a focus or a pointer on it selects its belt
     const link = { 'data-question': question.key, 'data-marked': marked ? '' : undefined, 'data-answered': answered ? '' : undefined, onFocus: onSelect, onPointerEnter: onSelect };
@@ -210,6 +213,16 @@ function QuestionRow({ question, entity, answer, onAnswer, itemNames, marked, an
                 {(['shared', 'per_copy'] as const).map(value => <FormControlLabel key={value} value={value} control={<Radio size="small" />} label={SHARING_ANSWER_TEXT[value]} />)}
             </RadioGroup>
         </FormControl>;
+    }
+    if (question.kind === 'lane-export') {
+        const typed = Number(answer);
+        return <Box {...link} sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center', ...markSx }}>
+            {icon}
+            <Typography variant="body2" sx={{ minWidth: 160 }}>{text}</Typography>
+            <NumberField label="Items a second" size="small" min={0} sx={{ width: 150 }} value={answer !== undefined && Number.isFinite(typed) && typed > 0 ? typed : null} inputAriaLabel={text}
+                onValueCommitted={(value: number | null) => { if (value !== null && value > 0) onAnswer(String(value)); }} />
+            {answered && <Typography variant="caption" color="text.secondary">{ANSWERED}</Typography>}
+        </Box>;
     }
     return <Box {...link} sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center', ...markSx }}>
         {icon}

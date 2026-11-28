@@ -61,11 +61,12 @@ export const BLUEPRINT_WAY_IN = {
 
 // ---- the questions
 
-/** The question's words, with the name of what it is about */
-export function questionText(question: ImportQuestion): string {
+/** The question's words, with the name of what it is about; a rate question names its item by `itemLabel`, and says "items" while the lane's item is asked */
+export function questionText(question: ImportQuestion, itemLabel: (item: string) => string = item => item): string {
     switch (question.kind) {
         case 'drill-ore': return `${question.subject.label} mines`;
         case 'lane-item': return `${question.subject.label}, lane ${question.subject.lane} holds`;
+        case 'lane-export': return `How many ${question.subject.item ? itemLabel(question.subject.item) : 'items'} a second leave ${question.subject.label}, lane ${question.subject.lane}?`;
         case 'lane-sharing': return `${question.subject.label}: do all copies use this belt?`;
     }
 }
@@ -209,7 +210,7 @@ const NOTE_WORDS: Record<Exclude<NoteCode, `unread:${string}` | `default:${strin
     'ids:splitter-or-loader-lane': 'a lane through a splitter or a loader: the site reads it as one belt lane.',
     'inserter-left-out:pickup': 'left out: it takes from nothing the site reads.',
     'inserter-left-out:drop': 'left out: it drops into nothing the site reads.',
-    'inserter-left-out:throttle': 'left out: it takes from a belt into an infinity chest that removes every item, so the site reads the belt as moving on there: that lane gets an infinite end.',
+    'inserter-left-out:throttle': 'left out: it takes from a belt into an infinity chest that removes every item. The site asks how many items a second leave that lane, and makes the lane an export at that rate.',
     'drill-left-out:no-ore': 'left out: its ore is not known.',
     'drill-left-out:target-has-no-id': 'left out: what it drops into is left out.',
     'ids-problem:bad-input': 'the site could not give it a number.',

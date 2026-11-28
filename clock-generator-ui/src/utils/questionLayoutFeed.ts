@@ -67,6 +67,8 @@ interface QuestionLanes {
     belts: ReadonlyMap<number, LaneEditorBelt>;
     /** The line, by its first piece, and the key of the question of a lane of a belt of the view; null for a belt that is none */
     keyOf(beltId: number, lane: number): { first: number; key: string } | null;
+    /** The same for the question of the lane's rate */
+    rateKeyOf(beltId: number, lane: number): { first: number; key: string } | null;
 }
 
 /** The tiles a piece covers: one at a whole tile's centre, and two across a tile's edge (a splitter, a loader) */
@@ -86,6 +88,7 @@ export function questionLanes(pasted: FeedSource & Pick<PastedBlueprint, 'questi
     const asked = new Set(pasted.questions.map(question => question.key));
     const rowOf = (line: (typeof lines)[number]) => line.belt === null ? held_back.belts.find(belt => belt.id === line.place) : pasted.belts.find(belt => belt.id === line.belt);
     const keys = new Map<string, { first: number; key: string }>();
+    const rateKeys = new Map<string, { first: number; key: string }>();
     const belts = new Map<number, LaneEditorBelt>();
     for (const line of lines) {
         if (line.pieces.length === 0) continue;
@@ -99,10 +102,16 @@ export function questionLanes(pasted: FeedSource & Pick<PastedBlueprint, 'questi
             const at = line.lane_lines?.indexOf(lane) ?? -1;
             const given = at < 0 ? '' : (row?.lanes[at]?.ingredient ?? '');
             const item = edited && answer !== undefined ? answer : given;
-            return { id: lane, side: lane === 1 ? 'left' : 'right', item: item === '' ? null : item, candidates: edited ? question.candidates : null };
+            // a lane is given a rate where its rate question was shown and is asked now or has an answer
+            const rateKey = `lane-export:${line.first}:${lane}`;
+            rateKeys.set(`${line.place}:${lane}`, { first: line.first, key: rateKey });
+            const rated = shown.has(rateKey) && (asked.has(rateKey) || answers[rateKey] !== undefined);
+            const typed = Number(answers[rateKey]);
+            const rate = rated ? (Number.isFinite(typed) && typed > 0 ? typed : null) : undefined;
+            return { id: lane, side: lane === 1 ? 'left' : 'right', item: item === '' ? null : item, candidates: edited ? question.candidates : null, ...(rate !== undefined && { rate }) };
         });
         const directions = new Map(line.pieces.flatMap(piece => tilesOf(piece.x, piece.y).map(([x, y]) => [tileKey(x, y), piece.direction] as const)));
         belts.set(line.place, { lanes, directions });
     }
-    return { belts, keyOf: (beltId, lane) => keys.get(`${beltId}:${lane}`) ?? null };
+    return { belts, keyOf: (beltId, lane) => keys.get(`${beltId}:${lane}`) ?? null, rateKeyOf: (beltId, lane) => rateKeys.get(`${beltId}:${lane}`) ?? null };
 }

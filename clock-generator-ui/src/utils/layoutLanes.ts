@@ -13,6 +13,8 @@ export interface LaneEditorLane {
     item: string | null;
     /** The items the user can pick for the lane, shown with "Another item"; null: the item is fixed and the lane has no control */
     candidates: readonly string[] | null;
+    /** The items a second that leave the lane, where the lane is asked its rate: null until it is answered; left out where it is not asked */
+    rate?: number | null;
 }
 
 export interface LaneEditorBelt {
@@ -31,6 +33,8 @@ export interface LaneEditor {
     markedLane?: number | null;
     /** An item is picked for a lane; the view changes nothing itself */
     onEdit(beltId: number, lane: number, item: string): void;
+    /** A rate is typed for a lane that has one, and is above 0 */
+    onRate?(beltId: number, lane: number, value: number): void;
 }
 
 /** The key of a belt tile in `LaneEditorBelt.directions`: the centre of the tile, as the layout gives it */
