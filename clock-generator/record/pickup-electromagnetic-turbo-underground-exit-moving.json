@@ -3,7 +3,7 @@
   "job": "pickup-electromagnetic-turbo-underground-exit-moving",
   "group": "pickup",
   "name": "electromagnetic-turbo-underground-exit-moving",
-  "config_sha256": "b3d39dcb8e17ef11693369a1866323e401ea446105ca488c0a21cb6ccff17b7a",
+  "config_sha256": "02331321bbf9625ad261228ec9b3dbdf3cae59492e7b0b9406d0edfd31bebd06",
   "job_results_sha256": "1a80ffa6081bfe3a87700718a8e1ca4042ef08c3a3db12887b30259d326d23e1",
   "selected": "takt_batches_swings_1",
   "selected_windows": {

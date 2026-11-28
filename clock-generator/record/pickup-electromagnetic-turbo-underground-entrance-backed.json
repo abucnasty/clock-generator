@@ -3,7 +3,7 @@
   "job": "pickup-electromagnetic-turbo-underground-entrance-backed",
   "group": "pickup",
   "name": "electromagnetic-turbo-underground-entrance-backed",
-  "config_sha256": "67e6c07eede44f2aec778b186dd0ea5b7a02e83ab1a1c23622247c8dd6a5ba24",
+  "config_sha256": "395a3b9ddc7a1ac85bb37723887da093e56ce2fa16166ff1f7d6908e9a6cd6ba",
   "job_results_sha256": "1a80ffa6081bfe3a87700718a8e1ca4042ef08c3a3db12887b30259d326d23e1",
   "selected": "takt_batches_swings_1",
   "selected_windows": {
