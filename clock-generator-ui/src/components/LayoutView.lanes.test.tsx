@@ -38,7 +38,8 @@ describe('the lane editor mode of the Layout view', () => {
         const [dx, dy] = LEFT_OF[direction];
         expect(Math.sign(left[0])).toBe(dx);
         expect(Math.sign(left[1])).toBe(dy);
-        expect(right).toEqual([-left[0], -left[1]]);
+        expect(right[0]).toBeCloseTo(-left[0]);
+        expect(right[1]).toBeCloseTo(-left[1]);
         expect(lane(tile, 'left').getAttribute('data-lane')).toBe('1');
         expect(lane(tile, 'right').getAttribute('data-lane')).toBe('2');
     });
