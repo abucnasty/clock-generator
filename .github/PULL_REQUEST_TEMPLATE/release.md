@@ -14,7 +14,7 @@
 - [ ] Generator bumped in `clock-generator` and `clock-generator-ui`, with both lock files
 - [ ] Changelog section dated
 - [ ] Record unchanged: the pull request changes no file in `clock-generator/record/`
-- [ ] Sidecar bumped in `info.json`, `changelog.txt` and `LATEST_SIDECAR_VERSION`, or not shipping
+- [ ] Sidecar bumped in `info.json` and `changelog.txt`, or not shipping
 
 ## Impact
 

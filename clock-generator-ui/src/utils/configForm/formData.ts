@@ -21,12 +21,12 @@ export interface MachineFormData {
     energy_consumption_bonus?: number;
     fuel?: Config['machines'][number]['fuel'];
     /**
-     * What the machine is ("electric-furnace"), shown as its icon; the engine works out how to simulate it from it. Sidecar
-     * exports it, it is chosen by hand, or picked for the recipe of a row without one
+     * What the machine is ("electric-furnace"), shown as its icon; the engine works out how to simulate it from it. A
+     * blueprint names it, it is chosen by hand, or picked for the recipe of a row without one
      */
     prototype?: string;
     /** UI-only: where `prototype` came from, for its tooltip; none for a build file, a share link or an older saved build */
-    _prototype_source?: 'sidecar' | 'sample' | 'hand' | 'recipe' | 'blueprint';
+    _prototype_source?: 'sample' | 'hand' | 'recipe' | 'blueprint';
     quality?: Config['machines'][number]['quality'];
     recipe_quality?: Config['machines'][number]['recipe_quality'];
     /** Where it stands in the game; Sidecar exports it, nothing reads it */

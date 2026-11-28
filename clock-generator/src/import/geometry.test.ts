@@ -613,6 +613,32 @@ describe("the lane ends and flow of the Sidecar's own lane-end game test, writte
     }
 });
 
+describe("the physical lines at a splitter and an underground pair", () => {
+    it("gives two belts into one splitter and a belt out of each output 5 lines: each belt, and the splitter alone", () => {
+        const s = new Sketch();
+        const upper = s.line(0, 0, E, 3);
+        const lower = s.line(0, 1, E, 3);
+        const splitter = s.put("turbo-splitter", 3.5, 1, E);
+        const outUpper = s.line(4, 0, E, 2);
+        const outLower = s.line(4, 1, E, 2);
+        const { world, geometry } = s.build();
+        // the world joins them: the splitter takes from both belts and gives to both
+        expect([...world.piece(splitter)!.inputs].sort((a, b) => a - b)).toEqual([upper[2], lower[2]]);
+        expect([...world.piece(splitter)!.outputs].sort((a, b) => a - b)).toEqual([outUpper[0], outLower[0]]);
+        expect(geometry.lines.map((l) => l.pieces)).toEqual([upper, lower, [splitter], outUpper, outLower]);
+    });
+
+    it("keeps an underground pair and the belts on either side one line", () => {
+        const s = new Sketch();
+        const before = s.line(0, 0, E, 2);
+        const entrance = s.put("turbo-underground-belt", 2.5, 0.5, E, { type: "input" });
+        const exit = s.put("turbo-underground-belt", 6.5, 0.5, E, { type: "output" });
+        const after = s.line(7, 0, E, 2);
+        const { geometry } = s.build();
+        expect(geometry.lines.map((l) => l.pieces)).toEqual([[...before, entrance, exit, ...after]]);
+    });
+});
+
 describe("a drop onto a splitter's near half, 77/256 tile off its centre line, in four facings (measured, game 2.1.24)", () => {
     for (let quarters = 0; quarters < 4; quarters += 1) {
         it(`facing ${4 * quarters}: line 2 from the left side, line 3 from the right side`, () => {
@@ -798,7 +824,7 @@ function linesOfBelts(g: BuildGeometry, inserters: CopiesBuild["inserters"]): Ma
 
 describe("copies, flow and sharing of sample builds", () => {
     for (const c of samples.copies) {
-        const { geometry } = built(path.join(SAMPLES, c.blueprint));
+        const { geometry, entities } = built(path.join(SAMPLES, c.blueprint));
         const why = SPACING_DIFFERS[c.name];
         const noSpacing = why !== undefined;
         it(noSpacing
@@ -838,14 +864,25 @@ describe("copies, flow and sharing of sample builds", () => {
             }
             expect(differ.map((d) => `${c.name} ${d}`).sort()).toEqual(Object.keys(SHARING_DIFFERS).filter((k) => k.startsWith(`${c.name} `)).sort());
         });
-        if (!noSpacing) it(`${c.name}: on every drop line a lane is shared exactly where the copy step has no part across the line and not every lane of the belt is per copy`, () => {
+        if (!noSpacing) it(`${c.name}: on every drop line a lane is shared exactly where the copy step has no part across the line and not every lane of the belt is per copy; a line no copy touches is shared by default`, () => {
             const offset = geometry.copy_offset.value!;
+            // an arm with no arm of its kind one copy step before or after it is of no copy
+            const arms = new Set(entities.map((e) => `${e.name}|${e.direction}|${e.mirror}|${e.position.x}|${e.position.y}`));
+            const ofNoCopy = (n: number) => {
+                const e = entities.find((x) => x.entity_number === n)!;
+                return [-1, 1].every((k) => !arms.has(`${e.name}|${e.direction}|${e.mirror}|${e.position.x + k * offset.x}|${e.position.y + k * offset.y}`));
+            };
             let drops = 0;
             for (const d of geometry.drops) {
                 const facing = sampleDirection(c, d.inserter);
                 const axis = facing === 0 || facing === 8 ? "x" : "y";
                 const across = axis === "x" ? offset.y : offset.x;
                 const line = lineOf(geometry, d.piece)!;
+                if ([...geometry.drops, ...geometry.pickups].filter((x) => line.pieces.includes(x.piece)).every((x) => ofNoCopy(x.inserter))) {
+                    expect(line.sharing, `inserter ${d.inserter}`).toEqual([{ value: "shared", basis: "default" }, { value: "shared", basis: "default" }]);
+                    drops += 1;
+                    continue;
+                }
                 const perCopy = line.sharing.every((s) => s.value === "per_copy");
                 const shared = Math.abs(across) < 1e-9 && !perCopy;
                 const lane = d.line.value === null ? null : ((d.line.value - 1) % 2);

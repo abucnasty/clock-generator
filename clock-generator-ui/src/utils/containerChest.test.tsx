@@ -59,7 +59,7 @@ describe('cars, tanks, cargo wagons and rocket silos in the form', () => {
         if (link.kind !== 'link') throw new Error('not a share link');
         const shared = await decodeShareLink(link);
         if (shared.kind !== 'build') throw new Error('not a build');
-        expect(shared.config).toEqual(config);
+        expect(shared.config).toEqual({ format: 1, ...config });
     });
 
     it.each([ChestType.CAR, ChestType.TANK, ChestType.CARGO_WAGON, ChestType.ROCKET_SILO])('adds a %s that the generator takes', type => {
@@ -195,16 +195,5 @@ describe('the fields of each type', () => {
         expect(containerOf(saved)).toMatchObject({ slot_filters: [{ slot: 1, item: 'iron-plate' }, { slot: 2, blocked: true, _marker: 'deconstruction-planner' }, { slot: 3, blocked: true, _marker: 'no-item' }] });
         expect(formDataToConfig(saved).chests![0]).toEqual({ ...build(CONTAINERS.car).chests![0],
             slot_filters: [{ slot: 1, item: 'iron-plate' }, { slot: 2, blocked: true }, { slot: 3, blocked: true }] });
-    });
-
-    it('reads a saved build or config that names a marker as a slot item as a blocked slot, keeping the marker', () => {
-        const drafted = build({ type: ChestType.CAR, slot_filters: [{ slot: 1, item: 'iron-plate' }, { slot: 2, item: 'deconstruction-planner' }, { slot: 3, item: 'no-item' }] });
-        const expected = [{ slot: 1, item: 'iron-plate' }, { slot: 2, blocked: true, _marker: 'deconstruction-planner' }, { slot: 3, blocked: true, _marker: 'no-item' }];
-        expect(containerOf(configToFormData(drafted))).toMatchObject({ slot_filters: expected });
-        expect(containerOf(readSavedConfig(JSON.stringify({ ...drafted, chests: drafted.chests!.map(chest => ({ ...chest, _uuid: 'x' })) }))!)).toMatchObject({ slot_filters: expected });
-        showFields(formChest(drafted.chests![0]));
-        expect(screen.getByRole('button', { name: 'Slot 2: Blocked (deconstruction-planner)' })).toBeDefined();
-        expect(formDataToConfig(configToFormData(drafted)).chests![0]).toEqual(build(CONTAINERS.blockedCar).chests![0]);
-        expect(ConfigSchema.parse(drafted).chests![0]).toEqual(build(CONTAINERS.blockedCar).chests![0]);
     });
 });

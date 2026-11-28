@@ -13,7 +13,7 @@ const quiet = {log() {}, info() {}, warn() {}, error() {}, debug() {}};
 // recorded clock (hash, window cycle, verdict, selection), and that the generator still makes it, is checked against the record
 // (tests/game/builds/clock-controls.test.ts), with the game's run against the verdict and the holds of the alternative
 
-// the car's Sidecar export (iron-plate-80-car-chest.sidecar-export.json) as the web app pastes it, at the export's suggested target: the
+// the car's Sidecar export as the web app pasted it, at the export's suggested target: the
 // furnaces' ceiling, 80.78015625, floored to 80.780/s (U11)
 describe("the car paste at 80.78/s", () => {
     let paste_config: Config;

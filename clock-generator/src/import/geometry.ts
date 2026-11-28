@@ -104,7 +104,7 @@ export type LinePickupPiece = {
     pickup_way: Based<number | false>;
 };
 
-/** A physical belt line: pieces joined by the belt graph and underground pairs */
+/** A physical belt line: pieces joined by the belt graph and underground pairs; a splitter is a line alone */
 export type BeltLine = {
     /** The entity number of its first piece in the blueprint's order */
     first: number;
@@ -794,7 +794,8 @@ export function geometryOf(world: BuildWorld, entities: readonly BlueprintEntity
         }
     }
 
-    // physical lines
+    // physical lines: pieces joined through their inputs, outputs and underground partners; a splitter joins no piece,
+    // so it is a line alone and the belts at its sides are lines of their own
     const parent = new Map<number, number>();
     const find = (n: number): number => {
         let r = n;
@@ -804,6 +805,7 @@ export function geometryOf(world: BuildWorld, entities: readonly BlueprintEntity
     };
     const join = (a: number, b: number) => {
         if (!parent.has(a) || !parent.has(b)) return;
+        if (world.piece(a)!.kind === "splitter" || world.piece(b)!.kind === "splitter") return;
         const ra = find(a), rb = find(b);
         if (ra !== rb) parent.set(Math.max(ra, rb), Math.min(ra, rb));
     };
@@ -894,7 +896,7 @@ export function geometryOf(world: BuildWorld, entities: readonly BlueprintEntity
             flow = { value, basis: value === null ? "default" : value === common ? "game" : "unread" };
         }
         // per run that copies touch on the lane: shared where two or more copies touch it, per copy where one does;
-        // runs of one line that disagree give shared with basis default, as joined lines that disagree do
+        // runs of one line that disagree give shared with basis default
         const sharingOf = (lane: 1 | 2): Based<Sharing> => {
             if (!offset) return { value: "shared", basis: "default" };
             const values = new Set<Sharing>();

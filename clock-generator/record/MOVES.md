@@ -8,6 +8,10 @@ a line that names the reason and lists the jobs. A pull request that moves no re
 CI checks this file: the "Record check" fails when a selected clock got worse than in the base and its job key is not in the lines the pull
 request adds to this file.
 
+## Old configurations and Sidecar exports are refused (#921)
+7 jobs moved, no clock, verdict or results digest.
+- config-PROCESSING_UNIT_80_CIRCUIT_EXPORT, config-PRODUCTIVITY_MODULE_80_CHEST_CHAIN, config-ELECTROMAGNETIC_SCIENCE_240_RECYCLER_BELT_FED, config-LOGISTIC_SCIENCE_240, config-UTILITY_SCIENCE_320_METERED_TAKERS, config-LITHIUM_PLATE_80_SILO_CHEST, variants-PROCESSING_UNIT_80_CIRCUIT_EXPORT_BACKED_UP: `config_sha256` only: the Sidecar's version stamp leaves the configuration
+
 ## The example builds state the places of their entities (#902)
 12 jobs moved, no selected clock, window, rate or wakeup, and no other clock's windows, holds, rate or wakeups. Eight of the nine example builds (all but logistic science 240) now state the position of each machine, drill, chest and inserter and the direction of each inserter, except the output inserters that drop on a belt in automation 240, chemical 240 and military 240, which state no direction. Military science 240 also names its machines' prototypes, and metallurgic science 45 states which way its belt 1 flows. The engine reads the places: a lane's takers stand where the build puts them and not a tile apart in the config's order, and an output inserter with a place and a direction joins a line of drops. Accepted by abucnasty: the two verdicts below.
 - config-CHEMICAL_SCIENCE_240_SHARED_FOUNDRY, variants-CHEMICAL_SCIENCE_240_SHARED_FOUNDRY_BACKED_UP: phase_shifted_batch unstable -> stable, better: the takers of the shared lanes now stand apart as they do in the build, so the lane run no longer misses their pickups; the selected coordinated_sources stays stable on the same clock and windows, and its label now says 2 output swings each output cycle where it said 1; `results_sha256` of takt_batches_observed, takt_batches_observed_swings_1 and phase_shifted_batch (the lane check's assessment and description), `config_sha256`

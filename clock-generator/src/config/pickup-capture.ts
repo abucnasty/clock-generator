@@ -10,13 +10,11 @@ export const BeltPickupCaptureSchema = z.discriminatedUnion("status", [
         model_version: z.union([z.literal(1), z.literal(2), z.literal(3)]).describe("The version of the pickup model."),
         entity_type: z.enum(["transport-belt", "underground-belt"]).describe("The type of the belt at the pickup."),
         entity_name: z.string().optional().describe("The prototype name of the belt at the pickup."),
-        sidecar_version: z.string().optional().describe("The version of the sidecar that recorded the pickup."),
     }),
     z.object({
         status: z.enum(["unsupported", "unclassified"]).describe("The sidecar does not support this pickup, or did not classify it."),
         entity_type: z.string().optional().describe("The type of the entity at the pickup."),
         entity_name: z.string().optional().describe("The prototype name of the entity at the pickup."),
-        sidecar_version: z.string().optional().describe("The version of the sidecar that recorded the pickup."),
         reason: z.string().describe("Why the sidecar does not support the pickup."),
     }),
 ]);
@@ -41,41 +39,15 @@ const OUT_OF_SCOPE_CAPTURES: Readonly<Record<string, string>> = {
 const object = (value: unknown): value is Record<string, unknown> =>
     typeof value === "object" && value !== null && !Array.isArray(value);
 
-/** Missing approach data cannot be recovered from a half-tile span or an old positive marker. */
+/** A pickup with a layout and no length gets the layout's length; a half-tile span cannot recover its approach. */
 function normalizeSource(source: Record<string, unknown>): Record<string, unknown> {
     const layout = source.pickup_layout;
-    let updated = source;
     if (typeof layout === "string" && BELT_PICKUP_LAYOUTS.includes(layout as BeltPickupLayout)
-        && source.pickup_length === undefined) updated = {...source, pickup_length: pickupLengthForLayout(layout as BeltPickupLayout)};
-    const capture = source.pickup_capture;
-    if (object(capture) && capture.status === "supported" && capture.model_version === 1
-        && capture.entity_type === "underground-belt") updated = {...updated,
-            pickup_capture: {...capture, status: "unclassified", reason: "layout-not-captured"}};
-    return updated;
+        && source.pickup_length === undefined) return {...source, pickup_length: pickupLengthForLayout(layout as BeltPickupLayout)};
+    return source;
 }
 
-/** Run before schema defaults: legacy diagnostics must not disappear into a straight-belt default. */
-export function sidecarPickupInserters(inserters: unknown, version: unknown, warnings: unknown): unknown {
-    if (!Array.isArray(inserters)) return inserters;
-    const notes = Array.isArray(warnings) ? warnings.filter(object) : [];
-    return inserters.map((entry, index) => {
-        if (!object(entry) || !object(entry.source) || entry.source.type !== "belt") return entry;
-        const source = normalizeSource(entry.source);
-        const note = notes.find(note => note.inserter_id === (entry.id ?? index + 1));
-        // An explicit warning wins over a contradictory supported marker. Unknown metadata is preserved so
-        // validation rejects future models rather than stripping their fields and assuming a current model.
-        if (source.pickup_capture !== undefined && !note) return source === entry.source ? entry : {...entry, source};
-        const capture = object(source.pickup_capture) ? source.pickup_capture : {};
-        const reason = note ? (typeof note.reason === "string" ? note.reason : "unsupported") : "legacy";
-        return { ...entry, source: { ...source, pickup_capture: {
-            ...capture, status: note ? "unsupported" : "unclassified", reason,
-            ...(reason === "splitter" && { entity_type: "splitter" }),
-            ...(typeof version === "string" && { sidecar_version: version }),
-        } } };
-    });
-}
-
-/** Derive length only from explicit layouts; normalize recognizable capture provenance before defaults. */
+/** Derive length only from explicit layouts, before defaults. */
 export function normalizePickupCaptureConfig(value: unknown): unknown {
     if (!object(value) || !Array.isArray(value.inserters)) return value;
     // Layout can supply length, but length cannot recover an underground layout.
@@ -84,8 +56,7 @@ export function normalizePickupCaptureConfig(value: unknown): unknown {
         const source = normalizeSource(entry.source);
         return source === entry.source ? entry : {...entry, source};
     });
-    return {...value, inserters: "sidecar_version" in value || "pickup_warnings" in value
-        ? sidecarPickupInserters(inserters, value.sidecar_version, value.pickup_warnings) : inserters};
+    return {...value, inserters};
 }
 
 /** A supported declaration still needs the matching model inputs; provenance alone is not a supply model. */

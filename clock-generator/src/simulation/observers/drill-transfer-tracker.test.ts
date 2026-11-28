@@ -11,7 +11,7 @@ import { DrillTransferTracker } from './drill-transfer-tracker';
 function recorder() {
     const config = ConfigSchema.parse({
         setpoint: { item: 'stone-brick', items_per_second: 1, copies: 1 },
-        machines: [{ id: 1, recipe: 'stone-brick', crafting_speed: 2, productivity: 0, type: 'furnace' }],
+        machines: [{ id: 1, recipe: 'stone-brick', crafting_speed: 2, productivity: 0, prototype: 'electric-furnace' }],
         drills: { configs: [{ id: 1, type: 'big-mining-drill', mined_item_name: 'stone', speed_bonus: 0, productivity: 0, target: { type: 'machine', id: 1 } }] },
         inserters: [{ source: { type: 'machine', id: 1 }, sink: { type: 'chest', id: 1 }, prototype: 'stack-inserter', quality: 'legendary', stack_size: 16 }],
         belts: [],

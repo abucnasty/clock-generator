@@ -1,4 +1,5 @@
 {
+  "format": 1,
   "setpoint": {
     "item": "stone-brick",
     "items_per_second": 120,

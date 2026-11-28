@@ -13,10 +13,6 @@ const typedChest = { type: ChestType.BUFFER_CHEST, id: 3, ...steelChest, positio
 /** A chest as it is saved, and the buffer chest config it is read as */
 const chestCases = [
     { name: 'a modern typed buffer chest', chest: typedChest, expected: typedChest },
-    { name: 'a legacy buffer chest without a type', chest: { id: 4, ...steelChest, position: { x: 0, y: -4.5 } },
-        expected: { type: ChestType.BUFFER_CHEST, id: 4, ...steelChest, position: { x: 0, y: -4.5 } } },
-    // the default type, storage and filter, and no prototype or position
-    { name: 'a legacy buffer chest with only an id', chest: { id: 7 }, expected: { type: ChestType.BUFFER_CHEST, id: 7, storage_size: 1, item_filter: '' } },
 ];
 
 function serializedConfig(chest: object): string {

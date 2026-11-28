@@ -61,7 +61,7 @@ describe("a belt pickup by an inserter other than the legendary stack inserter",
     });
 
     it("is refused in a Sidecar capture, across save and reload", () => {
-        let config = ConfigSchema.parse({ ...withInserter(1, { prototype: "long-handed-inserter", quality: "normal" }), sidecar_version: "0.11.0" });
+        let config = ConfigSchema.parse({ ...withInserter(1, { prototype: "long-handed-inserter", quality: "normal" }) });
         for (let reload = 0; reload < 3; reload++) {
             config = ConfigSchema.parse(JSON.parse(JSON.stringify(config)));
             expect(config.inserters[0]).toMatchObject({ prototype: "long-handed-inserter", quality: "normal" });
@@ -117,7 +117,7 @@ describe("filters that are a blacklist", () => {
     });
 
     it("are refused across save and reload of a Sidecar capture", () => {
-        let config = ConfigSchema.parse({ ...withInserter(2, { filters: ["iron-plate"], filter_mode: "blacklist" }), sidecar_version: "0.11.0" });
+        let config = ConfigSchema.parse({ ...withInserter(2, { filters: ["iron-plate"], filter_mode: "blacklist" }) });
         for (let reload = 0; reload < 3; reload++) {
             config = ConfigSchema.parse(JSON.parse(JSON.stringify(config)));
             expect(() => validateConfig(config)).toThrow(/Inserter 2: `filter_mode` "blacklist" is refused/);

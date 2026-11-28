@@ -4,5 +4,5 @@ export * from "./copies-validator";
 export * from "./repeated-unit-conversion";
 export * from "./inserter-coverage-validator";
 export * from "./loader";
+export * from "./format";
 export * from "./schema";
-export * from "./migrate-mining-productivity";

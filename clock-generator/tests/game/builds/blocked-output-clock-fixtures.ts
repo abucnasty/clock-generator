@@ -45,7 +45,7 @@ export function blockedOutputClockConfig(variant: BlockedOutputClockCase): Confi
     const product = "iron-gear-wheel";
     return ConfigSchema.parse({
         setpoint: {item: product, items_per_second: BLOCKED_OUTPUT_TARGET, copies: 1},
-        machines: [{id: 1, type: "machine", recipe: product, crafting_speed: BLOCKED_OUTPUT_CRAFTING_SPEED, productivity: 0}],
+        machines: [{id: 1, prototype: "assembling-machine-3", recipe: product, crafting_speed: BLOCKED_OUTPUT_CRAFTING_SPEED, productivity: 0}],
         inserters: [
             {id: 1, source: {type: "machine", id: 1}, sink: {type: "belt", id: 1}, stack_size: 16},
             {id: 2, source: {type: "chest", id: 1}, sink: {type: "machine", id: 1}, stack_size: 16},

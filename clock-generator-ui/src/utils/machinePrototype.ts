@@ -65,7 +65,6 @@ type PrototypeSource = NonNullable<MachineFormData['_prototype_source']>;
 /** The words for where the machine came from; a machine of a build file, a share link or an older saved build is the config's */
 export function prototypeSourceText(source: PrototypeSource | undefined): string {
     switch (source) {
-        case 'sidecar': return 'from Sidecar';
         case 'blueprint': return 'from the blueprint';
         case 'sample': return 'from the sample';
         case 'hand': return 'chosen by hand';

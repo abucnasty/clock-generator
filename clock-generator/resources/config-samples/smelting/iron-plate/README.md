@@ -10,9 +10,6 @@ used as a chest. Two legendary stack inserters take the ore from the car into tw
 a loader empties into a disposal chest. The target is 80 plates a second from one copy.
 
 - `iron-plate-80-car-chest.scaffold`: the build's blueprint as given by abucnasty on 2026-10-22. The loader and disposal chest are part of it.
-- `iron-plate-80-car-chest.sidecar-export.json`: what Sidecar 0.12.0 exports from the blueprint built in the harness game, taken again on
-  2026-10-22 with the released mod, which also exports each machine's `prototype` and quality and each entity's position
-  (and an inserter's or drill's direction).
 - `iron-plate-80-car-chest.json`: an earlier export of the same build as the paste reads it (each list through its schema), with the target
   added. It is the export above without the qualities, positions and directions, and with the drill's productivity
   79990 where the game writes 79990.00000001134; each machine's `prototype` (`electric-furnace` for both machines) was

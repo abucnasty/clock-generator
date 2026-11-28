@@ -1,4 +1,4 @@
-import { Add, ArrowDropDown, Check, ContentCopy, DeleteOutline, Edit, FolderOpen } from '@mui/icons-material';
+import { Add, ArrowDropDown, Check, ContentCopy, DeleteOutline, Download, Edit, FolderOpen, WarningAmber } from '@mui/icons-material';
 import {
     Box,
     Button,
@@ -14,13 +14,16 @@ import {
     useTheme,
 } from '@mui/material';
 import { useCallback, useEffect, useRef, useState, type Ref } from 'react';
-import { BUILDS_HEADING } from '../utils/buildLibrary';
+import { BUILDS_HEADING, REFUSED_BUILD_DOWNLOAD, REFUSED_BUILD_LABELS, REFUSED_BUILD_REMOVE } from '../utils/buildLibrary';
+import type { RefusedBuild } from '../hooks/usePersistedConfigForm';
 
 interface BuildRow {
     id: string;
     title: string;
     /** The recipe's name under a name of the player's own; null otherwise */
     secondary: string | null;
+    /** A saved build that is not read for its format: listed with Download and Remove, never opened; null or absent otherwise */
+    refused?: RefusedBuild | null;
 }
 
 interface BuildSwitcherProps {
@@ -35,15 +38,21 @@ interface BuildSwitcherProps {
     onDuplicate: () => void;
     onRename: () => void;
     onDelete: () => void;
+    /** Download of a refused build: its saved text as a file */
+    onDownloadRefused?: (id: string) => void;
+    /** Remove of a refused build */
+    onRemoveRefused?: (id: string) => void;
     /** A newer version of the site wrote the list of builds: what would change it is off */
     readOnly?: boolean;
 }
 
 /**
  * Your builds, in the app bar after the title: the open build's name, which opens a menu of the builds and of New,
- * Duplicate, Rename and Delete build. Below 600px it is an icon button, with the name in its accessible name.
+ * Duplicate, Rename and Delete build. Below 600px it is an icon button, with the name in its accessible name. A saved
+ * build that is not read for its format is listed as such, with Download and Remove in place of opening it.
  */
-export function BuildSwitcher({ ref, builds, currentId, currentTitle, onOpen, onNew, onDuplicate, onRename, onDelete, readOnly = false }: BuildSwitcherProps) {
+export function BuildSwitcher({ ref, builds, currentId, currentTitle, onOpen, onNew, onDuplicate, onRename, onDelete, onDownloadRefused, onRemoveRefused,
+    readOnly = false }: BuildSwitcherProps) {
     const wide = useMediaQuery(useTheme().breakpoints.up('sm'));
     const [anchor, setAnchor] = useState<HTMLElement | null>(null);
     const open = anchor !== null;
@@ -178,7 +187,26 @@ export function BuildSwitcher({ ref, builds, currentId, currentTitle, onOpen, on
                 }}
             >
                 <ListSubheader sx={{ lineHeight: 2.5, bgcolor: 'background.paper' }}>{BUILDS_HEADING}</ListSubheader>
-                {builds.map((build) => (
+                {builds.map((build) => build.refused ? [
+                    <Box key={build.id} role="presentation" sx={{ display: 'flex', alignItems: 'center', px: 2, pt: 0.75, gap: 2 }}>
+                        <WarningAmber fontSize="small" sx={{ color: 'warning.main' }} />
+                        <ListItemText
+                            primary={build.title}
+                            secondary={REFUSED_BUILD_LABELS[build.refused.problem]}
+                            slotProps={{ primary: { noWrap: true } }}
+                        />
+                    </Box>,
+                    <MenuItem key={`${build.id}-download`} dense onClick={run(() => onDownloadRefused?.(build.id))} sx={{ pl: 7 }}
+                        aria-label={`${REFUSED_BUILD_DOWNLOAD} ${build.title}`}>
+                        <ListItemIcon><Download fontSize="small" /></ListItemIcon>
+                        <ListItemText>{REFUSED_BUILD_DOWNLOAD}</ListItemText>
+                    </MenuItem>,
+                    <MenuItem key={`${build.id}-remove`} dense onClick={run(() => onRemoveRefused?.(build.id))} disabled={readOnly}
+                        sx={{ pl: 7, color: 'error.light' }} aria-label={`${REFUSED_BUILD_REMOVE} ${build.title}`}>
+                        <ListItemIcon sx={{ color: 'inherit' }}><DeleteOutline fontSize="small" /></ListItemIcon>
+                        <ListItemText>{REFUSED_BUILD_REMOVE}</ListItemText>
+                    </MenuItem>,
+                ] : (
                     <MenuItem key={build.id} role="menuitemradio" aria-checked={build.id === currentId} onClick={pick(build.id)}>
                         <ListItemIcon>{build.id === currentId && <Check fontSize="small" />}</ListItemIcon>
                         <ListItemText

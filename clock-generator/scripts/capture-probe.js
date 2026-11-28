@@ -31,6 +31,7 @@ async function main() {
     if (fs.existsSync(run) && fs.readdirSync(run).length) throw new Error("Choose an empty run directory; existing captures will not be overwritten");
     const fixture = path.join(ROOT, "tests/game/mechanics/belt-pickup/fixtures", backedUp ? "different-items" : "same-item");
     const { loadConfigFromFile } = require("../dist/config/loader");
+    const { withConfigFormat } = require("../dist/config/format");
     const { recordInFactorio } = require("../dist/harness/factorio-harness");
     const config = await loadConfigFromFile(path.join(fixture, !backedUp && values.geometry === "straight-belt" ? "straight-belt.json" : "config.json"));
     const input = config.inserters.find(inserter => inserter.source.type === "belt");
@@ -45,7 +46,7 @@ async function main() {
     const lua = composeProbeSource(path.join(fixture, backedUp ? "backed-up-probe.lua" : "probe.lua"), backedUp ? { item: values.item } : {});
     fs.mkdirSync(run, { recursive: true });
     fs.writeFileSync(path.join(run, "probe.generated.lua"), lua);
-    fs.writeFileSync(path.join(run, "config.json"), JSON.stringify(config, null, 2) + "\n");
+    fs.writeFileSync(path.join(run, "config.json"), JSON.stringify(withConfigFormat(config), null, 2) + "\n");
     fs.writeFileSync(path.join(run, "blueprint.txt"), blueprint.trim() + "\n");
     const result = await recordInFactorio({
         factorio: process.env.FACTORIO_PATH, save: path.resolve(ROOT, process.env.FACTORIO_HARNESS_SAVE),

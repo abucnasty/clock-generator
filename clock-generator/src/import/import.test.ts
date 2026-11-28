@@ -42,7 +42,7 @@ type Tier1Build = {
 const TIER1 = (JSON.parse(read(path.join(FIXTURES, "tier1.json"))) as { builds: Tier1Build[] }).builds;
 
 /** A row where a read holds a value and the import is expected to give another */
-type Allowed = { build: string; kind: string; entity_number: string; read_belt: string; line: string; lane: string; field: string; source: string };
+type Allowed = { build: string; kind: string; entity_number: string; read_belt: string; line: string; lane: string; field: string; class: string; source: string };
 const ALLOWED: Allowed[] = (() => {
     const lines = read(path.join(FIXTURES, "allowed-differences.tsv")).split("\n").filter((l) => l !== "" && !l.startsWith("#"));
     const header = lines[0].split("\t");
@@ -74,6 +74,22 @@ function settle(build: Tier1Build): Run {
     const source = JSON.parse(read(build.read_kind === "config" ? path.join(ENGINE, build.blueprint.replace(/\.scaffold$/, ".json")) : path.join(FIXTURES, build.read))) as ReadFile;
     const settled = settleAnswers({ name: build.name, text, data: DATA, source, translation: build.frame.translation, research: build.research, setpoint: build.setpoint });
     return { build, text, ...settled };
+}
+
+/** The class of a closed-list row where the read's export gave one belt id to two or more physical lines */
+const JOINED_BY_EXPORT = "joined by the Sidecar export";
+
+/** The physical lines (first pieces) whose pieces the import gives each belt id */
+function beltLinesOf(run: Pick<Run, "text" | "outcome">): Map<number, number[]> {
+    const decoded = decodeBlueprint(run.text);
+    if (decoded.kind !== "blueprint") throw new Error("not a blueprint");
+    const geometry = geometryOf(worldOf(decoded.entities, worldDataOf(DATA)), decoded.entities, geometryDataOf(DATA));
+    const beltOf = new Map(run.outcome.entities.flatMap((e) => (e.row?.list === "belts" ? [[e.entity_number, e.row.id] as const] : [])));
+    const out = new Map<number, number[]>();
+    for (const line of geometry.lines) {
+        for (const id of new Set(line.pieces.flatMap((p) => (beltOf.has(p) ? [beltOf.get(p)!] : [])))) out.set(id, [...(out.get(id) ?? []), line.first]);
+    }
+    return out;
 }
 
 type Compared = { differences: string[]; allowedUsed: string[]; compared: number; notHeldSkipped: number; pairs: Record<string, number> };
@@ -123,12 +139,35 @@ function compare(run: Run): Compared {
 
     // the maps from a read id to an import id, made by the match only
     const maps = { machine: new Map<number, number>(), chest: new Map<number, number>(), belt: new Map<number, number>() };
+    // a read belt that the read's export joined over two or more lines maps to one import belt per line, only on a
+    // row of the closed list of class "joined by the Sidecar export" (its entity_number lists the lines' first pieces)
+    const moreBelts = new Map<number, number[]>();
+    const linesOfBelt = beltLinesOf(run);
+    const joinedRows = new Set<Allowed>();
+    const joinedBy = (readBelt: number, importBelts: number[]): boolean => {
+        const row = ALLOWED.find((a) => a.build === build.name && a.kind === "belt" && a.class === JOINED_BY_EXPORT && a.read_belt === String(readBelt));
+        if (!row) return false;
+        const lines = row.entity_number.split(" ");
+        if (!importBelts.every((id) => (linesOfBelt.get(id) ?? []).length === 1 && lines.includes(String(linesOfBelt.get(id)![0])))) return false;
+        if (!joinedRows.has(row)) allowedUsed.push(`${build.name} belt ${readBelt} ${row.field}: ${row.source}`);
+        joinedRows.add(row);
+        return true;
+    };
     const endOf = (what: string, where: Parameters<typeof allowed>[0], field: string, readEnd: End | undefined, importEnd: Raw | undefined) => {
         check(what, where, `${field}.type`, readEnd?.type, importEnd?.type);
         if (readEnd === undefined || importEnd === undefined || readEnd.type !== importEnd.type) return;
         const map = maps[readEnd.type as keyof typeof maps];
-        if (readEnd.type === "belt" && !map.has(readEnd.id)) map.set(readEnd.id, importEnd.id as number);
-        check(what, where, `${field}.id (through the match)`, map.get(readEnd.id), importEnd.id);
+        let expected = map.get(readEnd.id);
+        if (readEnd.type === "belt") {
+            const id = importEnd.id as number;
+            const more = moreBelts.get(readEnd.id) ?? [];
+            if (expected === undefined) map.set(readEnd.id, (expected = id));
+            else if (id !== expected && (more.includes(id) || joinedBy(readEnd.id, [expected, ...more, id]))) {
+                if (!more.includes(id)) moreBelts.set(readEnd.id, [...more, id]);
+                expected = id;
+            }
+        }
+        check(what, where, `${field}.id (through the match)`, expected, importEnd.id);
     };
     /** Every key the read holds, but ids, positions, the version stamp and the ends (compared through the maps) */
     const SKIP = new Set(["id", "position", "sidecar_version", "source", "sink", "target", "result_target"]);
@@ -227,8 +266,7 @@ function compare(run: Run): Compared {
 
     // belts, paired through the inserter ends: type, lanes, the end of each lane and the way the items pass the copies
     pairs.belt = 0;
-    for (const r of file.belts ?? []) {
-        const id = maps.belt.get(r.id);
+    for (const r of file.belts ?? []) for (const id of [maps.belt.get(r.id), ...(moreBelts.get(r.id) ?? [])]) {
         const mine = outcome.belts.find((b) => b.id === id) as unknown as (Raw & { lanes: ReadLane[]; flow_direction?: number }) | undefined;
         if (!mine) {
             differences.push(`${build.name} belt ${r.id}: no import belt through the inserter ends`);
@@ -253,7 +291,8 @@ function compare(run: Run): Compared {
         else check(what, where, "flow_direction", r.flow_direction ?? null, mine.flow_direction ?? null);
     }
     for (const [kind, map] of Object.entries(maps)) {
-        if (new Set(map.values()).size !== map.size) differences.push(`${build.name}: the map from read ${kind} ids to import ids is not one to one`);
+        const values = [...map.values(), ...(kind === "belt" ? [...moreBelts.values()].flat() : [])];
+        if (new Set(values).size !== values.length) differences.push(`${build.name}: the map from read ${kind} ids to import ids is not one to one`);
     }
     return { differences, allowedUsed, compared, notHeldSkipped, pairs };
 }
@@ -381,6 +420,53 @@ describe("the 8 builds with reads, each held to its read", () => {
     });
 });
 
+// ---------------------------------------------------------------- a belt for each separate belt line
+
+describe("a belt for each separate belt line", () => {
+    it("gives each belt id of every build one physical line", () => {
+        for (const run of RUNS) {
+            const lines = beltLinesOf(run);
+            expect([...lines.keys()].sort((a, b) => a - b), run.build.name).toEqual(run.outcome.belts.map((b) => b.id));
+            for (const [id, of] of lines) expect(of, `${run.build.name} belt ${id}`).toHaveLength(1);
+        }
+    });
+
+    describe("logistic 240: two rows of 11 copies, whose input and output belts pass splitters", () => {
+        const run = RUNS.find((r) => r.build.name === "logistic-240")!;
+        const { outcome } = run;
+        const belts = (ends: ImportBuild["inserters"][number]["source"][]) => {
+            const count = new Map<number, number>();
+            for (const end of ends) if (end.type === "belt") count.set(end.id, (count.get(end.id) ?? 0) + 1);
+            return count;
+        };
+
+        it("gives a belt for each of the 8 lines that inserters touch", () => {
+            const touched = new Set(outcome.inserters.flatMap((i) => [i.source, i.sink]).flatMap((end) => (end.type === "belt" ? [end.id] : [])));
+            expect(outcome.belts).toHaveLength(8);
+            expect(touched.size).toBe(8);
+            expect([...beltLinesOf(run).values()].every((of) => of.length === 1)).toBe(true);
+        });
+
+        it("puts the 22 pickups on two belts of 11, with transport belts on lane 1 and inserters on lane 2 of the top row, mirrored on the bottom row", () => {
+            const pickups = outcome.inserters.filter((i) => i.source.type === "belt");
+            expect(pickups).toHaveLength(22);
+            const count = belts(pickups.map((i) => i.source));
+            expect([...count.values()]).toEqual([11, 11]);
+            const rowY = (id: number) => Math.min(...pickups.filter((i) => i.source.id === id).map((i) => i.position!.y));
+            const [top, bottom] = [...count.keys()].sort((a, b) => rowY(a) - rowY(b));
+            const lanes = (id: number) => outcome.belts.find((b) => b.id === id)!.lanes.map((l) => l.ingredient);
+            expect(lanes(top)).toEqual(["transport-belt", "inserter"]);
+            expect(lanes(bottom)).toEqual(["inserter", "transport-belt"]);
+        });
+
+        it("puts the 22 output drops on four belts: 10, 10 and the two 11th copies' 1 each", () => {
+            const drops = outcome.inserters.filter((i) => i.sink.type === "belt" && i.source.type === "machine");
+            expect(drops).toHaveLength(22);
+            expect([...belts(drops.map((i) => i.sink)).values()].sort((a, b) => a - b)).toEqual([1, 1, 10, 10]);
+        });
+    });
+});
+
 // ---------------------------------------------------------------- texts that are no build
 
 /** A blueprint string for a JSON text, as the game writes them: a zero, then base64 of the deflated text */
@@ -476,8 +562,8 @@ function twoLines(sideLoad = false): string {
 }
 const plates = (b: string) => ({ "lane-item:1:1": "iron-plate", "lane-item:1:2": "iron-plate", "lane-item:11:1": b, "lane-item:11:2": b });
 
-describe("a belt id that joins lines", () => {
-    it("asks each line's lanes, then joins two lines of the same items into one belt", () => {
+describe("a belt for each line, also of the same items", () => {
+    it("asks each line's lanes, then gives each line a belt", () => {
         const first = buildOf(importBlueprint(twoLines(), NO_RESEARCH, DATA), "two lines");
         expect(first.questions.map((q) => q.key)).toEqual(["lane-item:1:1", "lane-item:1:2", "lane-item:11:1", "lane-item:11:2"]);
         expect(first.belts).toEqual([]);
@@ -485,13 +571,13 @@ describe("a belt id that joins lines", () => {
         expect(apart.belts.map((b) => [b.lanes.map((l) => l.lane_end?.kind), b.flow_direction])).toEqual([[["dead_end", "dead_end"], 4], [["unknown", "unknown"], undefined]]);
     });
 
-    it("merges the ends of lines whose ends differ to unknown, and gives no way where their ways differ", () => {
-        const joined = buildOf(importBlueprint(twoLines(), { ...NO_RESEARCH, answers: plates("iron-plate") }, DATA), "two lines");
-        expect(joined.belts).toHaveLength(1);
-        expect(joined.belts[0].lanes.map((l) => l.lane_end?.kind)).toEqual(["unknown", "unknown"]);
-        expect(joined.belts[0].flow_direction).toBeUndefined();
-        expect(joined.belts[0].type).toBe("transport-belt");
-        expect(joined.inserters.map((i) => i.source)).toEqual([expect.objectContaining({ type: "belt", id: 1 }), expect.objectContaining({ type: "belt", id: 1 })]);
+    it("keeps two lines of the same items on the same lanes two belts, each with its own lane ends and way", () => {
+        const same = buildOf(importBlueprint(twoLines(), { ...NO_RESEARCH, answers: plates("iron-plate") }, DATA), "two lines");
+        expect(same.belts.map((b) => [b.id, b.type, b.lanes.map((l) => [l.ingredient, l.lane_end?.kind]), b.flow_direction])).toEqual([
+            [1, "transport-belt", [["iron-plate", "dead_end"], ["iron-plate", "dead_end"]], 4],
+            [2, "transport-belt", [["iron-plate", "unknown"], ["iron-plate", "unknown"]], undefined],
+        ]);
+        expect(same.inserters.map((i) => i.source)).toEqual([expect.objectContaining({ type: "belt", id: 1 }), expect.objectContaining({ type: "belt", id: 2 })]);
     });
 });
 

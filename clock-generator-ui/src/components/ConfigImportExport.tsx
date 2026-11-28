@@ -1,5 +1,4 @@
-import { canonicalRate } from 'clock-generator/light';
-import { pickupCaptureWarningMessage, sideLoadedDropMessage } from "../utils/sidecarExport";
+import { canonicalRate, configFormatProblem, withConfigFormat } from 'clock-generator/light';
 import { Check, Download, Upload, ContentPaste, MoreVert, RestartAlt, Science, MenuBook, Link, DarkModeOutlined, LightModeOutlined, BrightnessAutoOutlined, Tune } from '@mui/icons-material';
 import { Box, Button, Alert, Tooltip, FormControlLabel, Checkbox, Typography, IconButton, Menu, MenuItem, ListItemIcon, ListItemText, Divider, TextField, useMediaQuery, useTheme } from '@mui/material';
 import { useRef, useState, useCallback, useImperativeHandle, type ReactNode, type Ref } from 'react';
@@ -10,11 +9,10 @@ import { useDismissMessage, useNotify } from '../hooks/useMessages';
 import { useGameNames } from '../hooks/useGameNames';
 import { useDisplayPreferences } from '../hooks/useDisplayPreferences';
 import type { DisplayScheme } from '../utils/displayPreferences';
-import { neverOverrideNoteOfText, withNeverOverrideNote } from '../utils/neverOverrideNote';
 import { countOf, describePaste, exampleUndoMessage, UNDO_IMPORT_MESSAGE, UNDO_RESET_MESSAGE } from '../utils/undoSnapshot';
 import { BUTTON_NAMES } from '../utils/a11yLabels';
-import { looksLikeSidecarExport, readSidecarExport } from '../utils/sidecarExport';
-import { INTRO_BUTTONS, invalidExportPrompt, openFileProblem, PASTE_PROMPTS, type PastePrompt } from '../utils/sidecarGuide';
+import { isBuildFile } from '../utils/sidecarExport';
+import { INTRO_BUTTONS, openFileProblem, PASTE_PROMPTS, type PastePrompt } from '../utils/sidecarGuide';
 import { maximumTargetNote, NO_TARGET_NOTE, replacesTargetNote, targetRowCaption, targetRowLabel, targetToFill, type TargetValues } from '../utils/pasteTarget';
 import type { ExampleBuild } from '../utils/exampleBuilds';
 import { focusSetpointHeading } from '../utils/introCard';
@@ -38,15 +36,15 @@ import {
     shareLongMessage,
 } from '../utils/shareLink';
 import { askEngine } from '../worker/engineClient';
-import type { PastedEntities } from '../worker/types';
+import { refusedConfigOf, type PastedEntities } from '../worker/types';
 import { AppDialog } from './AppDialog';
+import { RefusedConfigDialog, type RefusedKind } from './RefusedConfigDialog';
 import { PasteFromFactorioDialog } from './PasteFromFactorioDialog';
 import { ExamplesDialog } from './ExamplesDialog';
 import { ImportSimplification } from './ImportSimplification';
 import { importReduction, type ImportReduction } from '../utils/importReduction';
 import { formDataToConfig } from '../utils/configForm/configMapping';
 import { PickupGeometrySummary } from './PickupGeometrySummary';
-import type { PickupCaptureWarning } from '../utils/sidecarExport';
 import { BlueprintImportPanel, BlueprintMachineValues, BlueprintNotes, BlueprintSetpointRow, type MachineOverrides } from './BlueprintImportPanel';
 import { BLUEPRINT_FAILED_PROMPT, BLUEPRINT_PROMPTS, isJsonText } from '../utils/blueprintPaste';
 import { openProfileStore, TEMPLATES } from '../utils/researchProfiles';
@@ -82,6 +80,15 @@ const THEME_CHOICES = [
     { scheme: 'system', label: 'Theme: Auto (device)', icon: BrightnessAutoOutlined },
 ] satisfies { scheme: DisplayScheme; label: string; icon: typeof DarkModeOutlined }[];
 
+/** JSON that parses and is not a build file: an export of the Sidecar mod, which the site no longer reads */
+function isSidecarExportText(text: string): boolean {
+    try {
+        return !isBuildFile(JSON.parse(text));
+    } catch {
+        return false;
+    }
+}
+
 /** Describe the destination of this exact preview without suggesting a silent rebind or renumber. */
 function crossingText(warning: PasteReferenceWarning): string {
     const imported = warning.direction === 'incoming-to-retained';
@@ -91,7 +98,6 @@ function crossingText(warning: PasteReferenceWarning): string {
 }
 
 interface PendingImport extends PastedEntities {
-    pickupWarnings?: PickupCaptureWarning[];
     /** Set for a pasted blueprint */
     blueprint?: BlueprintSession;
     original?: PendingImport;
@@ -224,8 +230,10 @@ export function ConfigImportExport({
         && acknowledged?.selections === importSelections;
     if (acknowledged && !acknowledgedCurrent) setAcknowledged(null);
     const hasImportWork = (importSelections.target && pendingImport?.fill != null) || preview?.counts.some(row => row.replacing) === true;
-    // a pasted blueprint imports nothing while a question is open, or after its last ask failed
-    const blueprintOpen = pendingImport?.blueprint !== undefined && (pendingImport.blueprint.pasted.questions.length > 0 || pendingImport.blueprint.failed);
+    // the last ask of a pasted blueprint is out: the preview still holds the answer of the ask before it
+    const [blueprintAskOut, setBlueprintAskOut] = useState(false);
+    // a pasted blueprint imports nothing while a question is open, after its last ask failed, or while its last ask is out
+    const blueprintOpen = pendingImport?.blueprint !== undefined && (pendingImport.blueprint.pasted.questions.length > 0 || pendingImport.blueprint.failed || blueprintAskOut);
     const canImport = hasImportWork && !blueprintOpen && !preview?.geometryProblem && (!preview?.crossings.length || acknowledgedCurrent);
 
     // Simplification can replace a complete import, never a category the user chose to retain.
@@ -262,6 +270,7 @@ export function ConfigImportExport({
         pasteRequestRef.current++;
         pasteBusyRef.current = false;
         setPendingImport(null);
+        setBlueprintAskOut(false);
         setPasteDialog(null);
         setAcknowledged(null);
         setImportSelections(freshImportSelections());
@@ -272,7 +281,7 @@ export function ConfigImportExport({
 
     const handleExport = useCallback(() => {
         if (!config) return;
-        const jsonString = JSON.stringify(canonicalRate(config), null, 2);
+        const jsonString = JSON.stringify(withConfigFormat(canonicalRate(config)), null, 2);
         const blob = new Blob([jsonString], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -340,12 +349,24 @@ export function ConfigImportExport({
         fileInputRef.current?.click();
     }, []);
 
-    /** Replaces the build with the one a build file holds; throws when the text is not one */
+    // a file, paste or example whose configuration the site does not read: the message, with Paste a blueprint
+    const [refused, setRefused] = useState<RefusedKind | null>(null);
+    const closeRefused = useCallback(() => setRefused(null), []);
+
+    /** Replaces the build with the one a build file holds; throws when the text is not one; refuses one of another format */
     const importConfigText = useCallback(async (text: string, undoMessage: string, prototypeSource?: 'sample') => {
         // values out of bounds are kept, for the form to show; only a broken file is rejected
-        const parsedConfig = await askEngine({ kind: 'config-file', config: readConfigFile(text) });
-        // its Undo message says what replaced the build, and which entities its Never on override (removed) now leaves on Auto
-        onUndoable(withNeverOverrideNote(undoMessage, neverOverrideNoteOfText(text)));
+        let parsedConfig: Config;
+        try {
+            parsedConfig = await askEngine({ kind: 'config-file', config: readConfigFile(text) });
+        } catch (error) {
+            const refusal = refusedConfigOf(error);
+            if (refusal === null) throw error;
+            setRefused(refusal);
+            return;
+        }
+        // its Undo message says what replaced the build
+        onUndoable(undoMessage);
         onImport(parsedConfig, prototypeSource);
         onBuildReplaced();
     }, [onImport, onBuildReplaced, onUndoable]);
@@ -417,6 +438,7 @@ export function ConfigImportExport({
         const { answer } = settled;
         if (answer.kind === 'problem') return BLUEPRINT_PROMPTS[answer.problem];
         confirmOpenerRef.current = document.activeElement;
+        setBlueprintAskOut(false);
         setPendingImport(pendingOf({ ...settled.session, pasted: answer, failed: false }));
         // everything there is; the setpoint only where the user's build has none
         setImportSelections({ target: suggested, machines: true, drills: true, inserters: true, belts: true, chests: true });
@@ -436,66 +458,55 @@ export function ConfigImportExport({
         if (!asks) return;
         const ask = ++blueprintAskRef.current;
         const request = pasteRequestRef.current;
+        setBlueprintAskOut(true);
+        // what the user changed since the ask started (a rate, an override) is in the live session, not in the one the ask began with
+        const keepTyped = (answered: BlueprintSession) => (previous: PendingImport | null): PendingImport => {
+            const live = previous?.blueprint;
+            if (!live) return pendingOf(answered);
+            // the rate follows the suggestion only while the live setpoint still does
+            const rate = live.suggested ? answered.setpoint.items_per_second : live.setpoint.items_per_second;
+            return pendingOf({ ...answered, overrides: live.overrides, suggested: live.suggested, setpoint: { ...answered.setpoint, items_per_second: rate } });
+        };
+        const failed = (previous: PendingImport | null): PendingImport => pendingOf({ ...(previous?.blueprint ?? next), failed: true });
         settle(next).then(({ session, answer }) => {
             if (ask !== blueprintAskRef.current || request !== pasteRequestRef.current) return;
-            setPendingImport(answer.kind === 'build' ? pendingOf({ ...session, pasted: answer, failed: false }) : pendingOf({ ...next, failed: true }));
+            setBlueprintAskOut(false);
+            setPendingImport(answer.kind === 'build' ? keepTyped({ ...session, pasted: answer, failed: false }) : failed);
         }, error => {
             if (ask !== blueprintAskRef.current || request !== pasteRequestRef.current) return;
             console.error('Blueprint paste error:', error);
-            setPendingImport(pendingOf({ ...next, failed: true }));
+            setBlueprintAskOut(false);
+            setPendingImport(failed);
         });
     }, [pendingImport, pendingOf, settle]);
 
     /**
-     * Reads a paste and opens the confirm dialog for it: a blueprint goes through the import, JSON is read as an export of
-     * the Sidecar mod. Returns why it could not, for the Paste from Factorio dialog to say, or null once the confirm dialog
-     * is open.
+     * Reads a paste and opens the confirm dialog for it: a blueprint goes through the import; JSON is a build file, to open
+     * with Open, or an export of the Sidecar mod, which gets its message. Returns why it could not, for the Paste from
+     * Factorio dialog to say, or null once the confirm dialog or a message is open.
      */
     const startPaste = useCallback(async (text: string, request = ++pasteRequestRef.current): Promise<PastePrompt | null> => {
         if (request !== pasteRequestRef.current) return null;
         if (text.trim() === '') return PASTE_PROMPTS.empty;
         if (!isJsonText(text)) return startBlueprintPaste(text.trim(), request);
-        const read = readSidecarExport(text);
-        if (read.kind === 'problem') {
-            return PASTE_PROMPTS[read.problem];
-        }
-        let validated: PastedEntities;
+        // a build file of another format is refused here as when it is opened; one of this format is opened with Open
+        let value: unknown;
         try {
-            // each list checked against its schema
-            validated = await askEngine({
-                kind: 'pasted-entities',
-                machines: read.machines,
-                drills: read.drills,
-                inserters: read.inserters,
-                belts: read.belts,
-                chests: read.chests,
-                sidecar_version: read.sidecarVersion,
-                pickup_warnings: read.pickupWarnings,
-                suggested_target: read.suggestedTarget,
-            });
-        } catch (error) {
-            if (request !== pasteRequestRef.current) return null;
-            console.error('Paste from Factorio error:', error);
-            return invalidExportPrompt(error instanceof Error ? error.message : 'Unknown error');
+            value = JSON.parse(text);
+        } catch {
+            value = undefined;
         }
-        if (request !== pasteRequestRef.current) return null;
-        const suggestion = Option.toNullable(validated.suggested_target);
-        const fill = suggestion ? { values: targetToFill(suggestion), source: suggestion.source,
-            ...(suggestion.belt_limit !== undefined && { beltLimit: suggestion.belt_limit }),
-            ...(suggestion.build_limit !== undefined && { buildLimit: suggestion.build_limit }) } : null;
-        confirmOpenerRef.current = document.activeElement;
-        setPendingImport({ ...validated, fill, pickupWarnings: read.pickupWarnings });
-        // everything there is, except a target the player has already set; the first exports had machines only
-        setImportSelections({
-            target: fill !== null && currentTarget.item === '',
-            machines: validated.machines.length > 0,
-            drills: !read.legacy && validated.drills.length > 0,
-            inserters: !read.legacy && validated.inserters.length > 0,
-            belts: !read.legacy && validated.belts.length > 0,
-            chests: !read.legacy && validated.chests.length > 0,
-        });
+        const format = isBuildFile(value) ? configFormatProblem(value) : null;
+        if (format !== null) {
+            setRefused(format);
+            return null;
+        }
+        // a build file of this format is opened with Open; any other JSON is an export of the Sidecar mod, no longer read
+        if (value === undefined) return PASTE_PROMPTS['not-json'];
+        if (isBuildFile(value)) return PASTE_PROMPTS['build-file'];
+        setRefused('sidecar');
         return null;
-    }, [currentTarget.item, startBlueprintPaste]);
+    }, [startBlueprintPaste]);
 
     const handleFileChange = useCallback(
         async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -506,12 +517,14 @@ export function ConfigImportExport({
 
             try {
                 const content = await file.text();
-                if (looksLikeSidecarExport(content) || !isJsonText(content)) {
-                    // an export of the mod or a blueprint saved to a file goes to the paste
+                if (!isJsonText(content)) {
+                    // a blueprint saved to a file goes to the paste
                     const prompt = await startPaste(content);
                     if (prompt) {
                         showPastePrompt(prompt);
                     }
+                } else if (isSidecarExportText(content)) {
+                    setRefused('sidecar');
                 } else {
                     await importConfigText(content, UNDO_IMPORT_MESSAGE);
                 }
@@ -596,7 +609,7 @@ export function ConfigImportExport({
             .map(row => countOf(row.incoming, row.category.slice(0, -1), row.category));
         if (fill !== null) parts.unshift('Setpoint');
         const blueprint = pendingImport.blueprint;
-        if (blueprint && (blueprint.pasted.questions.length > 0 || blueprint.failed)) return;
+        if (blueprint && (blueprint.pasted.questions.length > 0 || blueprint.failed || blueprintAskOut)) return;
         const next = applyPaste(currentForm, pendingImport, importSelections, fill?.values,
             blueprint ? { research: blueprint.pasted.research, copy_offset: blueprint.pasted.copy_offset } : undefined);
 
@@ -606,7 +619,7 @@ export function ConfigImportExport({
         onUndoable(describePaste(parts));
         onApplyPaste(next);
         onBuildReplaced();
-    }, [pendingImport, importSelections, currentForm, acknowledgedCurrent, onApplyPaste, onBuildReplaced, onUndoable, resetPasteFlow]);
+    }, [pendingImport, importSelections, currentForm, acknowledgedCurrent, blueprintAskOut, onApplyPaste, onBuildReplaced, onUndoable, resetPasteFlow]);
 
     const handleCancelImport = resetPasteFlow;
 
@@ -889,13 +902,6 @@ export function ConfigImportExport({
                 {pendingImport && !pendingImport.reduction && (
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                         <PickupGeometrySummary build={{ inserters: prospectiveInserters }} backedUp={null} />
-                        {importSelections.inserters && pendingImport.pickupWarnings?.map(warning => <Typography key={warning.inserter_id} variant="body2" color="text.secondary">
-                            Captured Inserter {warning.inserter_id}: {pickupCaptureWarningMessage(warning.reason)}
-                        </Typography>)}
-                        {importSelections.inserters && !pendingImport.blueprint && pendingImport.inserters.flatMap((inserter, i) => inserter.sink.type === 'belt' && inserter.sink.drop_capture
-                            ? [<Typography key={`side-loaded-${i}`} variant="body2" color="text.secondary">
-                                Captured Inserter {inserter.id ?? i + 1}: {sideLoadedDropMessage(inserter.sink.drop_capture.tiles)}
-                            </Typography>] : [])}
                         {preview?.geometryProblem && <Alert severity="error">{preview.geometryProblem}</Alert>}
                         {pendingImport.fill || pendingImport.blueprint ? (
                             <Box>
@@ -1003,6 +1009,7 @@ export function ConfigImportExport({
                 />
             )}
             {examplesOpen && <ExamplesDialog onPick={handlePickExample} onClose={handleCloseExamples} />}
+            <RefusedConfigDialog kind={refused} onPaste={handlePasteFromFactorio} onClose={closeRefused} />
 
             {/* the browser did not let the page copy: the link to copy by hand */}
             <AppDialog open={fallbackLink !== null} onClose={() => setFallbackLink(null)} title="Share link" describedBy="share-link-fallback-text" cancel="Close">
