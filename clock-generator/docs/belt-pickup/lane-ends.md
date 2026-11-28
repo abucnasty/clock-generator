@@ -46,8 +46,8 @@ The generator finds the role of each lane from the inserters, item by item
 A lane with no item (`"ingredient": ""`) has the role and the end of the other lane of its belt. A lane that no
 inserter takes from or drops on has no role, and its end is an infinite end. The generator never gives an unknown end.
 
-Thus a build that states no lane end has dead ends on its input lanes: the generator makes its clocks for pickups
-with backpressure. A stated `lane_end` is always the end of the lane.
+Thus a build that states no lane end has dead ends on its input lanes: the generator makes
+its clocks for pickups with backpressure. A stated `lane_end` is always the end of the lane.
 
 To find the end, follow the lane downstream from the last inserter of the configuration that takes from it:
 
@@ -66,7 +66,8 @@ supply rate, no lane end and no sharing. Thus only the stated lane tells if all 
 - If the stated lane is an infinite end or an unknown end, the belt has a lane that is not a dead end.
 
 A lane end comes only to a lane that the belt states. A lane with `"ingredient": ""` is a stated lane. It carries no
-item, and its end is the end that it states or the end of the other lane. A lane with a secondary setpoint (`consumption_per_second`) does not take the end of the other lane: its
+item, and its lane end is the one that it states or that of the
+other lane. A lane with a secondary setpoint (`consumption_per_second`) does not take the end of the other lane: its
 end is an infinite end.
 
 An inserter can drop items onto the two sides of a belt with one lane stated. The generator keeps the other side only

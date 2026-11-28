@@ -23,7 +23,7 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 
 ### Removed
 - ui: the site no longer reads exports of the Clock Generator Sidecar mod
-- ui: the backed-up belts setting is gone: state the end of each lane instead
+- ui: a configuration that states the old belt setting no longer opens: state lane ends
 
 ## [0.32.0] - 2026-11-26
 

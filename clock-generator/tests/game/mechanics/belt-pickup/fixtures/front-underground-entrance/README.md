@@ -50,7 +50,7 @@ the unselected lane moves even though none of its items are collected.
 
 The existing simulator supports these observations with explicit `near_lane: 1` unmirrored or `near_lane: 2`
 mirrored, and `pickup_length: 0.5` in both. `config.json` holds the unmirrored moving case; the flipped test changes
-its explicit lane preference. The backed-up test states a dead end on each lane as well
+its explicit lane preference. The test with backpressure states a dead end on each lane as well
 as removing the loader from the blueprint. Backed-up first-hand counts match directly. Moving counts match one
 of the model's two turbo stream phases, including the pause before the fourth grab. The comparison checks phase
 compatibility; it does not infer the starting phase from the blueprint or calibrate absolute arm-arrival timing.
@@ -62,8 +62,8 @@ with no pickup warning. Classification requires a centered inserter downstream o
 the belt's direction. The classifier has rotation checks in all four cardinal directions; actual entrance grabs
 were measured only in this eastbound fixture. Wrong-facing, off-center and upstream inline pickups remain unclassified.
 Since Sidecar 0.16.0 an export also states the end of each pickup lane, read from the build: a dead end where the line
-stops, an infinite end at a loader that takes everything. These tests state the end of each lane in memory: a dead end
-for the backed-up runs, an infinite end for the moving runs.
+stops, an infinite end at a loader that takes everything. These tests state each lane end in memory: a dead end
+for the runs with backpressure, an infinite end for the moving runs.
 
 Sidecar 0.10.0 reported `inline` and omitted both fields for these same captures. The fixture retains explicit
 settings for the independent simulator comparison. The four-speed sweep below also checks swapped ingredients. Other cardinal orientations' actual grabs and
