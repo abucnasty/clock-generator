@@ -534,13 +534,14 @@ export function dropSpacingInsights(result: Pick<BlueprintGenerationResult, "clo
         const id = inserter.id ?? index + 1;
         if (inserter.sink.type === "belt") starts.set(id, dropTicks(run, `inserter:${id}`));
     });
-    const names = { build: buildToNameOf(config), numbered: false };
     const spacing = dropSpacing(config, starts, run.total_duration_ticks);
+    // the names are made only where a note is made: building them reads the recipe data of every machine
+    const names = () => ({ build: buildToNameOf(config), numbered: false });
     if (spacing === null) {
         const part = uncheckedPartDrops(config);
-        return part.length === 0 ? [] : [{ id: "drop-spacing", scope: "clock", title: "Drops of a partial copy are not checked", what: partUncheckedText(part, names), why: "", explanation: "" }];
+        return part.length === 0 ? [] : [{ id: "drop-spacing", scope: "clock", title: "Drops of a partial copy are not checked", what: partUncheckedText(part, names()), why: "", explanation: "" }];
     }
-    const text = describeDropSpacing(spacing, names, run_with_copies);
+    const text = describeDropSpacing(spacing, names(), run_with_copies);
     return [{ id: "drop-spacing", scope: "clock", title: text.title, what: text.what, why: text.why, explanation: text.explanation, table: dropSpacingTable(spacing) }];
 }
 
