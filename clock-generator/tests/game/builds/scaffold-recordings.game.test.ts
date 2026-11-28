@@ -351,7 +351,7 @@ const BUILDS: Record<string, ScaffoldBuild> = {
     // One block of four chemical science assemblers, four engine assemblers and one foundry casting the pipes of all four
     // engines, all legendary with legendary modules and 40 legendary beacons. The sample is this block as one copy at 480/11 a second
     // (5.5 copies of it make 240 a second). The build was given 2026-10-15. Without a clock it makes 44.0 a second, a hair over the 43.636 the target asks of one
-    // block; with the selected clock, 256 in each of 102 window cycles of 352 ticks, recorded 2026-10-15.
+    // block; with the selected clock, 256 in each of 11 window cycles of 352 ticks, recorded 2026-11-27.
     "chemical science with a shared foundry": {
         scaffold: path.join(SAMPLES, "science", "chemical", "chemical-240-shared-foundry.scaffold"),
         config: ConfigPaths.CHEMICAL_SCIENCE_240_SHARED_FOUNDRY,

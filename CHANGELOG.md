@@ -21,7 +21,7 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 - generation: builds whose copies share lanes take less time to generate
 
 ### Fixed
-- ui: the note on drops landing on each other now follows output belts and partial copies
+- ui: the note on drops landing on each other follows output belts and partial copies, and says only what it checked
 
 ## [0.32.0] - 2026-11-26
 
