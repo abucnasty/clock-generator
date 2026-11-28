@@ -77,6 +77,8 @@ export const SHARING_ANSWER_TEXT: Record<'shared' | 'per_copy', string> = {
 };
 
 export const ANOTHER_ITEM = 'Another item';
+/** The mark of a lane row whose question is answered, and stays in the list while the dialog is open */
+export const ANSWERED = 'Answered';
 export const FOUND_IN_BLUEPRINT = 'Found in the blueprint';
 
 // ---- what was read
