@@ -1,12 +1,11 @@
 {
   "setpoint": {
     "item": "chemical-science-pack",
-    "items_per_second": 240,
-    "copies": 5.5,
-    "copy_offset": {
-      "x": 18,
-      "y": 0
-    }
+    "items_per_second": {
+      "numerator": 480,
+      "denominator": 11
+    },
+    "copies": 1
   },
   "machines": [
     {

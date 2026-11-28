@@ -323,7 +323,9 @@ describe("a build whose copies all side-load", () => {
 
 describe("a part copy", () => {
     it("drops the hands of the inserters the shared-lane model gives it: 5 whole copies and the part on each line (chemical science, 5.5 copies)", async () => {
+        // the sample is one copy at 480/11 a second; the part copy needs the build it was before: 240 a second from 5.5 copies, 18 tiles apart
         const config = await sample(ConfigPaths.CHEMICAL_SCIENCE_240_SHARED_FOUNDRY, { 1: 8, 2: 8, 3: 0, 4: 0 });
+        config.setpoint = { ...config.setpoint, items_per_second: 240, copies: 5.5, copy_offset: { x: 18, y: 0 } };
         const parts = partCopiesOf(config);
         // the shared-lane model gives one part set here
         expect(parts.length).toBe(1);
