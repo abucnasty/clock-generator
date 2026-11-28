@@ -101,6 +101,32 @@ export type DropPosition = { inserter: number; x: number; y: number };
 /** A belt line that inserters drop onto: its first piece and its pieces, by entity number */
 export type OutputLine = { first: number; pieces: number[] };
 
+/** A belt piece that an inserter end reaches, as the blueprint places it: `shape` is a belt's, null for the other pieces */
+export type LayoutPiece = { entity_number: number; x: number; y: number; direction: number; shape: "straight" | "left" | "right" | null };
+/**
+ * A belt line with the number the questions call it by (`place`, from 1) and the belt id the configuration gives it, null
+ * where it has none. `lane_lines` is the transport line of each entry of that belt's `lanes` (null where the lanes are not
+ * by line); a line with no belt id has the two lines, 1 and 2. `pieces` are the pieces that an inserter end reaches.
+ */
+export type LayoutLine = { first: number; place: number; belt: number | null; lane_lines: (1 | 2)[] | null; pieces: LayoutPiece[] };
+/** A drill with the number its question calls it by, and its id in the configuration (null where it has none) */
+export type LayoutDrill = { entity_number: number; place: number; drill: number | null };
+/**
+ * An inserter of the lists, or one held back, with the first piece of the line at each of its belt ends (null at an end that
+ * is not a belt). The id of a held-back inserter follows the largest id of the inserters of the lists.
+ */
+export type LayoutInserterLines = { entity_number: number; id: number; held_back: boolean; source_line: number | null; sink_line: number | null };
+/**
+ * Rows that the open questions keep out of the lists, in the configuration's own types and in the layout view's numbers: a
+ * belt for each line with an open lane (its id is the line's place, an asked lane has no item), an inserter at such a line
+ * (its belt ends are the places of their lines), and a drill whose ore is asked (its id is its place).
+ */
+export interface LayoutHeldBack {
+    belts: BeltConfig[];
+    inserters: InserterConfig[];
+    drills: MiningDrillConfig[];
+}
+
 /** What the layout view can draw; nothing of it is written into the configuration */
 export interface ImportLayout {
     /** By inserter */
@@ -109,6 +135,13 @@ export interface ImportLayout {
     drop_positions: DropPosition[];
     /** By first piece */
     output_lines: OutputLine[];
+    /** By first piece: every belt line */
+    lines: LayoutLine[];
+    /** By entity number */
+    drills: LayoutDrill[];
+    /** By id */
+    inserter_lines: LayoutInserterLines[];
+    held_back: LayoutHeldBack;
 }
 
 /** The lists of the configuration that an entity of the blueprint can be a row of */

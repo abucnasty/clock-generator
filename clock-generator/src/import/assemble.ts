@@ -17,9 +17,10 @@ import type { BlueprintEntityRead, FilterRead } from "./blueprint-entities";
 import { decodeBlueprint } from "./decode";
 import { flowsOf, type BuildFlows, type FlowsData, type FlowsInputs } from "./flows";
 import { geometryOf, type Basis, type Based, type BuildGeometry, type GeometryData, type GeometryRow, type PickupProblem } from "./geometry";
-import { idsOf, type BuildIds, type IdsData } from "./ids";
+import { idsOf, type BeltId, type BuildIds, type DrillId, type IdsData, type InserterId } from "./ids";
 import type { DropLane, DropPosition, GeometryNoteField, ImportBuild, ImportEntity, ImportList, ImportSpeed, ImportInputs, ImportNote, ImportOutcome, ImportQuestion, NoteCode, OutputLine, QuestionKind, ReadKind } from "./outcome";
 import { isPleaseCheck, READ_KINDS, SHARING_ANSWERS } from "./outcome";
+import { placesOf, questionLayoutOf } from "./question-layout";
 import { speedsOf, type SpeedData, type SpeedResult } from "./speeds";
 import { worldOf, type BuildWorld, type PrototypeRow, type WorldData, type WorldProblemCode } from "./world";
 
@@ -263,17 +264,13 @@ function assemble(entities: readonly BlueprintEntityRead[], inputs: ImportInputs
     const entityOf = new Map(entities.map((e) => [e.entity_number, e]));
     const speedOf = new Map(speeds.rows.map((row) => [row.entity_number, row]));
     const lineOf = new Map(geometry.lines.map((line) => [line.first, line]));
-    const lineOfPiece = new Map<number, number>();
-    for (const line of geometry.lines) for (const piece of line.pieces) lineOfPiece.set(piece, line.first);
     const pickupOf = new Map(geometry.pickups.map((p) => [p.inserter, p]));
     const dropOf = new Map(geometry.drops.map((d) => [d.inserter, d]));
     const endsOf = new Map(geometry.ends.map((e) => [e.inserter, e]));
 
     // ------------------------------------------------ the questions: the flows' two kinds and the sharing of a line
-    const drillPlaces = new Map(world.entities.filter((e) => e.prototype !== null && DRILL_TYPES.includes(e.prototype)).map((e, index) => [e.entity_number, index + 1]));
-    const armLines = [...new Set([...geometry.pickups.map((p) => p.piece), ...geometry.drops.map((d) => d.piece)].map((piece) => lineOfPiece.get(piece)).filter((n): n is number => n !== undefined))].sort(byNumber);
-    const otherLines = geometry.lines.map((l) => l.first).filter((n) => !armLines.includes(n));
-    const beltPlaces = new Map([...armLines, ...otherLines].map((first, index) => [first, index + 1]));
+    const places = placesOf(world, geometry, DRILL_TYPES);
+    const { drillPlaces, armLines, beltPlaces, lineOfPiece } = places;
 
     const questions: ImportQuestion[] = flows.questions.map((q) => ({
         key: q.key,
@@ -329,7 +326,7 @@ function assemble(entities: readonly BlueprintEntityRead[], inputs: ImportInputs
 
     // ------------------------------------------------ drills (g)
     const drillFlow = new Map(flows.drills.map((d) => [d.entity_number, d]));
-    const drills: MiningDrillConfig[] = ids.drills.map((d) => {
+    const drillRow = (d: DrillId): MiningDrillConfig => {
         const e = entityOf.get(d.entity_number)!;
         const row = speedOf.get(d.entity_number);
         return {
@@ -342,10 +339,11 @@ function assemble(entities: readonly BlueprintEntityRead[], inputs: ImportInputs
             position: position(e),
             direction: e.direction,
         };
-    });
+    };
+    const drills: MiningDrillConfig[] = ids.drills.map(drillRow);
 
     // ------------------------------------------------ belts (d): each id is one physical line (the merge below is of that one line)
-    const belts: BeltConfig[] = ids.belts.map((b) => {
+    const beltRow = (b: BeltId): BeltConfig => {
         const lines = b.lines.map((n) => lineOf.get(n)).filter((l): l is NonNullable<typeof l> => l !== undefined);
         const first = lineOf.get(b.first_line) ?? lines[0];
         const pickups = lines.flatMap((l) => l.pickups);
@@ -370,7 +368,8 @@ function assemble(entities: readonly BlueprintEntityRead[], inputs: ImportInputs
             ...(flow !== null && { flow_direction: flow }),
             lanes,
         } as unknown as BeltConfig;
-    });
+    };
+    const belts: BeltConfig[] = ids.belts.map(beltRow);
 
     // ------------------------------------------------ a buffer chest whose limit leaves it no slot: left out, with the inserters at it
     const storageOf = (e: BlueprintEntityRead): number => e.bar ?? e.inventory?.bar ?? (own(data.chest, e.name) as { inventory_size?: number } | undefined)?.inventory_size ?? 0;
@@ -385,7 +384,7 @@ function assemble(entities: readonly BlueprintEntityRead[], inputs: ImportInputs
     const keptChests = ids.chests.filter((c) => !noSlots.has(c.id));
 
     // ------------------------------------------------ inserters (b, e)
-    const inserters: InserterConfig[] = keptInserters.map((i) => {
+    const inserterRow = (i: InserterId, notes: Notes): InserterConfig => {
         const e = entityOf.get(i.entity_number)!;
         let source: Record<string, unknown> = { type: i.source.type, id: i.source.id };
         if (i.source.type === "belt") {
@@ -439,7 +438,8 @@ function assemble(entities: readonly BlueprintEntityRead[], inputs: ImportInputs
             position: position(e),
             direction: e.direction,
         } as unknown as InserterConfig;
-    });
+    };
+    const inserters: InserterConfig[] = keptInserters.map((i) => inserterRow(i, notes));
 
     // ------------------------------------------------ chests (b)
     const slotFiltersOf = (e: BlueprintEntityRead) => itemsOfFilters(e.inventory?.filters, () => notes.add("filter-no-item:inventory", e.entity_number))
@@ -552,6 +552,14 @@ function assemble(entities: readonly BlueprintEntityRead[], inputs: ImportInputs
     const drop_positions: DropPosition[] = geometry.drops.map((d) => ({ inserter: d.inserter, x: endsOf.get(d.inserter)!.drop.x, y: endsOf.get(d.inserter)!.drop.y }));
     const outputFirsts = [...new Set(geometry.drops.map((d) => lineOfPiece.get(d.piece)).filter((n): n is number => n !== undefined))].sort(byNumber);
     const output_lines: OutputLine[] = outputFirsts.map((first) => ({ first, pieces: [...lineOf.get(first)!.pieces] }));
+    // the lines, the drills and the inserters by number, and the rows the open questions keep out of the lists: built by the code of the written rows, with notes of no list
+    const numbered = questionLayoutOf({ world, geometry, flows, ids, places, entityOf, keptInserters, keptChests });
+    const unlisted = new Notes();
+    const held_back = {
+        belts: numbered.held.belts.map((b) => beltRow({ id: b.place, signature: "", lines: [b.first], first_line: b.first, items: [], lanes: b.items.map((ingredient) => ({ ingredient })), lane_lines: [1, 2] })),
+        inserters: numbered.held.inserters.map((i) => inserterRow(i, unlisted)),
+        drills: numbered.held.drills.map(drillRow),
+    };
 
     // ------------------------------------------------ each entity by its number, and the row of the lists it is
     const rowOf = new Map<number, { list: ImportList; id: number }>();
@@ -601,7 +609,7 @@ function assemble(entities: readonly BlueprintEntityRead[], inputs: ImportInputs
         notes: notes.list(),
         read: READ_KINDS.filter((kind) => (counts.get(kind) ?? 0) > 0).map((name) => ({ name, count: counts.get(name)! })),
         ignored: [...ignored.entries()].sort((a, b) => compareText(a[0], b[0])).map(([name, count]) => ({ name, count })),
-        layout: { drop_lanes, drop_positions, output_lines },
+        layout: { drop_lanes, drop_positions, output_lines, lines: numbered.lines, drills: numbered.drills, inserter_lines: numbered.inserter_lines, held_back },
         entities: importEntities,
         speeds: importSpeeds,
     };

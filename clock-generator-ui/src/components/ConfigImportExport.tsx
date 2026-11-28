@@ -232,6 +232,9 @@ export function ConfigImportExport({
     const hasImportWork = (importSelections.target && pendingImport?.fill != null) || preview?.counts.some(row => row.replacing) === true;
     // the last ask of a pasted blueprint is out: the preview still holds the answer of the ask before it
     const [blueprintAskOut, setBlueprintAskOut] = useState(false);
+    // the panel of a pasted blueprint shows the layout once a question was asked, so the dialog is wider then
+    const blueprintAsked = pendingImport?.blueprint !== undefined && !pendingImport.reduction
+        && (pendingImport.blueprint.pasted.questions.length > 0 || Object.keys(pendingImport.blueprint.answers).length > 0);
     // a pasted blueprint imports nothing while a question is open, after its last ask failed, or while its last ask is out
     const blueprintOpen = pendingImport?.blueprint !== undefined && (pendingImport.blueprint.pasted.questions.length > 0 || pendingImport.blueprint.failed || blueprintAskOut);
     const canImport = hasImportWork && !blueprintOpen && !preview?.geometryProblem && (!preview?.crossings.length || acknowledgedCurrent);
@@ -844,7 +847,7 @@ export function ConfigImportExport({
             />
 
             {/* Import Confirmation Dialog */}
-            <AppDialog open={pendingImport !== null} onClose={handleCancelImport} title="Confirm Import from Factorio" disableRestoreFocus onExited={handleConfirmExited}
+            <AppDialog open={pendingImport !== null} maxWidth={blueprintAsked ? 'md' : undefined} onClose={handleCancelImport} title="Confirm Import from Factorio" disableRestoreFocus onExited={handleConfirmExited}
                 cancel="Cancel" actions={<Button
                     id="confirm-factorio-import"
                     onClick={handleConfirmImport}

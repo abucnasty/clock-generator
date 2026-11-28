@@ -13,6 +13,7 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 
 ### Added
 - ui: paste a blueprint of your build to fill its machines, inserters, belts and chests
+- ui: the paste's questions show your build's layout, where you pick each belt lane's item
 - ui: change the research profile of a build made from a blueprint
 - ui: keep your research numbers as named profiles in this browser, started from two templates
 

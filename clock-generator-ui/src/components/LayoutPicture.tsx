@@ -1,4 +1,4 @@
-import { memo, useId, useMemo, useState, type KeyboardEvent, type ReactNode, type SVGProps } from 'react';
+import { memo, useId, useMemo, useState, type KeyboardEvent, type ReactNode, type Ref, type SVGProps } from 'react';
 import type { Layout, LayoutBeltTile, LayoutBox, LayoutInserter } from '../utils/layoutOf';
 import { TILE_GRID_SHADE } from '../theme/tileGrid';
 import { LAYOUT_TILE_PX as PX } from '../utils/layoutBounds';
@@ -8,6 +8,7 @@ import type { LayoutCombinator } from '../utils/layoutCombinators';
 import { beltColour, LAYOUT_GROUND, regionColour } from '../utils/layoutColours';
 import type { RegionTints } from '../utils/layoutRegions';
 import { entityLabel } from '../utils/entityLabel';
+import { tileKey, type LaneEditorBelt } from '../utils/layoutLanes';
 import { FactorioIcon } from './FactorioIcon';
 import type { EntityClickType } from './ConfigFlowDiagram';
 
@@ -36,17 +37,29 @@ interface LayoutPictureProps {
      * inserter's number of another region
      */
     combinators?: ReadonlyMap<string, LayoutCombinator> | null;
+    /**
+     * The lane editor mode: the belts drawn with their two lanes, and the tile of the belt in `anchorBelt` that hands its
+     * element to `onAnchor`. Null: every belt is drawn as it is without the mode
+     */
+    lanes?: LaneDrawing | null;
+}
+
+/** What the picture draws of the lanes of the belts of a lane editor */
+interface LaneDrawing {
+    belts: ReadonlyMap<number, LaneEditorBelt>;
+    anchorBelt: number | null;
+    onAnchor(element: SVGGElement | null): void;
 }
 
 /** An entity of the picture that a click or Enter selects */
-function Pickable({ label, selected, onPick, children }: { label: string; selected: boolean; onPick(): void; children: ReactNode }) {
+function Pickable({ label, selected, onPick, anchorRef, children }: { label: string; selected: boolean; onPick(): void; anchorRef?: Ref<SVGGElement>; children: ReactNode }) {
     const onKeyDown = (event: KeyboardEvent<SVGGElement>) => {
         if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onPick(); }
     };
     // a ring for a keyboard user only: a pointer click focuses the entity too, and the selection shows that
     const [focused, setFocused] = useState(false);
     return (
-        <g role="button" tabIndex={0} aria-label={label} aria-pressed={selected} onClick={onPick} onKeyDown={onKeyDown}
+        <g ref={anchorRef} role="button" tabIndex={0} aria-label={label} aria-pressed={selected} onClick={onPick} onKeyDown={onKeyDown}
             onFocus={event => setFocused(event.currentTarget.matches(':focus-visible'))} onBlur={() => setFocused(false)}
             data-focused={focused ? '' : undefined}
             style={{ cursor: 'pointer', outline: focused ? `3px solid ${FOCUS}` : 'none', outlineOffset: 3 }}>
@@ -117,12 +130,45 @@ function Arrow({ direction, size, fill }: { direction: number; size: number; fil
     return <polygon points={`0,${-size} ${size * 0.8},${size * 0.7} ${-size * 0.8},${size * 0.7}`} transform={`rotate(${direction * 22.5})`} fill={fill} stroke={INK} strokeWidth={1} />;
 }
 
-function BeltTile({ tile, onPick, selected }: { tile: LayoutBeltTile; onPick(): void; selected: boolean }) {
-    const colour = beltColour(tile.beltId);
+/** The two lanes of a belt tile, each half of the tile on its side of the way the belt runs, with its item's picture where it has one */
+function BeltLanes({ belt, direction }: { belt: LaneEditorBelt; direction: number }) {
+    const vector = DIRECTION_VECTOR[direction];
+    if (vector === undefined) return null;
+    // the left of the way of travel, on a picture with north up
+    const left: [number, number] = [vector[1], -vector[0]];
+    const horizontal = vector[0] !== 0;
+    const along = PX - 4, across = PX / 2 - 2;
     return (
-        <Pickable label={entityLabel('belt', tile.beltId)} selected={selected} onPick={onPick}>
+        <g pointerEvents="none">
+            {belt.lanes.map(lane => {
+                const sign = lane.side === 'left' ? 1 : -1;
+                const cx = left[0] * sign * PX * 0.25, cy = left[1] * sign * PX * 0.25;
+                const width = horizontal ? along : across, height = horizontal ? across : along;
+                return (
+                    <g key={lane.id}>
+                        <rect x={cx - width / 2} y={cy - height / 2} width={width} height={height} data-lane={lane.id} data-lane-side={lane.side}
+                            fill={lane.item ? '#f1f1f1' : '#2e2e2e'} fillOpacity={0.9} stroke={INK} strokeWidth={0.8} strokeDasharray={lane.item ? undefined : '2 2'} />
+                        {lane.item
+                            ? <foreignObject x={cx - 6} y={cy - 6} width={12} height={12}><FactorioIcon name={lane.item} size={12} alt="" /></foreignObject>
+                            : <text x={cx} y={cy + 3} textAnchor="middle" fontSize={9} fontWeight={700} fill="#ffffff">{lane.id}</text>}
+                    </g>
+                );
+            })}
+            <g transform={`translate(${vector[0] * PX * 0.42} ${vector[1] * PX * 0.42})`}><Arrow direction={direction} size={3.5} fill="#ffffff" /></g>
+        </g>
+    );
+}
+
+function BeltTile({ tile, onPick, selected, lanes, anchorRef }: { tile: LayoutBeltTile; onPick(): void; selected: boolean; lanes?: LaneEditorBelt; anchorRef?: Ref<SVGGElement> }) {
+    const colour = beltColour(tile.beltId);
+    // a tile is drawn with its lanes where the mode knows the way the belt runs there
+    const direction = lanes === undefined ? null : (lanes.directions.get(tileKey(tile.x, tile.y)) ?? tile.direction);
+    return (
+        <Pickable label={entityLabel('belt', tile.beltId)} selected={selected} onPick={onPick} anchorRef={anchorRef}>
             <Rect x={tile.x} y={tile.y} width={1} height={1} fill={colour} stroke={selected ? SELECTED : RIM} strokeWidth={selected ? 3.5 : 1.5} />
-            {tile.direction !== null && (
+            {lanes !== undefined && direction !== null ? (
+                <g transform={`translate(${px(tile.x)} ${px(tile.y)})`}><BeltLanes belt={lanes} direction={direction} /></g>
+            ) : tile.direction !== null && (
                 <g transform={`translate(${px(tile.x)} ${px(tile.y)})`}><Arrow direction={tile.direction} size={PX * 0.3} fill="#ffffff" /></g>
             )}
         </Pickable>
@@ -197,7 +243,7 @@ function JoinLine({ layout, combinator }: { layout: Layout; combinator: LayoutCo
  * with its number. It draws what the config holds and no more. Of a clock that is current for the build it also draws the
  * letter and colour of each combinator on the inserters and drills it switches on.
  */
-function LayoutPictureComponent({ layout, names, tints, selection, onSelect, combinators = null }: LayoutPictureProps) {
+function LayoutPictureComponent({ layout, names, tints, selection, onSelect, combinators = null, lanes = null }: LayoutPictureProps) {
     const isSelected = (kind: EntityClickType, id: number) => selection?.kind === kind && selection.id === id;
     const tintOf = (kind: string, id: number) => tints?.of.get(`${kind}:${id}`);
     const marked = (samePlace: readonly unknown[]) => samePlace.length > 0;
@@ -206,6 +252,8 @@ function LayoutPictureComponent({ layout, names, tints, selection, onSelect, com
         [layout, tints, combinators],
     );
     const selected = selection === null || combinators === null ? undefined : combinators.get(`${selection.kind}:${selection.id}`);
+    // the editor of a belt is anchored on its first tile
+    const anchorTile = lanes?.anchorBelt == null ? undefined : layout.beltTiles.find(tile => tile.beltId === lanes.anchorBelt);
     return (
         <g>
             {/* halos first, so no region tint covers an entity */}
@@ -226,7 +274,8 @@ function LayoutPictureComponent({ layout, names, tints, selection, onSelect, com
                 );
             })}
             {layout.beltTiles.map(tile => (
-                <BeltTile key={`${tile.beltId}|${tile.x}|${tile.y}`} tile={tile} selected={isSelected('belt', tile.beltId)} onPick={() => onSelect('belt', tile.beltId)} />
+                <BeltTile key={`${tile.beltId}|${tile.x}|${tile.y}`} tile={tile} selected={isSelected('belt', tile.beltId)} onPick={() => onSelect('belt', tile.beltId)}
+                    lanes={lanes?.belts.get(tile.beltId)} anchorRef={tile === anchorTile ? lanes?.onAnchor : undefined} />
             ))}
             {layout.inserters.map((inserter, index) => (
                 <Pickable key={`inserter-${index}`} label={entityLabel('inserter', inserter.id)} selected={isSelected('inserter', inserter.id)} onPick={() => onSelect('inserter', inserter.id)}>
